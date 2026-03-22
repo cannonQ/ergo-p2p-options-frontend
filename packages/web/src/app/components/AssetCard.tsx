@@ -34,10 +34,10 @@ export function AssetCard({
       </div>
 
       <div className="text-xl font-mono text-[#eab308] mb-2">
-        {price !== undefined
+        {price !== undefined && price > 0
           ? `$${price.toLocaleString(undefined, {
               minimumFractionDigits: 2,
-              maximumFractionDigits: price >= 100 ? 0 : price >= 1 ? 2 : 4,
+              maximumFractionDigits: Math.max(2, price >= 100 ? 0 : price >= 1 ? 2 : 4),
             })}`
           : "—"}
       </div>
