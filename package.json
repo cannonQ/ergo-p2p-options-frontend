@@ -1,0 +1,16 @@
+{
+  "name": "ergo-options-ui",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @ergo-options/web dev",
+    "build": "pnpm --filter @ergo-options/core build && pnpm --filter @ergo-options/web build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3", "esbuild", "unrs-resolver"]
+  }
+}
