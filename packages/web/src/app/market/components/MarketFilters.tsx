@@ -12,12 +12,27 @@ interface MarketFiltersProps {
 export function MarketFilters({ reserves, spotPrices }: MarketFiltersProps) {
   const [assetFilter, setAssetFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [expiryFilter, setExpiryFilter] = useState("all");
+  const [itmOnly, setItmOnly] = useState(false);
 
   const assets = [...new Set(reserves.map((r) => r.assetName))].sort();
+
+  // Group expiries by approximate date (round to nearest week)
+  const expiries = [...new Set(reserves.map((r) => {
+    const blocksFromNow = r.maturityHeight; // Will compare against current height
+    return r.maturityHeight.toString();
+  }))].sort();
 
   const filtered = reserves.filter((r) => {
     if (assetFilter !== "all" && r.assetName !== assetFilter) return false;
     if (typeFilter !== "all" && r.optionType !== typeFilter) return false;
+    if (expiryFilter !== "all" && r.maturityHeight.toString() !== expiryFilter) return false;
+    if (itmOnly) {
+      const spot = spotPrices[r.oracleIndex];
+      if (spot === undefined) return false;
+      const isITM = r.optionType === "call" ? spot > r.strikePrice : spot < r.strikePrice;
+      if (!isITM) return false;
+    }
     return true;
   });
 
@@ -44,6 +59,25 @@ export function MarketFilters({ reserves, spotPrices }: MarketFiltersProps) {
           <option value="call">Calls</option>
           <option value="put">Puts</option>
         </select>
+        <select
+          value={expiryFilter}
+          onChange={(e) => setExpiryFilter(e.target.value)}
+          className="bg-[#131a2a] border border-[#1e293b] rounded-lg px-3 py-1.5 text-sm text-[#e2e8f0]"
+        >
+          <option value="all">All Expiries</option>
+          {expiries.map((exp) => (
+            <option key={exp} value={exp}>Block {exp}</option>
+          ))}
+        </select>
+        <label className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#94a3b8] cursor-pointer">
+          <input
+            type="checkbox"
+            checked={itmOnly}
+            onChange={(e) => setItmOnly(e.target.checked)}
+            className="w-4 h-4 rounded border-[#1e293b] bg-[#0a0e17] text-[#3b82f6]"
+          />
+          ITM only
+        </label>
       </div>
 
       {/* Table */}

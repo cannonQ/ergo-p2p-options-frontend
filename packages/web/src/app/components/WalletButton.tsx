@@ -15,17 +15,9 @@ export function WalletButton() {
 
     setConnecting(true);
     try {
-      if (!window.ergoConnector?.nautilus) {
-        alert("Nautilus wallet not found. Please install the Nautilus extension.");
-        return;
-      }
-
-      const ok = await window.ergoConnector.nautilus.connect({
-        createErgoObject: true,
-      });
-      if (!ok) return;
-
-      const api = await window.ergoConnector.nautilus.getContext();
+      // Poll for extension injection (async, per EIP-12 best practice)
+      const { connectNautilus } = await import("@/lib/wallet");
+      const api = await connectNautilus();
       const addrs = await api.get_used_addresses();
       const addr = addrs[0] ?? (await api.get_change_address());
       const balance = await api.get_balance("ERG");
