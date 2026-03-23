@@ -3,9 +3,13 @@
  */
 import { classifyBox, BoxState } from '@ergo-options/core';
 import { config } from './config.js';
+import { parseCollByte, parseCollLong } from './sigma.js';
 
 interface NodeBox {
   boxId: string;
+  transactionId: string;
+  index: number;
+  ergoTree: string;
   value: number;
   creationHeight: number;
   assets: { tokenId: string; amount: number }[];
@@ -36,16 +40,36 @@ async function fetchBoxes(address: string): Promise<NodeBox[]> {
 /**
  * Parse R7 (creation box ID) and R8[3] (maturityDate) from node register format.
  * Registers come as hex-encoded sigma serialization.
- * For a basic implementation, we extract key fields.
+ *
+ * R7 = Coll[Byte] (0x0e prefix) — 32-byte creation box ID
+ * R8 = Coll[Long] (0x11 prefix) — option params, index 3 = maturityDate
  */
 function parseBoxForClassification(box: NodeBox): {
   creationBoxId?: string;
   maturityDate?: bigint;
 } {
-  // R7 is at register index 3 (R4=0, R5=1, R6=2, R7=3)
-  // For now, return undefined — full parsing requires Fleet SDK deserializer
-  // The bot will use a simplified heuristic: token count > 1 means undelivered
-  return {};
+  const result: { creationBoxId?: string; maturityDate?: bigint } = {};
+
+  // Parse R7 — Coll[Byte] containing the 32-byte creation box ID
+  const r7hex = box.additionalRegisters.R7;
+  if (r7hex) {
+    const parsed = parseCollByte(r7hex);
+    if (parsed && parsed.length === 64) {
+      // 32 bytes = 64 hex chars
+      result.creationBoxId = parsed;
+    }
+  }
+
+  // Parse R8 — Coll[Long] containing option params
+  const r8hex = box.additionalRegisters.R8;
+  if (r8hex) {
+    const params = parseCollLong(r8hex);
+    if (params && params.length > 3) {
+      result.maturityDate = params[3]; // R8[3] = maturityDate (block height)
+    }
+  }
+
+  return result;
 }
 
 /**

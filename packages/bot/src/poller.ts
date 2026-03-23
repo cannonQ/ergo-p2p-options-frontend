@@ -5,6 +5,8 @@ import { config } from './config.js';
 import { scanAll, type ClassifiedBox } from './scanner.js';
 import { BoxState } from '@ergo-options/core';
 import { upsertBox, getRetryCount, incrementRetry, markResolved } from './state.js';
+import { executeDelivery } from './actions/deliver.js';
+import { executeClose } from './actions/close.js';
 
 let lastHeight = 0;
 
@@ -32,8 +34,17 @@ async function handleBox(box: ClassifiedBox, currentHeight: number) {
         const retries = getRetryCount(box.boxId);
         if (retries < config.maxDeliveryRetries) {
           console.log(`[ACTION] Retrying delivery for ${box.boxId.slice(0, 16)}... (attempt ${retries + 1})`);
-          // TODO: Call buildDeliverOptionTx from core, sign, and submit
-          incrementRetry(box.boxId, 'DELIVER_RETRY');
+          try {
+            const txId = await executeDelivery(box, currentHeight);
+            incrementRetry(box.boxId, 'DELIVER_RETRY');
+            if (txId) {
+              console.log(`[ACTION] Delivery TX submitted: ${txId}`);
+              markResolved(box.boxId);
+            }
+          } catch (err) {
+            console.error(`[ACTION] Delivery failed for ${box.boxId.slice(0, 16)}...:`, err);
+            incrementRetry(box.boxId, 'DELIVER_RETRY_FAILED');
+          }
         } else {
           console.log(`[ALERT] Delivery failed after ${retries} retries: ${box.boxId.slice(0, 16)}...`);
         }
@@ -47,9 +58,17 @@ async function handleBox(box: ClassifiedBox, currentHeight: number) {
     case BoxState.EXPIRED:
       if (config.autoCloseExpired) {
         console.log(`[ACTION] Auto-closing expired reserve: ${box.boxId.slice(0, 16)}...`);
-        // TODO: Call buildCloseExpiredTx from core, sign, and submit
-        incrementRetry(box.boxId, 'CLOSE');
-        markResolved(box.boxId);
+        try {
+          const txId = await executeClose(box, currentHeight);
+          incrementRetry(box.boxId, 'CLOSE');
+          if (txId) {
+            console.log(`[ACTION] Close TX submitted: ${txId}`);
+          }
+          markResolved(box.boxId);
+        } catch (err) {
+          console.error(`[ACTION] Close failed for ${box.boxId.slice(0, 16)}...:`, err);
+          incrementRetry(box.boxId, 'CLOSE_FAILED');
+        }
       }
       break;
   }
