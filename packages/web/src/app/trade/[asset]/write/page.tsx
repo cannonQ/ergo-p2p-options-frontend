@@ -12,6 +12,7 @@ import {
   USE_TOKEN_ID,
   SIGUSD_TOKEN_ID,
   CONTRACT_ADDRESSES,
+  OPTION_RESERVE_ERGOTREE,
   hasPhysicalDelivery,
   type OptionType as OptionTypeNum,
   type OptionStyle as OptionStyleNum,
@@ -50,11 +51,7 @@ const ASSET_MAP: Record<string, { name: string; index: number; unit: string }> =
 const BLOCKS_PER_DAY = 720;
 
 // OptionReserveV2 contract ErgoTree (hex) — production deployment
-// TODO: Replace with actual deployed contract ErgoTree after deployment
-const OPTION_CONTRACT_ERGOTREE =
-  CONTRACT_ADDRESSES[0]?.address
-    ? "" // Will be resolved from address when CONTRACT_ADDRESSES is populated
-    : "100604000e20" + "0".repeat(64); // placeholder
+const OPTION_CONTRACT_ERGOTREE = OPTION_RESERVE_ERGOTREE;
 
 // dApp UI fee tree — 36-byte P2PK ErgoTree for fee collection
 // TODO: Replace with actual fee collection address
