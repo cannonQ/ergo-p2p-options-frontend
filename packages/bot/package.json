@@ -12,11 +12,13 @@
   },
   "dependencies": {
     "@ergo-options/core": "workspace:*",
+    "@fleet-sdk/core": "^0.6.4",
+    "@fleet-sdk/wallet": "^0.12.0",
     "better-sqlite3": "^11.0.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.0",
-    "typescript": "^5.4.0",
-    "tsx": "^4.0.0"
+    "tsx": "^4.0.0",
+    "typescript": "^5.4.0"
   }
 }

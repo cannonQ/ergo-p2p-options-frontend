@@ -1,68 +1,87 @@
 /**
- * Transaction signing and submission via the Ergo node wallet API.
+ * Transaction signing via Fleet SDK mnemonic (no node wallet needed).
  *
- * The node must have its wallet unlocked (POST /wallet/unlock with password).
- * This avoids the WASM context extension serialization bug and is simpler
- * than using Fleet SDK's ErgoHDKey for signing.
+ * Uses ErgoHDKey from @fleet-sdk/wallet to derive keys from a mnemonic.
+ * The mnemonic is read from the BOT_MNEMONIC env var (source ~/.secrets).
+ *
+ * This avoids conflicting with the node's wallet (which may be in use
+ * by other services like the oracle operator).
  */
+import { ErgoHDKey, Prover } from '@fleet-sdk/wallet';
+import { ErgoAddress } from '@fleet-sdk/core';
 import { config } from './config.js';
 
-/**
- * Get the bot's wallet change address from the node.
- * Cached after first call.
- */
-let cachedChangeAddress: string | null = null;
+let cachedKey: ErgoHDKey | null = null;
+let cachedAddress: string | null = null;
+let cachedErgoTree: string | null = null;
 
-export async function getChangeAddress(): Promise<string> {
-  if (cachedChangeAddress) return cachedChangeAddress;
+function getMnemonic(): string {
+  const mnemonic = process.env.BOT_MNEMONIC;
+  if (!mnemonic) {
+    throw new Error(
+      'BOT_MNEMONIC env var not set. Run: source ~/.secrets\n' +
+      'Expected: export BOT_MNEMONIC="your 15 or 24 word mnemonic"'
+    );
+  }
+  return mnemonic;
+}
 
-  const res = await fetch(`${config.nodeUrl}/wallet/addresses`, {
-    headers: { 'Content-Type': 'application/json', 'api_key': 'hello' },
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to get wallet addresses: ${res.status} ${await res.text()}`);
-  }
-  const addresses: string[] = await res.json();
-  if (addresses.length === 0) {
-    throw new Error('No wallet addresses found — is the node wallet initialized?');
-  }
-  cachedChangeAddress = addresses[0];
-  return cachedChangeAddress;
+function getHDKey(): ErgoHDKey {
+  if (cachedKey) return cachedKey;
+  const mnemonic = getMnemonic();
+  const master = ErgoHDKey.fromMnemonicSync(mnemonic);
+  // Derive the first EIP-3 address (m/44'/429'/0'/0/0)
+  const derived = master.derive("m/44'/429'/0'/0/0");
+  cachedKey = derived;
+  return derived;
 }
 
 /**
- * Get the ErgoTree hex for the bot's wallet change address.
+ * Get the bot's wallet address (derived from mnemonic).
  */
-export async function getChangeErgoTree(): Promise<string> {
-  const address = await getChangeAddress();
-  const res = await fetch(`${config.nodeUrl}/utils/addressToRaw/${address}`);
-  if (!res.ok) {
-    throw new Error(`Failed to convert address to ErgoTree: ${res.status}`);
-  }
-  const data = await res.json();
-  return data.raw as string;
+export function getChangeAddress(): string {
+  if (cachedAddress) return cachedAddress;
+  const key = getHDKey();
+  const addr = ErgoAddress.fromPublicKey(key.publicKey);
+  cachedAddress = addr.toString();
+  console.log(`[SIGNER] Bot address: ${cachedAddress}`);
+  return cachedAddress;
 }
 
 /**
- * Sign a transaction via the Ergo node wallet API and submit it to the network.
+ * Get the ErgoTree hex for the bot's wallet address.
+ */
+export function getChangeErgoTree(): string {
+  if (cachedErgoTree) return cachedErgoTree;
+  const key = getHDKey();
+  const addr = ErgoAddress.fromPublicKey(key.publicKey);
+  cachedErgoTree = addr.ergoTree;
+  return cachedErgoTree;
+}
+
+/**
+ * Sign an unsigned transaction using the bot's mnemonic-derived key.
  *
- * @param unsignedTx EIP-12 format unsigned transaction object
- * @returns Transaction ID of the submitted transaction
+ * For permissionless contract TXs (mint, deliver, close), the contract
+ * inputs evaluate to true without a signature. The bot's key only signs
+ * the P2PK input(s) that provide miner fee ERG.
  */
-export async function signAndSubmitTx(unsignedTx: unknown): Promise<string> {
-  // Sign via node wallet
-  const signRes = await fetch(`${config.nodeUrl}/wallet/transaction/sign`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'api_key': 'hello' },
-    body: JSON.stringify(unsignedTx),
-  });
-  if (!signRes.ok) {
-    const body = await signRes.text();
-    throw new Error(`Sign failed (${signRes.status}): ${body}`);
-  }
-  const signedTx = await signRes.json();
+export function signTx(unsignedTx: any): any {
+  const key = getHDKey();
+  const prover = new Prover();
+  return prover.signTransaction(unsignedTx, [key]);
+}
 
-  // Submit to network
+/**
+ * Sign and submit a transaction to the Ergo network.
+ *
+ * @param unsignedTx EIP-12 format unsigned transaction
+ * @returns Transaction ID
+ */
+export async function signAndSubmitTx(unsignedTx: any): Promise<string> {
+  const signedTx = signTx(unsignedTx);
+
+  // Submit to network via node API (no wallet auth needed for submission)
   const submitRes = await fetch(`${config.nodeUrl}/transactions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -73,7 +92,6 @@ export async function signAndSubmitTx(unsignedTx: unknown): Promise<string> {
     throw new Error(`Submit failed (${submitRes.status}): ${body}`);
   }
 
-  // Returns TX ID as a JSON string
   const txId: string = await submitRes.json();
   return txId;
 }
