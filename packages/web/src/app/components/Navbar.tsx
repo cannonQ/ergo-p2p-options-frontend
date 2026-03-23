@@ -57,10 +57,12 @@ export function Navbar() {
 
         <div className="flex items-center gap-6">
           {/* Trade dropdown */}
-          <div className="relative">
+          <div
+            className="relative"
+            onMouseLeave={() => setTradeOpen(false)}
+          >
             <button
               onClick={() => setTradeOpen(!tradeOpen)}
-              onBlur={() => setTimeout(() => setTradeOpen(false), 200)}
               className="text-[#94a3b8] hover:text-[#e2e8f0] transition-colors flex items-center gap-1"
             >
               Trade
@@ -70,7 +72,8 @@ export function Navbar() {
             </button>
 
             {tradeOpen && (
-              <div className="absolute top-full left-0 mt-2 w-72 bg-[#0a0e17] border border-[#1e293b] rounded-lg shadow-xl z-50 py-1">
+              <div className="absolute top-full left-0 pt-2 w-72 z-50">
+              <div className="bg-[#0a0e17] border border-[#1e293b] rounded-lg shadow-xl py-1">
                 {ASSET_CATEGORIES.map((cat) => (
                   <div key={cat.label}>
                     <div className="px-3 py-2 text-[10px] font-bold text-[#3b82f6] uppercase tracking-widest border-b border-[#1e293b]/50 bg-[#131a2a]">
@@ -93,6 +96,7 @@ export function Navbar() {
                     ))}
                   </div>
                 ))}
+              </div>
               </div>
             )}
           </div>

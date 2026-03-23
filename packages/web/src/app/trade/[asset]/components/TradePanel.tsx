@@ -8,7 +8,7 @@ interface TradePanelProps {
   strike: number;
   type: "call" | "put";
   expiry: string;
-  premium: number;      // ERG per contract
+  premium: number;      // stablecoin per contract
   available: number;    // contracts available
   onClose: () => void;
 }
@@ -26,7 +26,7 @@ export function TradePanel({
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [quantity, setQuantity] = useState<string>("1");
   const [slippage, setSlippage] = useState<string>("1.0");
-  const [stablecoin, setStablecoin] = useState<string>("SigUSD");
+  const [stablecoin, setStablecoin] = useState<string>("USE");
 
   const qty = parseInt(quantity) || 0;
   const total = qty * premium;
@@ -34,12 +34,13 @@ export function TradePanel({
   const accentColor = isCall ? "#22c55e" : "#ef4444";
   const typeLabel = isCall ? "Call" : "Put";
 
-  // Exercise math
+  // Exercise math — pay/receive in stablecoins, not dollars
+  const stableDecimals = stablecoin === "USE" ? 3 : 2;
   const exerciseReceive = isCall
     ? `${qty} ${assetName}`
-    : `$${(qty * strike).toFixed(2)}`;
+    : `${(qty * strike).toFixed(stableDecimals)} ${stablecoin}`;
   const exercisePay = isCall
-    ? `$${(qty * strike).toFixed(2)}`
+    ? `${(qty * strike).toFixed(stableDecimals)} ${stablecoin}`
     : `${qty} ${assetName}`;
   const breakeven = isCall
     ? strike + premium * spotPrice   // strike + premium converted to asset terms
@@ -78,7 +79,7 @@ export function TradePanel({
               {typeLabel}
             </span>
             <span className="font-bold text-[#e2e8f0]">{assetName}</span>
-            <span className="text-[#eab308] font-mono">${strike.toLocaleString()}</span>
+            <span className="text-[#eab308] font-mono">${strike >= 100 ? strike.toFixed(0) : strike >= 1 ? strike.toFixed(2) : strike.toFixed(4)}</span>
             <span className="text-[#94a3b8] text-sm">Exp: {expiry}</span>
           </div>
           <button
@@ -122,7 +123,7 @@ export function TradePanel({
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-[#94a3b8]">Premium</span>
-              <span className="text-[#eab308] font-mono">{premium.toFixed(4)} ERG</span>
+              <span className="text-[#eab308] font-mono">{premium.toFixed(stableDecimals)} {stablecoin}</span>
             </div>
           </div>
 
@@ -143,7 +144,7 @@ export function TradePanel({
           <div className="flex justify-between items-center px-1">
             <span className="text-[#94a3b8] text-sm">Total</span>
             <span className="text-[#eab308] font-mono text-xl font-bold">
-              {total.toFixed(4)} ERG
+              {total.toFixed(stableDecimals)} {stablecoin}
             </span>
           </div>
 
@@ -189,7 +190,8 @@ export function TradePanel({
                 onChange={(e) => setStablecoin(e.target.value)}
                 className="w-full bg-[#0a0e17] border border-[#1e293b] rounded-lg px-3 py-2 text-[#e2e8f0] text-sm focus:border-[#3b82f6] focus:outline-none appearance-none cursor-pointer"
               >
-                <option value="SigUSD">SigUSD</option>
+                <option value="USE">USE ($1 = 1000)</option>
+                <option value="SigUSD">SigUSD ($1 = 100)</option>
               </select>
             </div>
           </div>

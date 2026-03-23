@@ -23,17 +23,26 @@ import { Tooltip } from "@/app/components/Tooltip";
 import { fetchHeight } from "@/lib/api";
 
 const ASSET_MAP: Record<string, { name: string; index: number; unit: string }> = {
+  // Crypto — Physical Delivery (Rosen Bridge)
   eth: { name: "ETH", index: 0, unit: "rsETH" },
   btc: { name: "BTC", index: 1, unit: "rsBTC" },
   bnb: { name: "BNB", index: 2, unit: "rsBNB" },
   doge: { name: "DOGE", index: 3, unit: "rsDOGE" },
   ada: { name: "ADA", index: 4, unit: "rsADA" },
   erg: { name: "ERG", index: 17, unit: "ERG" },
+  // Crypto — Cash Settlement
+  hns: { name: "HNS", index: 5, unit: "USE/SigUSD" },
+  ckb: { name: "CKB", index: 6, unit: "USE/SigUSD" },
+  atom: { name: "ATOM", index: 7, unit: "USE/SigUSD" },
+  firo: { name: "FIRO", index: 19, unit: "USE/SigUSD" },
+  // Commodities & Metals
   gold: { name: "Gold", index: 18, unit: "DexyGold" },
+  silver: { name: "Silver", index: 11, unit: "USE/SigUSD" },
+  copper: { name: "Copper", index: 12, unit: "USE/SigUSD" },
   brent: { name: "Brent", index: 13, unit: "USE/SigUSD" },
   wti: { name: "WTI", index: 14, unit: "USE/SigUSD" },
   natgas: { name: "NatGas", index: 15, unit: "USE/SigUSD" },
-  lithium: { name: "Lithium", index: 16, unit: "USE/SigUSD" },
+  // Indices
   spx: { name: "S&P 500", index: 9, unit: "USE/SigUSD" },
   dji: { name: "DJI", index: 10, unit: "USE/SigUSD" },
 };
@@ -427,7 +436,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                   return Math.pow(10, mag).toString();
                 })()}
                 className="w-40 bg-[#131a2a] border border-[#1e293b] rounded-lg px-3 py-2 text-[#eab308] font-mono focus:border-[#3b82f6] focus:outline-none" />
-              <span className="text-sm text-[#94a3b8]">ERG/contract</span>
+              <span className="text-sm text-[#94a3b8]">{stablecoin}/contract</span>
               {premium && suggestedPremium > 0 && (
                 <button
                   onClick={() => setPremium("")}
@@ -480,7 +489,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           <label className="flex items-center gap-2 text-sm text-[#94a3b8] cursor-pointer">
             <input type="checkbox" checked={autoList} onChange={(e) => setAutoList(e.target.checked)}
               className="w-4 h-4 rounded border-[#1e293b] bg-[#0a0e17] text-[#3b82f6] focus:ring-[#3b82f6]" />
-            Auto-list on market at {premium || suggestedPremium.toFixed(6) || "—"} ERG after minting
+            Auto-list on market at {premium || suggestedPremium.toFixed(6) || "—"} {stablecoin} after minting
           </label>
 
           {/* Submit */}

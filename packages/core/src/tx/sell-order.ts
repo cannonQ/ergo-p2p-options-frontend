@@ -2,9 +2,12 @@
  * Build sell order transactions (create, buy, cancel).
  * Port of SellOrder.scala — FixedPriceSell contract.
  *
- * Create: Writer lists option tokens at a fixed ERG price.
- * Buy: Buyer purchases option tokens (partial or full fill).
+ * Create: Writer lists option tokens at a fixed stablecoin price.
+ * Buy: Buyer purchases option tokens with stablecoin (partial or full fill).
  * Cancel: Writer reclaims unsold tokens.
+ *
+ * Payment is in stablecoin (USE or SigUSD), NOT ERG.
+ * The contract uses PAYMENT_TOKEN_ID compile-time constant.
  */
 import {
   OutputBuilder,
@@ -26,8 +29,10 @@ export interface CreateSellOrderParams {
   optionTokenId: string;
   /** Number of tokens to list */
   tokenAmount: bigint;
-  /** Price per token in nanoERG */
+  /** Price per token in stablecoin raw units (USE: 1000/dollar, SigUSD: 100/dollar) */
   premiumPerToken: bigint;
+  /** Stablecoin token ID used for payment */
+  paymentTokenId: string;
   /** dApp UI fee per 1000 (e.g., 10 = 1%) */
   dAppUIFeePer1000: bigint;
   /** Seller's SigmaProp (pre-serialized hex string for R4) */
@@ -78,13 +83,15 @@ export interface BuyFromSellOrderParams {
   premiumPerToken: bigint;
   dAppUIFeePer1000: bigint;
   contractTxFee: bigint;
+  /** Stablecoin token ID for payment */
+  paymentTokenId: string;
   /** Seller's address ErgoTree (hex) — from R4 */
   sellerErgoTree: string;
   /** dApp UI fee address ErgoTree (hex) — from R6 */
   dAppUIFeeErgoTree: string;
   /** Preserved registers from sell box */
   registers: Record<string, string>;
-  /** Buyer's wallet boxes (for payment) */
+  /** Buyer's wallet boxes (for payment — must contain stablecoin) */
   buyerBoxes: Box<Amount>[];
   /** Buyer's change address ErgoTree (hex) */
   changeErgoTree: string;
@@ -128,19 +135,18 @@ export function buildBuyFromSellOrderTx(
     );
   }
 
-  // OUTPUTS[1]: seller payment
-  const sellerPayment = (() => {
-    const v = sellerPaid - contractTxFee;
-    return v < MIN_BOX_VALUE ? MIN_BOX_VALUE : v;
-  })();
-  outputs.push(
-    new OutputBuilder(sellerPayment, sellerErgoTree)
-  );
+  // OUTPUTS[1]: seller receives stablecoin payment (not ERG)
+  const sellerOutput = new OutputBuilder(MIN_BOX_VALUE, sellerErgoTree);
+  if (sellerPaid > 0n) {
+    sellerOutput.addTokens({ tokenId: params.paymentTokenId, amount: sellerPaid });
+  }
+  outputs.push(sellerOutput);
 
-  // OUTPUTS[2]: dApp UI fee (only if > MIN_BOX_VALUE)
-  if (uiFee > MIN_BOX_VALUE) {
+  // OUTPUTS[2]: dApp UI fee in stablecoin (if > 0)
+  if (uiFee > 0n) {
     outputs.push(
-      new OutputBuilder(uiFee, dAppUIFeeErgoTree)
+      new OutputBuilder(MIN_BOX_VALUE, dAppUIFeeErgoTree)
+        .addTokens({ tokenId: params.paymentTokenId, amount: uiFee })
     );
   }
 
