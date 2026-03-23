@@ -3,17 +3,13 @@
 import { useState, useCallback, useRef } from "react";
 import {
   buildCreateOptionTx,
-  buildMintOptionTx,
-  buildDeliverOptionTx,
-  MINER_FEE,
   ERG_ORACLE_INDEX,
-  REGISTRY_RATES,
   REGISTRY_TOKEN_IDS,
   hexToBytes,
+  CONTRACT_ADDRESSES,
   type OptionType,
   type OptionStyle,
   type SettlementType,
-  type OptionParams,
 } from "@ergo-options/core";
 import {
   connectNautilus,
@@ -22,6 +18,7 @@ import {
   getChangeAddress,
 } from "@/lib/wallet";
 import { fetchHeight, submitTransaction, checkMempoolTx } from "@/lib/api";
+import type { PollResponse } from "@/app/api/poll/[boxId]/route";
 
 /** Parameters the write page passes to the hook */
 export interface WriteOptionInput {
@@ -47,12 +44,16 @@ export interface WriteOptionInput {
 }
 
 export interface WriteOptionResult {
-  step: number; // 0=idle, 1=create, 2=mint, 3=deliver, 4=done
+  /** 0=form, 1=signing create TX, 2=waiting for bot mint, 3=waiting for bot deliver, 4=done */
+  step: number;
   error: string | null;
-  txIds: { create?: string; mint?: string; deliver?: string };
+  txIds: { create?: string };
   execute: (input: WriteOptionInput) => Promise<void>;
   reset: () => void;
 }
+
+const POLL_INTERVAL_MS = 10_000; // 10 seconds
+const POLL_TIMEOUT_MS = 5 * 60_000; // 5 minutes
 
 /**
  * Wait for a TX to appear in the mempool or get confirmed.
@@ -128,9 +129,6 @@ function ergoTreeToECPoint(ergoTreeHex: string): Uint8Array {
 async function addressToErgoTree(address: string): Promise<string> {
   const res = await fetch(`/api/address-to-tree?address=${encodeURIComponent(address)}`);
   if (!res.ok) {
-    // Fallback: Nautilus addresses are P2PK — we can decode inline
-    // For P2PK: network byte (1) + ergoTree (36 bytes) + checksum (4) = 41 bytes base58
-    // But decoding base58 in JS without a lib is messy, so we use a different approach.
     throw new Error("Could not resolve address to ErgoTree");
   }
   const data = await res.json();
@@ -152,17 +150,95 @@ async function getErgoTreeFromWallet(api: any): Promise<string> {
   return addressToErgoTree(addr);
 }
 
+/**
+ * Poll the definition box state via the /api/poll/[boxId] route.
+ * Returns the current state of the box.
+ */
+async function pollBoxState(
+  boxId: string,
+  contractAddress: string,
+): Promise<PollResponse> {
+  const res = await fetch(
+    `/api/poll/${boxId}?contractAddress=${encodeURIComponent(contractAddress)}`,
+  );
+  if (!res.ok) {
+    throw new Error(`Poll failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+/**
+ * Wait for the definition box to reach a target state by polling.
+ * Calls onStateChange when the state transitions.
+ */
+async function waitForState(
+  boxId: string,
+  contractAddress: string,
+  targetStates: string[],
+  abortSignal: AbortSignal,
+  onStateChange?: (state: string) => void,
+): Promise<PollResponse> {
+  const deadline = Date.now() + POLL_TIMEOUT_MS;
+
+  while (Date.now() < deadline) {
+    if (abortSignal.aborted) {
+      throw new Error("Operation cancelled");
+    }
+
+    try {
+      const response = await pollBoxState(boxId, contractAddress);
+
+      if (onStateChange) {
+        onStateChange(response.state);
+      }
+
+      if (targetStates.includes(response.state)) {
+        return response;
+      }
+    } catch {
+      // ignore transient poll errors, will retry
+    }
+
+    // Wait before next poll
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(resolve, POLL_INTERVAL_MS);
+      const onAbort = () => {
+        clearTimeout(timer);
+        reject(new Error("Operation cancelled"));
+      };
+      abortSignal.addEventListener("abort", onAbort, { once: true });
+    });
+  }
+
+  throw new Error(
+    "Timed out waiting for bot to process the option (5 minutes). " +
+    "Check your portfolio — the definition box may need manual recovery.",
+  );
+}
+
+/**
+ * Get the contract address for the current deployment.
+ * Uses the first CONTRACT_ADDRESSES entry.
+ */
+function getContractAddress(): string {
+  if (CONTRACT_ADDRESSES.length === 0) {
+    throw new Error("No contract addresses configured");
+  }
+  return CONTRACT_ADDRESSES[0].address;
+}
+
 export function useWriteOption(): WriteOptionResult {
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [txIds, setTxIds] = useState<{
-    create?: string;
-    mint?: string;
-    deliver?: string;
-  }>({});
+  const [txIds, setTxIds] = useState<{ create?: string }>({});
   const executingRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   const reset = useCallback(() => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
     setStep(0);
     setError(null);
     setTxIds({});
@@ -174,6 +250,10 @@ export function useWriteOption(): WriteOptionResult {
     executingRef.current = true;
     setError(null);
     setTxIds({});
+
+    // Create an abort controller for the polling phase
+    const abortController = new AbortController();
+    abortRef.current = abortController;
 
     try {
       // Connect wallet
@@ -192,7 +272,7 @@ export function useWriteOption(): WriteOptionResult {
       const decimals = "0";
 
       // ---------------------------------------------------------------
-      // Step 1: Create Definition Box
+      // Step 1: Create Definition Box (user signs with Nautilus)
       // ---------------------------------------------------------------
       setStep(1);
 
@@ -232,127 +312,60 @@ export function useWriteOption(): WriteOptionResult {
       // Convert to EIP-12 format for Nautilus signing
       const createEip12 = unsignedCreateTx.toEIP12Object();
 
-      // Sign via Nautilus
+      // Sign via Nautilus (this is the ONLY wallet signature)
       const signedCreateTx = await signTx(api, createEip12);
 
       // Submit via API route
       const createTxId = await submitTransaction(signedCreateTx);
-      setTxIds((prev) => ({ ...prev, create: createTxId }));
+      setTxIds({ create: createTxId });
 
       // Wait for mempool acceptance
       await waitForMempool(createTxId);
 
+      // Get the definition box ID from the signed TX
+      const definitionBox = findOutputBox(signedCreateTx, input.contractErgoTree);
+      if (!definitionBox.boxId) {
+        throw new Error("Signed TX output missing boxId — cannot track state");
+      }
+      const definitionBoxId: string = definitionBox.boxId;
+
       // ---------------------------------------------------------------
-      // Step 2: Mint Option Tokens
+      // Step 2: Wait for bot to mint (automatic — no user action)
       // ---------------------------------------------------------------
       setStep(2);
 
-      // The definition box is the output at the contract address
-      const definitionBox = findOutputBox(signedCreateTx, input.contractErgoTree);
+      const contractAddress = getContractAddress();
 
-      // The definition box ID is the create TX's first output at contract addr
-      // We need to construct the box ID. In Ergo, output box IDs are computed
-      // by the node. The signed TX should have output box IDs.
-      // Nautilus signed TX outputs have boxId field.
-      if (!definitionBox.boxId) {
-        throw new Error("Signed TX output missing boxId — cannot proceed to mint");
-      }
-
-      // Parse the R8 params for mint
-      const optionParams: OptionParams = {
-        optionType: input.optionType,
-        style: input.style,
-        shareSize: input.shareSize,
-        maturityDate: input.maturityHeight,
-        strikePrice: input.strikePrice,
-        dAppUIMintFee: input.dAppUIMintFee,
-        txFee: MINER_FEE,
-        oracleIndex: input.oracleIndex,
-        settlementType: input.settlementType,
-        collateralCap: input.collateralCap,
-        stablecoinDecimal: input.stablecoinDecimal,
-      };
-
-      // We need serialized register values from the definition box
-      const defRegisters = definitionBox.additionalRegisters;
-      if (!defRegisters?.R4 || !defRegisters?.R5 || !defRegisters?.R6 || !defRegisters?.R8 || !defRegisters?.R9) {
-        throw new Error("Definition box missing required registers");
-      }
-
-      // Convert the definition box to Fleet SDK format for the mint builder
-      const defBoxFleet = nautilusBoxToFleet(definitionBox);
-
-      const mintParams = {
-        definitionBox: defBoxFleet,
-        contractErgoTree: input.contractErgoTree,
-        params: optionParams,
-        registryRates: REGISTRY_RATES,
-        registers: {
-          R4: defRegisters.R4,
-          R5: defRegisters.R5,
-          R6: defRegisters.R6,
-          R8: defRegisters.R8,
-          R9: defRegisters.R9,
+      // Poll until the box transitions to MINTED or DELIVERED
+      // (bot may mint+deliver so fast we skip straight to DELIVERED)
+      await waitForState(
+        definitionBoxId,
+        contractAddress,
+        ["MINTED", "DELIVERED"],
+        abortController.signal,
+        (state) => {
+          // If we see MINTED, advance to step 3
+          if (state === "MINTED") {
+            setStep(3);
+          }
         },
-        changeErgoTree,
-      };
-
-      // Build unsigned mint TX
-      const unsignedMintTx = buildMintOptionTx(mintParams, currentHeight);
-      const mintEip12 = unsignedMintTx.toEIP12Object();
-
-      // Sign via Nautilus
-      const signedMintTx = await signTx(api, mintEip12);
-
-      // Submit
-      const mintTxId = await submitTransaction(signedMintTx);
-      setTxIds((prev) => ({ ...prev, mint: mintTxId }));
-
-      // Wait for mempool acceptance
-      await waitForMempool(mintTxId);
+      );
 
       // ---------------------------------------------------------------
-      // Step 3: Deliver Option Tokens
+      // Step 3: Wait for bot to deliver (automatic — no user action)
       // ---------------------------------------------------------------
       setStep(3);
 
-      // The reserve box is the output at the contract address from the mint TX
-      const reserveBox = findOutputBox(signedMintTx, input.contractErgoTree);
-
-      if (!reserveBox.boxId) {
-        throw new Error("Signed mint TX output missing boxId — cannot proceed to deliver");
-      }
-
-      const reserveRegisters = reserveBox.additionalRegisters;
-      if (!reserveRegisters) {
-        throw new Error("Reserve box missing registers");
-      }
-
-      const reserveBoxFleet = nautilusBoxToFleet(reserveBox);
-
-      const deliverParams = {
-        reserveBox: reserveBoxFleet,
-        issuerECPoint,
-        registers: reserveRegisters,
-        changeErgoTree,
-      };
-
-      // Build unsigned deliver TX
-      const unsignedDeliverTx = buildDeliverOptionTx(deliverParams, currentHeight);
-      const deliverEip12 = unsignedDeliverTx.toEIP12Object();
-
-      // Sign via Nautilus
-      const signedDeliverTx = await signTx(api, deliverEip12);
-
-      // Submit
-      const deliverTxId = await submitTransaction(signedDeliverTx);
-      setTxIds((prev) => ({ ...prev, deliver: deliverTxId }));
-
-      // Wait for mempool acceptance
-      await waitForMempool(deliverTxId);
+      // If already DELIVERED from the previous poll, this returns immediately
+      await waitForState(
+        definitionBoxId,
+        contractAddress,
+        ["DELIVERED"],
+        abortController.signal,
+      );
 
       // ---------------------------------------------------------------
-      // Step 4: Done
+      // Step 4: Done — tokens are in the user's wallet
       // ---------------------------------------------------------------
       setStep(4);
     } catch (err: any) {
@@ -361,6 +374,7 @@ export function useWriteOption(): WriteOptionResult {
       setError(message);
     } finally {
       executingRef.current = false;
+      abortRef.current = null;
     }
   }, []);
 

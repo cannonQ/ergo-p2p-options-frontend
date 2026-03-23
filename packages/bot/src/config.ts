@@ -21,7 +21,13 @@ export const config = {
   /** Auto-close expired reserves */
   autoCloseExpired: process.env.AUTO_CLOSE_EXPIRED !== 'false',
 
-  /** Alert blocks for stuck definition boxes */
+  /** Blocks before auto-minting a definition box */
+  stuckMintBlocks: Number(process.env.STUCK_MINT_BLOCKS || 1),
+
+  /** Max mint retries before alerting */
+  maxMintRetries: Number(process.env.MAX_MINT_RETRIES || 3),
+
+  /** Alert blocks for stuck definition boxes (legacy, used if mint keeps failing) */
   stuckDefinitionBlocks: Number(process.env.STUCK_DEFINITION_BLOCKS || 10),
 
   /** Contract addresses to monitor (comma-separated) */

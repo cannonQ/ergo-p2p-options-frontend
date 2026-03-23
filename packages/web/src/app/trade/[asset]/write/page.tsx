@@ -53,10 +53,14 @@ const BLOCKS_PER_DAY = 720;
 // OptionReserveV2 contract ErgoTree (hex) — production deployment
 const OPTION_CONTRACT_ERGOTREE = OPTION_RESERVE_ERGOTREE;
 
-// dApp UI fee tree — 36-byte P2PK ErgoTree for fee collection
-// TODO: Replace with actual fee collection address
-const DAPP_UI_FEE_TREE = new Uint8Array(36);
-const DAPP_UI_MINT_FEE = 0n; // no mint fee for now
+// dApp UI fee address: 9ewpUXoFqTomiiAxkj7P5x1FLvQ5Ldsn95XZiTpJaVpgUr3VZeS
+// P2PK ErgoTree = 0x0008cd + 33-byte EC point
+const DAPP_UI_FEE_TREE_HEX = '0008cd02383747243fed0a3ae9fcf0f3936d92447b57bb34c53faf5c5c0a105fbf42b4c8';
+const DAPP_UI_FEE_TREE = new Uint8Array(
+  DAPP_UI_FEE_TREE_HEX.match(/.{2}/g)!.map(b => parseInt(b, 16))
+);
+// Mint fee: 0.01 ERG (covers bot's miner fees for mint + deliver)
+const DAPP_UI_MINT_FEE = 10_000_000n;
 
 export default function WritePage({ params }: { params: { asset: string } }) {
   const info = ASSET_MAP[params.asset];
@@ -72,7 +76,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
   const [autoList, setAutoList] = useState(true);
   const [contractSize, setContractSize] = useState("");
 
-  // Write option hook — manages the 3-TX chain
+  // Write option hook — single signature, bot handles mint + deliver
   const {
     step,
     error: writeError,
@@ -547,6 +551,9 @@ export default function WritePage({ params }: { params: { asset: string } }) {
             disabled={!strike || contracts <= 0 || cSize <= 0}>
             Lock Collateral &amp; Mint
           </button>
+          <p className="text-xs text-[#94a3b8] text-center">
+            You sign once. Our bot handles the rest in ~1 minute.
+          </p>
         </div>
       ) : (
         /* Step progress for TX chain */
@@ -555,9 +562,28 @@ export default function WritePage({ params }: { params: { asset: string } }) {
             {step >= 4 ? "Option Created" : "Creating Option..."}
           </h2>
           {[
-            { label: "Create Definition Box", desc: "Locking collateral at contract address", num: 1, txKey: "create" as const },
-            { label: "Mint Option Tokens", desc: `Minting ${contracts + 1} tokens (${contracts} tradeable + 1 singleton)`, num: 2, txKey: "mint" as const },
-            { label: "Deliver to Wallet", desc: "Sending option tokens to your wallet", num: 3, txKey: "deliver" as const },
+            {
+              label: "Create Definition Box",
+              desc: step === 1 ? "Sign with Nautilus" : "Collateral locked at contract address",
+              num: 1,
+              isUserAction: true,
+            },
+            {
+              label: "Mint Option Tokens",
+              desc: step === 2
+                ? "Bot is minting... (~30s)"
+                : `${contracts + 1} tokens (${contracts} tradeable + 1 singleton)`,
+              num: 2,
+              isUserAction: false,
+            },
+            {
+              label: "Deliver to Wallet",
+              desc: step === 3
+                ? "Bot is delivering... (~30s)"
+                : "Option tokens sent to your wallet",
+              num: 3,
+              isUserAction: false,
+            },
           ].map((s) => (
             <div key={s.num} className="flex items-start gap-3">
               <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold ${
@@ -566,16 +592,23 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                   : step === s.num && writeError ? "bg-[#ef4444] text-white"
                   : "bg-[#1e293b] text-[#94a3b8]"
               }`}>
-                {step > s.num ? "✓" : s.num}
+                {step > s.num ? "\u2713" : s.num}
               </div>
               <div className="min-w-0 flex-1">
-                <span className={step >= s.num ? "text-[#e2e8f0]" : "text-[#94a3b8]"}>
-                  {s.label}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={step >= s.num ? "text-[#e2e8f0]" : "text-[#94a3b8]"}>
+                    {s.label}
+                  </span>
+                  {!s.isUserAction && step >= s.num && step <= s.num && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-[#3b82f6]/10 text-[#3b82f6]">
+                      automatic
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-[#94a3b8]">{s.desc}</p>
-                {txIds[s.txKey] && (
+                {s.num === 1 && txIds.create && (
                   <p className="text-xs text-[#3b82f6] font-mono mt-0.5 truncate">
-                    TX: {txIds[s.txKey]}
+                    TX: {txIds.create}
                   </p>
                 )}
               </div>
@@ -595,9 +628,15 @@ export default function WritePage({ params }: { params: { asset: string } }) {
             </div>
           )}
 
-          {step < 4 && !writeError && (
+          {step < 4 && step >= 2 && !writeError && (
+            <p className="text-xs text-[#94a3b8] mt-2">
+              You can safely wait. The bot handles minting and delivery automatically.
+            </p>
+          )}
+
+          {step === 1 && !writeError && (
             <p className="text-xs text-[#f59e0b] mt-2">
-              Do not close this page until all steps complete. Each step requires a wallet signature.
+              Approve the transaction in your Nautilus wallet.
             </p>
           )}
 

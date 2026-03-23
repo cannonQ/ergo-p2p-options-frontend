@@ -7,6 +7,7 @@ import { BoxState } from '@ergo-options/core';
 import { upsertBox, getRetryCount, incrementRetry, markResolved } from './state.js';
 import { executeDelivery } from './actions/deliver.js';
 import { executeClose } from './actions/close.js';
+import { executeMint } from './actions/mint.js';
 
 let lastHeight = 0;
 
@@ -24,8 +25,24 @@ async function handleBox(box: ClassifiedBox, currentHeight: number) {
 
   switch (box.state) {
     case BoxState.DEFINITION:
-      if (age > config.stuckDefinitionBlocks) {
-        console.log(`[ALERT] Stuck definition box: ${box.boxId.slice(0, 16)}... age=${age} blocks`);
+      if (age > config.stuckMintBlocks) {
+        const retries = getRetryCount(box.boxId);
+        if (retries < config.maxMintRetries) {
+          console.log(`[ACTION] Auto-minting definition box ${box.boxId.slice(0, 16)}... (attempt ${retries + 1})`);
+          try {
+            const txId = await executeMint(box, currentHeight);
+            incrementRetry(box.boxId, 'MINT');
+            if (txId) {
+              console.log(`[ACTION] Mint TX submitted: ${txId}`);
+              markResolved(box.boxId);
+            }
+          } catch (err) {
+            console.error(`[ACTION] Mint failed for ${box.boxId.slice(0, 16)}...:`, err);
+            incrementRetry(box.boxId, 'MINT_FAILED');
+          }
+        } else if (age > config.stuckDefinitionBlocks) {
+          console.log(`[ALERT] Stuck definition box after ${retries} mint retries: ${box.boxId.slice(0, 16)}... age=${age} blocks`);
+        }
       }
       break;
 
