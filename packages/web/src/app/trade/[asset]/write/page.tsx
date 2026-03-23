@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import Link from "next/link";
 import {
   ORACLE_DECIMAL,
@@ -8,9 +8,19 @@ import {
   MIN_BOX_VALUE,
   ERG_ORACLE_INDEX,
   REGISTRY_RATES,
+  REGISTRY_TOKEN_IDS,
+  USE_TOKEN_ID,
+  SIGUSD_TOKEN_ID,
+  CONTRACT_ADDRESSES,
   hasPhysicalDelivery,
+  type OptionType as OptionTypeNum,
+  type OptionStyle as OptionStyleNum,
+  type SettlementType as SettlementTypeNum,
 } from "@ergo-options/core";
 import { bsCall, bsPut, blocksToYears, oracleVolToDecimal } from "@ergo-options/core";
+import { useWriteOption, type WriteOptionInput } from "@/lib/hooks/useWriteOption";
+import { Tooltip } from "@/app/components/Tooltip";
+import { fetchHeight } from "@/lib/api";
 
 const ASSET_MAP: Record<string, { name: string; index: number; unit: string }> = {
   eth: { name: "ETH", index: 0, unit: "rsETH" },
@@ -30,6 +40,18 @@ const ASSET_MAP: Record<string, { name: string; index: number; unit: string }> =
 
 const BLOCKS_PER_DAY = 720;
 
+// OptionReserveV2 contract ErgoTree (hex) — production deployment
+// TODO: Replace with actual deployed contract ErgoTree after deployment
+const OPTION_CONTRACT_ERGOTREE =
+  CONTRACT_ADDRESSES[0]?.address
+    ? "" // Will be resolved from address when CONTRACT_ADDRESSES is populated
+    : "100604000e20" + "0".repeat(64); // placeholder
+
+// dApp UI fee tree — 36-byte P2PK ErgoTree for fee collection
+// TODO: Replace with actual fee collection address
+const DAPP_UI_FEE_TREE = new Uint8Array(36);
+const DAPP_UI_MINT_FEE = 0n; // no mint fee for now
+
 export default function WritePage({ params }: { params: { asset: string } }) {
   const info = ASSET_MAP[params.asset];
 
@@ -42,11 +64,38 @@ export default function WritePage({ params }: { params: { asset: string } }) {
   const [expiryDays, setExpiryDays] = useState("7");
   const [premium, setPremium] = useState("");
   const [autoList, setAutoList] = useState(true);
-  const [step, setStep] = useState(0); // 0=form, 1=create, 2=mint, 3=deliver, 4=done
 
-  // Placeholder oracle values (will come from store in production)
-  const spotPrice = 0; // USD, from oracle
-  const oracleVol = 5500; // bps, from oracle R5
+  // Write option hook — manages the 3-TX chain
+  const {
+    step,
+    error: writeError,
+    txIds,
+    execute: executeWrite,
+    reset: resetWrite,
+  } = useWriteOption();
+
+  // Fetch oracle data client-side (spot price + volatility)
+  const [spotPrice, setSpotPrice] = useState(0);
+  const [oracleVol, setOracleVol] = useState(5500); // bps, default fallback
+
+  useEffect(() => {
+    if (!info) return;
+    fetch(`/api/spot?index=${info.index}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.price) {
+          setSpotPrice(data.price);
+          // Default strike to current oracle price (rounded to sensible precision)
+          if (!strike) {
+            const p = data.price;
+            const decimals = p >= 100 ? 0 : p >= 1 ? 2 : p >= 0.01 ? 4 : 6;
+            setStrike(p.toFixed(decimals));
+          }
+        }
+        if (data.vol) setOracleVol(data.vol);
+      })
+      .catch(() => {});
+  }, [info]);
 
   const stablecoinDecimal = stablecoin === "USE" ? 1000n : 100n;
   const expiryBlocks = Number(expiryDays || 0) * BLOCKS_PER_DAY;
@@ -95,13 +144,111 @@ export default function WritePage({ params }: { params: { asset: string } }) {
   // ERG deposit for non-ERG collateral options
   const ergDeposit = Number(4n * MINER_FEE + MIN_BOX_VALUE + 3n * MIN_BOX_VALUE) / 1e9;
 
+  // Build the write input and kick off the 3-TX chain
+  const handleWrite = useCallback(async () => {
+    if (!info) return;
+    const currentHeight = await fetchHeight();
+    const expiryHeight = BigInt(currentHeight + expiryBlocks);
+
+    // Convert UI strings to on-chain types
+    const optTypeNum: OptionTypeNum = optionType === "call" ? 0 : 1;
+    const styleNum: OptionStyleNum = style === "european" ? 0 : 1;
+    const settlNum: SettlementTypeNum = settlement === "physical" ? 0 : 1;
+
+    const oracleIdx = info.index;
+    const rate = REGISTRY_RATES[oracleIdx] ?? 1_000_000n;
+
+    // Strike price in oracle units (USD * ORACLE_DECIMAL)
+    const strikeBigint = BigInt(Math.round(Number(strike) * Number(ORACLE_DECIMAL)));
+
+    // Share size = tokensPerOracleUnit (from registry)
+    // For calls: how many token-units per contract (e.g. 10^9 rsETH per 1 ETH contract)
+    // For puts/cash: shareSize field from config
+    const shareSize = rate > 0n ? rate : 100000n;
+
+    // Collateral cap for cash-settled (how much stablecoin per contract at max loss)
+    // For physical, this is unused but must be > 0
+    const collateralCap = strikeBigint > 0n ? strikeBigint : 1n;
+
+    // Collateral token setup
+    const colAmount = Number(collateral) || 0;
+    let collateralToken: { tokenId: string; amount: bigint } | undefined;
+    let ergCollateral: bigint | undefined;
+
+    const isErgCall =
+      optTypeNum === 0 && settlNum === 0 && oracleIdx === ERG_ORACLE_INDEX;
+
+    if (isErgCall) {
+      // ERG call: collateral in nanoERG
+      ergCollateral = BigInt(Math.round(colAmount * 1e9));
+    } else if (optTypeNum === 0 && settlNum === 0) {
+      // Physical non-ERG call: collateral in underlying token
+      const tokenId = REGISTRY_TOKEN_IDS[oracleIdx];
+      if (!tokenId) throw new Error("No token ID for this asset");
+      collateralToken = {
+        tokenId,
+        amount: BigInt(Math.round(colAmount * Number(rate))),
+      };
+    } else {
+      // Put or cash-settled: collateral in stablecoin
+      const stableId = stablecoin === "USE" ? USE_TOKEN_ID : SIGUSD_TOKEN_ID;
+      const stableDecimal = stablecoin === "USE" ? 1000n : 100n;
+      collateralToken = {
+        tokenId: stableId,
+        amount: BigInt(Math.round(colAmount * Number(stableDecimal))),
+      };
+    }
+
+    // Option name for R4
+    const assetName = info.name;
+    const typeStr = optionType === "call" ? "Call" : "Put";
+    const strikeStr = Number(strike).toFixed(2);
+    const optionName = `${assetName} ${typeStr} $${strikeStr}`;
+
+    const input: WriteOptionInput = {
+      contractErgoTree: OPTION_CONTRACT_ERGOTREE,
+      optionName,
+      optionType: optTypeNum,
+      style: styleNum,
+      settlementType: settlNum,
+      oracleIndex: oracleIdx,
+      shareSize,
+      maturityHeight: expiryHeight,
+      strikePrice: strikeBigint,
+      collateralCap,
+      stablecoinDecimal,
+      collateralToken,
+      ergCollateral,
+      dAppUIMintFee: DAPP_UI_MINT_FEE,
+      dAppUIFeeTree: DAPP_UI_FEE_TREE,
+    };
+
+    await executeWrite(input);
+  }, [
+    optionType,
+    style,
+    settlement,
+    strike,
+    collateral,
+    stablecoin,
+    expiryBlocks,
+    stablecoinDecimal,
+    info,
+    executeWrite,
+  ]);
+
   if (!info) {
     return <div className="text-center py-20 text-[#94a3b8]">Asset not found</div>;
   }
 
   // Summary calculations
-  const strikePaymentPerContract = Number(strike || 0) * Number(stablecoinDecimal) / Number(ORACLE_DECIMAL);
+  // Strike in oracle units (USD × 10^6), then convert to raw stablecoin
+  const strikeOracleUnits = Math.round(Number(strike || 0) * Number(ORACLE_DECIMAL));
+  const strikePaymentPerContract = Math.floor(strikeOracleUnits * Number(stablecoinDecimal) / Number(ORACLE_DECIMAL));
   const totalStrikeIfExercised = strikePaymentPerContract * contracts;
+  // Human-readable stablecoin amounts
+  const strikeUsdPerContract = strikePaymentPerContract / Number(stablecoinDecimal);
+  const totalStrikeUsd = totalStrikeIfExercised / Number(stablecoinDecimal);
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -117,7 +264,10 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           {/* Row 1: Type + Style */}
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm text-[#94a3b8] mb-2">Type</label>
+              <label className="block text-sm text-[#94a3b8] mb-2">
+                Type
+                <Tooltip text="Call: You profit when the price goes UP. You lock the underlying asset and buyers pay the strike price to claim it. Put: You profit when the price goes DOWN. You lock stablecoin and buyers deliver the underlying asset to claim it." />
+              </label>
               <div className="flex gap-2">
                 {(["call", "put"] as const).map((t) => (
                   <button key={t} onClick={() => setOptionType(t)}
@@ -134,7 +284,13 @@ export default function WritePage({ params }: { params: { asset: string } }) {
               </div>
             </div>
             <div>
-              <label className="block text-sm text-[#94a3b8] mb-2">Style</label>
+              <label className="block text-sm text-[#94a3b8] mb-2">
+                Style
+                <Tooltip text={style === "european"
+                  ? "European: Buyer can only exercise during the ~24h window after maturity. Better for writers — price spikes during the term don't matter."
+                  : "American: Buyer can exercise any time before maturity. Better for buyers — they can capture price movements whenever they occur."
+                } />
+              </label>
               <div className="flex gap-2">
                 {(["european", "american"] as const).map((s) => (
                   <button key={s} onClick={() => setStyle(s)}
@@ -148,22 +304,6 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                 ))}
               </div>
             </div>
-          </div>
-
-          {/* Style explanation */}
-          <div className="p-3 bg-[#0a0e17] rounded text-xs text-[#94a3b8] border-l-2 border-[#3b82f6]">
-            {style === "european" ? (
-              <>
-                <strong className="text-[#e2e8f0]">European:</strong> Buyer can only exercise during
-                the window after maturity (~24h). Better for writers — price spikes during the term
-                don&apos;t matter, only the price at maturity.
-              </>
-            ) : (
-              <>
-                <strong className="text-[#e2e8f0]">American:</strong> Buyer can exercise at any time
-                before maturity. Better for buyers — they can capture price movements whenever they occur.
-              </>
-            )}
           </div>
 
           {/* Settlement */}
@@ -266,7 +406,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
             </div>
             {strike && (
               <p className="mt-1 text-xs text-[#94a3b8]">
-                Strike payment per contract: {strikePaymentPerContract.toFixed(0)} raw {stablecoin} (${Number(strike).toFixed(3)})
+                Strike payment per contract: {strikeUsdPerContract.toFixed(stablecoin === "USE" ? 3 : 2)} {stablecoin}
               </p>
             )}
           </div>
@@ -280,11 +420,25 @@ export default function WritePage({ params }: { params: { asset: string } }) {
               <input type="number" value={premium || (suggestedPremium > 0 ? suggestedPremium.toFixed(6) : "")}
                 onChange={(e) => setPremium(e.target.value)}
                 placeholder="0.000000"
+                step={(() => {
+                  const val = Number(premium) || suggestedPremium;
+                  if (val <= 0) return "0.001";
+                  const mag = Math.floor(Math.log10(val));
+                  return Math.pow(10, mag).toString();
+                })()}
                 className="w-40 bg-[#131a2a] border border-[#1e293b] rounded-lg px-3 py-2 text-[#eab308] font-mono focus:border-[#3b82f6] focus:outline-none" />
               <span className="text-sm text-[#94a3b8]">ERG/contract</span>
+              {premium && suggestedPremium > 0 && (
+                <button
+                  onClick={() => setPremium("")}
+                  className="text-xs text-[#3b82f6] hover:underline"
+                >
+                  Reset to B-S
+                </button>
+              )}
               {suggestedPremium > 0 && !premium && (
                 <span className="text-xs text-[#94a3b8]">
-                  (σ={oracleVolToDecimal(oracleVol) * 100}%, r=0%)
+                  (σ={(oracleVolToDecimal(oracleVol) * 100).toFixed(1)}%)
                 </span>
               )}
             </div>
@@ -313,8 +467,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
 
                 <span className="text-[#94a3b8]">If all exercised:</span>
                 <span className="text-[#22c55e] font-mono">
-                  you receive {totalStrikeIfExercised.toFixed(0)} raw {stablecoin}
-                  {" "}(${(totalStrikeIfExercised / Number(stablecoinDecimal)).toFixed(2)})
+                  you receive {totalStrikeUsd.toFixed(stablecoin === "USE" ? 3 : 2)} {stablecoin}
                 </span>
 
                 <span className="text-[#94a3b8]">If expired:</span>
@@ -332,7 +485,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
 
           {/* Submit */}
           <button
-            onClick={() => setStep(1)}
+            onClick={handleWrite}
             className="w-full py-3 bg-[#3b82f6] text-white rounded-lg font-medium hover:bg-[#2563eb] transition-colors disabled:opacity-50"
             disabled={!strike || !collateral || contracts <= 0}>
             Lock Collateral &amp; Mint
@@ -341,39 +494,70 @@ export default function WritePage({ params }: { params: { asset: string } }) {
       ) : (
         /* Step progress for TX chain */
         <div className="bg-[#131a2a] border border-[#1e293b] rounded-lg p-6 space-y-4">
-          <h2 className="text-lg font-semibold mb-2">Creating Option...</h2>
+          <h2 className="text-lg font-semibold mb-2">
+            {step >= 4 ? "Option Created" : "Creating Option..."}
+          </h2>
           {[
-            { label: "Create Definition Box", desc: "Locking collateral at contract address", num: 1 },
-            { label: "Mint Option Tokens", desc: `Minting ${contracts + 1} tokens (${contracts} tradeable + 1 singleton)`, num: 2 },
-            { label: "Deliver to Wallet", desc: "Sending option tokens to your wallet", num: 3 },
+            { label: "Create Definition Box", desc: "Locking collateral at contract address", num: 1, txKey: "create" as const },
+            { label: "Mint Option Tokens", desc: `Minting ${contracts + 1} tokens (${contracts} tradeable + 1 singleton)`, num: 2, txKey: "mint" as const },
+            { label: "Deliver to Wallet", desc: "Sending option tokens to your wallet", num: 3, txKey: "deliver" as const },
           ].map((s) => (
             <div key={s.num} className="flex items-start gap-3">
               <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold ${
                 step > s.num ? "bg-[#22c55e] text-white"
-                  : step === s.num ? "bg-[#3b82f6] text-white animate-pulse"
+                  : step === s.num && !writeError ? "bg-[#3b82f6] text-white animate-pulse"
+                  : step === s.num && writeError ? "bg-[#ef4444] text-white"
                   : "bg-[#1e293b] text-[#94a3b8]"
               }`}>
                 {step > s.num ? "✓" : s.num}
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <span className={step >= s.num ? "text-[#e2e8f0]" : "text-[#94a3b8]"}>
                   {s.label}
                 </span>
                 <p className="text-xs text-[#94a3b8]">{s.desc}</p>
+                {txIds[s.txKey] && (
+                  <p className="text-xs text-[#3b82f6] font-mono mt-0.5 truncate">
+                    TX: {txIds[s.txKey]}
+                  </p>
+                )}
               </div>
             </div>
           ))}
 
-          {step >= 4 && (
+          {writeError && (
+            <div className="mt-4 p-3 bg-[#ef4444]/10 border border-[#ef4444]/30 rounded-lg text-sm text-[#ef4444]">
+              <p className="font-semibold mb-1">Error at step {step}:</p>
+              <p className="break-words">{writeError}</p>
+            </div>
+          )}
+
+          {step >= 4 && !writeError && (
             <div className="mt-4 p-3 bg-[#22c55e]/10 border border-[#22c55e]/30 rounded-lg text-sm text-[#22c55e]">
               Option created successfully! {contracts} tokens are in your wallet.
             </div>
           )}
 
-          {step < 4 && (
+          {step < 4 && !writeError && (
             <p className="text-xs text-[#f59e0b] mt-2">
-              Do not close this page until all steps complete. If a step fails, check your portfolio for stuck boxes.
+              Do not close this page until all steps complete. Each step requires a wallet signature.
             </p>
+          )}
+
+          {/* Back / Retry buttons */}
+          {(writeError || step >= 4) && (
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={resetWrite}
+                className="px-4 py-2 bg-[#1e293b] text-[#e2e8f0] rounded-lg text-sm hover:bg-[#334155] transition-colors">
+                {writeError ? "Back to Form" : "Write Another"}
+              </button>
+              {writeError && step < 4 && (
+                <p className="self-center text-xs text-[#94a3b8]">
+                  Check your portfolio for stuck boxes before retrying.
+                </p>
+              )}
+            </div>
           )}
         </div>
       )}

@@ -1,4 +1,5 @@
 import { OptionChain } from "./components/OptionChain";
+import { fetchSpotPriceByIndex } from "@/lib/oracle-parser";
 import Link from "next/link";
 
 // Map URL slugs to oracle feed indices and display info
@@ -18,7 +19,7 @@ const ASSET_MAP: Record<string, { name: string; index: number; pair: string }> =
   dji:     { name: "DJI",     index: 10, pair: "DJI" },
 };
 
-export default function TradePage({
+export default async function TradePage({
   params,
 }: {
   params: { asset: string };
@@ -37,6 +38,9 @@ export default function TradePage({
     );
   }
 
+  // Fetch live spot price from oracle (server-side, cached 60s)
+  const spotPrice = await fetchSpotPriceByIndex(info.index);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -54,7 +58,7 @@ export default function TradePage({
       </div>
 
       {/* Option Chain */}
-      <OptionChain assetName={info.name} oracleIndex={info.index} />
+      <OptionChain assetName={info.name} oracleIndex={info.index} spotPrice={spotPrice} />
     </div>
   );
 }

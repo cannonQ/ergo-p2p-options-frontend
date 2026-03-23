@@ -30,7 +30,7 @@ export function Navbar() {
   const [tradeOpen, setTradeOpen] = useState(false);
 
   return (
-    <nav className="border-b border-[#1e293b] bg-[#131a2a]">
+    <nav className="border-b border-[#1e293b] bg-[#131a2a] sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="text-lg font-bold text-[#3b82f6]">

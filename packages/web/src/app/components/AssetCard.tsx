@@ -7,7 +7,15 @@ interface AssetCardProps {
   slug: string;
   price?: number;       // USD price (from oracle, human-readable)
   optionCount?: number;  // Number of active options
-  hasPhysical?: boolean; // Physical delivery available
+  badge?: string;       // e.g. "rsETH", "DexyGold", "Native"
+}
+
+function formatPrice(price: number): string {
+  if (price >= 10000) return price.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  if (price >= 100) return price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (price >= 1) return price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (price >= 0.01) return price.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+  return price.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 });
 }
 
 export function AssetCard({
@@ -15,7 +23,7 @@ export function AssetCard({
   slug,
   price,
   optionCount = 0,
-  hasPhysical = false,
+  badge,
 }: AssetCardProps) {
   return (
     <Link
@@ -26,20 +34,15 @@ export function AssetCard({
         <span className="text-lg font-bold text-[#e2e8f0] group-hover:text-[#3b82f6] transition-colors">
           {name}
         </span>
-        {hasPhysical && (
+        {badge && (
           <span className="text-[10px] px-1.5 py-0.5 bg-[#22c55e]/10 text-[#22c55e] rounded">
-            Physical
+            {badge}
           </span>
         )}
       </div>
 
       <div className="text-xl font-mono text-[#eab308] mb-2">
-        {price !== undefined && price > 0
-          ? `$${price.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: Math.max(2, price >= 100 ? 0 : price >= 1 ? 2 : 4),
-            })}`
-          : "—"}
+        {price !== undefined && price > 0 ? `$${formatPrice(price)}` : "—"}
       </div>
 
       <div className="text-sm text-[#94a3b8]">
