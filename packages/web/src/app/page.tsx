@@ -1,5 +1,7 @@
 import { AssetCard } from "./components/AssetCard";
+import { ActivityFeed } from "./components/ActivityFeed";
 import { fetchSpotPrices } from "@/lib/oracle-parser";
+import { fetchAllAssetPriceData } from "@/lib/price-history";
 
 const CATEGORIES = [
   {
@@ -47,17 +49,13 @@ const CATEGORIES = [
 ];
 
 export default async function HomePage() {
-  const spotPrices = await fetchSpotPrices();
+  const [spotPrices, priceData] = await Promise.all([
+    fetchSpotPrices(),
+    fetchAllAssetPriceData(),
+  ]);
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold mb-1">P2P Options</h1>
-        <p className="text-[#94a3b8]">
-          Decentralized options trading on Ergo. Pick an asset to see available options.
-        </p>
-      </div>
-
       {CATEGORIES.map((category, catIdx) => (
         <section key={`${category.name}-${catIdx}`}>
           <div className="flex items-baseline gap-2 mb-3">
@@ -66,18 +64,28 @@ export default async function HomePage() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {category.assets.map((asset) => (
-              <AssetCard
-                key={asset.index}
-                name={asset.name}
-                slug={asset.slug}
-                price={spotPrices.get(asset.index)}
-                badge={asset.badge}
-              />
-            ))}
+            {category.assets.map((asset) => {
+              const history = priceData.get(asset.index);
+              return (
+                <AssetCard
+                  key={asset.index}
+                  name={asset.name}
+                  slug={asset.slug}
+                  price={spotPrices.get(asset.index)}
+                  badge={asset.badge}
+                  sparkline={history?.sparkline}
+                  change24h={history?.change24h}
+                />
+              );
+            })}
           </div>
         </section>
       ))}
+
+      {/* Live Activity Feed */}
+      <section>
+        <ActivityFeed />
+      </section>
     </div>
   );
 }

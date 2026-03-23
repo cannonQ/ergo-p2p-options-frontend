@@ -51,8 +51,9 @@ export function Navbar() {
   return (
     <nav className="border-b border-[#1e293b] bg-[#131a2a] sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-        <Link href="/" className="text-lg font-bold text-[#3b82f6]">
-          Ergo Options
+        <Link href="/" className="flex items-baseline gap-2">
+          <span className="text-lg font-bold text-[#3b82f6]">Ergo P2P Options</span>
+          <span className="text-xs text-[#94a3b8] hidden sm:inline">Decentralized options trading on Ergo</span>
         </Link>
 
         <div className="flex items-center gap-6">

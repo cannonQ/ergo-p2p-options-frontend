@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { oracleVolToDecimal } from "@ergo-options/core";
 import { TradePanel } from "./TradePanel";
 
 interface OptionChainProps {
   assetName: string;
   oracleIndex: number;
   spotPrice?: number;
+  oracleVol?: number; // bps from companion R5
   hasPhysical?: boolean;
 }
 
@@ -17,10 +19,12 @@ interface ChainRow {
   callAvail: number;
   callOI: number;
   callIV?: number;
+  callVolume: number;
   putPremium?: number;
   putAvail: number;
   putOI: number;
   putIV?: number;
+  putVolume: number;
 }
 
 interface SelectedOption {
@@ -70,10 +74,49 @@ function formatStrike(strike: number): string {
   return `$${strike.toFixed(6)}`;
 }
 
-export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, hasPhysical }: OptionChainProps) {
+/**
+ * Compute approximate IV for a strike using oracle realized vol + smile skew.
+ * ATM uses oracle vol; OTM/ITM adds a skew proportional to log-moneyness.
+ */
+function computeSmileIV(strike: number, spot: number, baseVol: number): number {
+  const moneyness = Math.abs(Math.log(strike / spot));
+  const skew = moneyness * 0.3; // 30% skew per unit of log-moneyness
+  return baseVol * (1 + skew);
+}
+
+/** Volume bar component — horizontal bar with colored background */
+function VolumeBar({
+  volume,
+  maxVolume,
+  color,
+}: {
+  volume: number;
+  maxVolume: number;
+  color: string;
+}) {
+  const widthPx = maxVolume > 0 ? Math.round((volume / maxVolume) * 60) : 0;
+  return (
+    <div className="flex items-center h-full">
+      <div
+        className="rounded"
+        style={{
+          width: `${widthPx}px`,
+          height: "8px",
+          backgroundColor: color,
+          minWidth: volume > 0 ? "2px" : "0px",
+        }}
+      />
+    </div>
+  );
+}
+
+export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, oracleVol, hasPhysical }: OptionChainProps) {
   const [selectedExpiry, setSelectedExpiry] = useState<string>("all");
   const [settlement, setSettlement] = useState<"all" | "physical" | "cash">(hasPhysical ? "all" : "cash");
   const [selectedOption, setSelectedOption] = useState<SelectedOption | null>(null);
+
+  // Base vol: convert oracle bps to decimal
+  const baseVol = oracleVol ? oracleVolToDecimal(oracleVol) : undefined;
 
   // Generate strike rows from spot price (even with 0 options on-chain)
   // In production, on-chain reserves + sell orders will populate premium/avail/OI
@@ -81,15 +124,30 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, h
     if (!spotPrice || spotPrice <= 0) return [];
 
     const strikes = generateStrikes(spotPrice);
-    return strikes.map((strike) => ({
-      strike,
-      expiry: "—",
-      callAvail: 0,
-      callOI: 0,
-      putAvail: 0,
-      putOI: 0,
-    }));
-  }, [spotPrice]);
+    return strikes.map((strike) => {
+      const iv = baseVol && spotPrice > 0
+        ? computeSmileIV(strike, spotPrice, baseVol)
+        : undefined;
+
+      return {
+        strike,
+        expiry: "—",
+        callAvail: 0,
+        callOI: 0,
+        callIV: iv ? Number((iv * 100).toFixed(1)) : undefined,
+        callVolume: 0, // No volume data yet
+        putAvail: 0,
+        putOI: 0,
+        putIV: iv ? Number((iv * 100).toFixed(1)) : undefined,
+        putVolume: 0, // No volume data yet
+      };
+    });
+  }, [spotPrice, baseVol]);
+
+  // Max volume across all rows (for bar width scaling)
+  const maxVolume = useMemo(() => {
+    return Math.max(1, ...rows.map((r) => Math.max(r.callVolume, r.putVolume)));
+  }, [rows]);
 
   const expiries: string[] = []; // Will be populated from on-chain data
 
@@ -116,6 +174,14 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, h
           </span>
           {spotPrice && spotPrice > 0 && (
             <span className="text-[#94a3b8]/60 text-xs">via oracle</span>
+          )}
+          {baseVol !== undefined && (
+            <>
+              <span className="text-[#94a3b8] ml-2">RV:</span>
+              <span className="text-[#a78bfa] font-mono">
+                {(baseVol * 100).toFixed(1)}%
+              </span>
+            </>
           )}
         </div>
       </div>
@@ -176,26 +242,28 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, h
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[#1e293b]">
-                <th colSpan={4} className="py-2 px-2 text-center text-[#22c55e] font-semibold text-xs uppercase tracking-wider">
+                <th colSpan={5} className="py-2 px-2 text-center text-[#22c55e] font-semibold text-xs uppercase tracking-wider">
                   Calls
                 </th>
                 <th className="py-2 px-3 text-center text-[#e2e8f0] font-bold bg-[#1e293b]">
                   Strike
                 </th>
-                <th colSpan={4} className="py-2 px-2 text-center text-[#ef4444] font-semibold text-xs uppercase tracking-wider">
+                <th colSpan={5} className="py-2 px-2 text-center text-[#ef4444] font-semibold text-xs uppercase tracking-wider">
                   Puts
                 </th>
               </tr>
               <tr className="border-b border-[#1e293b]/50">
+                <th className="text-center py-1 px-2 text-[#22c55e]/70 font-normal text-xs w-[68px]">Vol</th>
                 <th className="text-left py-1 px-2 text-[#22c55e]/70 font-normal text-xs">Premium</th>
                 <th className="text-right py-1 px-2 text-[#22c55e]/70 font-normal text-xs">Avail</th>
                 <th className="text-right py-1 px-2 text-[#22c55e]/70 font-normal text-xs">OI</th>
                 <th className="text-right py-1 px-2 text-[#22c55e]/70 font-normal text-xs">IV</th>
                 <th className="bg-[#1e293b]"></th>
-                <th className="text-left py-1 px-2 text-[#ef4444]/70 font-normal text-xs">Premium</th>
-                <th className="text-right py-1 px-2 text-[#ef4444]/70 font-normal text-xs">Avail</th>
+                <th className="text-left py-1 px-2 text-[#ef4444]/70 font-normal text-xs">IV</th>
                 <th className="text-right py-1 px-2 text-[#ef4444]/70 font-normal text-xs">OI</th>
-                <th className="text-right py-1 px-2 text-[#ef4444]/70 font-normal text-xs">IV</th>
+                <th className="text-right py-1 px-2 text-[#ef4444]/70 font-normal text-xs">Avail</th>
+                <th className="text-left py-1 px-2 text-[#ef4444]/70 font-normal text-xs">Premium</th>
+                <th className="text-center py-1 px-2 text-[#ef4444]/70 font-normal text-xs w-[68px]">Vol</th>
               </tr>
             </thead>
             <tbody>
@@ -207,6 +275,9 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, h
                 const isITMCall = spotPrice !== undefined && row.strike < spotPrice;
                 const isITMPut = spotPrice !== undefined && row.strike > spotPrice;
 
+                const callBarColor = isATM ? "#3b82f6" : "#22c55e";
+                const putBarColor = isATM ? "#3b82f6" : "#ef4444";
+
                 return (
                   <tr
                     key={i}
@@ -214,6 +285,12 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, h
                       isATM ? "bg-[#3b82f6]/8" : ""
                     }`}
                   >
+                    {/* Call volume bar */}
+                    <td className={`py-2 px-2 ${isITMCall ? "bg-[#22c55e]/5" : ""}`}>
+                      <div className="flex justify-end">
+                        <VolumeBar volume={row.callVolume} maxVolume={maxVolume} color={callBarColor} />
+                      </div>
+                    </td>
                     {/* Call side */}
                     <td
                       className={`py-2 px-2 font-mono cursor-pointer hover:bg-[#22c55e]/10 transition-colors ${
@@ -229,7 +306,7 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, h
                     <td className={`py-2 px-2 text-right ${row.callOI > 0 ? "text-[#94a3b8]" : "text-[#94a3b8]/30"} ${isITMCall ? "bg-[#22c55e]/5" : ""}`}>
                       {row.callOI}
                     </td>
-                    <td className={`py-2 px-2 text-right text-[#94a3b8]/30 ${isITMCall ? "bg-[#22c55e]/5" : ""}`}>
+                    <td className={`py-2 px-2 text-right ${row.callIV ? "text-[#a78bfa]" : "text-[#94a3b8]/30"} ${isITMCall ? "bg-[#22c55e]/5" : ""}`}>
                       {row.callIV ? `${row.callIV}%` : "—"}
                     </td>
                     {/* Strike */}
@@ -239,7 +316,16 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, h
                       {formatStrike(row.strike)}
                       {isATM && <span className="ml-1 text-[10px] text-[#3b82f6]">ATM</span>}
                     </td>
-                    {/* Put side */}
+                    {/* Put side (mirrored: IV | OI | Avail | Premium | Vol) */}
+                    <td className={`py-2 px-2 text-left ${row.putIV ? "text-[#a78bfa]" : "text-[#94a3b8]/30"} ${isITMPut ? "bg-[#ef4444]/5" : ""}`}>
+                      {row.putIV ? `${row.putIV}%` : "—"}
+                    </td>
+                    <td className={`py-2 px-2 text-right ${row.putOI > 0 ? "text-[#94a3b8]" : "text-[#94a3b8]/30"} ${isITMPut ? "bg-[#ef4444]/5" : ""}`}>
+                      {row.putOI}
+                    </td>
+                    <td className={`py-2 px-2 text-right ${row.putAvail > 0 ? "text-[#94a3b8]" : "text-[#94a3b8]/30"} ${isITMPut ? "bg-[#ef4444]/5" : ""}`}>
+                      {row.putAvail}
+                    </td>
                     <td
                       className={`py-2 px-2 font-mono cursor-pointer hover:bg-[#ef4444]/10 transition-colors ${
                         row.putPremium ? "text-[#eab308]" : "text-[#94a3b8]/40"
@@ -248,14 +334,9 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, h
                     >
                       {row.putPremium?.toFixed(4) ?? "—"}
                     </td>
-                    <td className={`py-2 px-2 text-right ${row.putAvail > 0 ? "text-[#94a3b8]" : "text-[#94a3b8]/30"} ${isITMPut ? "bg-[#ef4444]/5" : ""}`}>
-                      {row.putAvail}
-                    </td>
-                    <td className={`py-2 px-2 text-right ${row.putOI > 0 ? "text-[#94a3b8]" : "text-[#94a3b8]/30"} ${isITMPut ? "bg-[#ef4444]/5" : ""}`}>
-                      {row.putOI}
-                    </td>
-                    <td className={`py-2 px-2 text-right text-[#94a3b8]/30 ${isITMPut ? "bg-[#ef4444]/5" : ""}`}>
-                      {row.putIV ? `${row.putIV}%` : "—"}
+                    {/* Put volume bar */}
+                    <td className={`py-2 px-2 ${isITMPut ? "bg-[#ef4444]/5" : ""}`}>
+                      <VolumeBar volume={row.putVolume} maxVolume={maxVolume} color={putBarColor} />
                     </td>
                   </tr>
                 );

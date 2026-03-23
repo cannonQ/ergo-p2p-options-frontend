@@ -1,5 +1,5 @@
 import { OptionChain } from "./components/OptionChain";
-import { fetchSpotPriceByIndex } from "@/lib/oracle-parser";
+import { fetchSpotPriceByIndex, fetchVolByIndex } from "@/lib/oracle-parser";
 import { hasPhysicalDelivery } from "@ergo-options/core";
 import Link from "next/link";
 
@@ -48,8 +48,11 @@ export default async function TradePage({
     );
   }
 
-  // Fetch live spot price from oracle (server-side, cached 60s)
-  const spotPrice = await fetchSpotPriceByIndex(info.index);
+  // Fetch live spot price and realized volatility from oracle (server-side, cached 60s)
+  const [spotPrice, oracleVol] = await Promise.all([
+    fetchSpotPriceByIndex(info.index),
+    fetchVolByIndex(info.index),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -68,7 +71,7 @@ export default async function TradePage({
       </div>
 
       {/* Option Chain */}
-      <OptionChain assetName={info.name} oracleIndex={info.index} spotPrice={spotPrice} hasPhysical={hasPhysicalDelivery(info.index)} />
+      <OptionChain assetName={info.name} oracleIndex={info.index} spotPrice={spotPrice} oracleVol={oracleVol} hasPhysical={hasPhysicalDelivery(info.index)} />
     </div>
   );
 }

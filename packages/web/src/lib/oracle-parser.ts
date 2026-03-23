@@ -57,6 +57,38 @@ export async function fetchSpotPriceByIndex(index: number): Promise<number | und
   return prices.get(index);
 }
 
+/**
+ * Fetch realized volatility from the companion box R5 register for a single oracle index.
+ * R5 is Coll[Long] with annualized volatility in basis points (1% = 100 bps).
+ * Returns bps or undefined if not available.
+ */
+export async function fetchVolByIndex(index: number): Promise<number | undefined> {
+  try {
+    const res = await fetch(
+      `${NODE_URL}/blockchain/box/unspent/byTokenId/${COMPANION_NFT_ID}?offset=0&limit=1`,
+      { next: { revalidate: 60 } }
+    );
+
+    if (!res.ok) return undefined;
+    const boxes = await res.json();
+    if (!boxes || boxes.length === 0) return undefined;
+
+    const box = boxes[0];
+    const r5hex = box.additionalRegisters?.R5;
+    if (!r5hex) return undefined;
+
+    const bytes = hexToBytes(r5hex);
+    const parsed = parseCollLong(bytes);
+    if (!parsed || index >= parsed.length) return undefined;
+
+    const val = Number(parsed[index]);
+    return val > 0 ? val : undefined;
+  } catch (err) {
+    console.error("Failed to fetch oracle volatility:", err);
+    return undefined;
+  }
+}
+
 export function hexToBytes(hex: string): Uint8Array {
   const clean = hex.startsWith("0x") ? hex.slice(2) : hex;
   const bytes = new Uint8Array(clean.length / 2);
