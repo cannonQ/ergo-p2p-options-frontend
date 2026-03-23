@@ -1,6 +1,7 @@
 {
   "name": "ergo-options-ui",
   "private": true,
+  "license": "AGPL-3.0-only",
   "scripts": {
     "dev": "pnpm --filter @ergo-options/web dev",
     "build": "pnpm --filter @ergo-options/core build && pnpm --filter @ergo-options/web build",
