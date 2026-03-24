@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { oracleVolToDecimal } from "@ergo-options/core";
 import { TradePanel } from "./TradePanel";
+import type { ParsedReserve } from "@/lib/reserve-scanner";
 
 interface OptionChainProps {
   assetName: string;
@@ -10,6 +11,7 @@ interface OptionChainProps {
   spotPrice?: number;
   oracleVol?: number; // bps from companion R5
   hasPhysical?: boolean;
+  reserves?: ParsedReserve[];
 }
 
 interface ChainRow {
@@ -110,7 +112,7 @@ function VolumeBar({
   );
 }
 
-export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, oracleVol, hasPhysical }: OptionChainProps) {
+export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, oracleVol, hasPhysical, reserves = [] }: OptionChainProps) {
   const [selectedExpiry, setSelectedExpiry] = useState<string>("all");
   const [settlement, setSettlement] = useState<"all" | "physical" | "cash">(hasPhysical ? "all" : "cash");
   const [selectedOption, setSelectedOption] = useState<SelectedOption | null>(null);
@@ -118,31 +120,55 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, o
   // Base vol: convert oracle bps to decimal
   const baseVol = oracleVol ? oracleVolToDecimal(oracleVol) : undefined;
 
+  // Build OI lookup from on-chain reserves: { "call:0.30": 1, "put:0.30": 0, ... }
+  const oiByStrikeType = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const r of reserves) {
+      const key = `${r.optionType}:${r.strikePrice}`;
+      map.set(key, (map.get(key) ?? 0) + 1);
+    }
+    return map;
+  }, [reserves]);
+
+  // Collect on-chain strike prices to ensure they appear in the chain
+  const onChainStrikes = useMemo(() => {
+    return [...new Set(reserves.map((r) => r.strikePrice))];
+  }, [reserves]);
+
   // Generate strike rows from spot price (even with 0 options on-chain)
-  // In production, on-chain reserves + sell orders will populate premium/avail/OI
+  // Merges on-chain reserve OI data into the chain rows
   const rows: ChainRow[] = useMemo(() => {
     if (!spotPrice || spotPrice <= 0) return [];
 
     const strikes = generateStrikes(spotPrice);
+    // Merge on-chain strikes that might not be in the generated list
+    for (const s of onChainStrikes) {
+      if (!strikes.includes(s)) strikes.push(s);
+    }
+    strikes.sort((a, b) => a - b);
+
     return strikes.map((strike) => {
       const iv = baseVol && spotPrice > 0
         ? computeSmileIV(strike, spotPrice, baseVol)
         : undefined;
 
+      const callOI = oiByStrikeType.get(`call:${strike}`) ?? 0;
+      const putOI = oiByStrikeType.get(`put:${strike}`) ?? 0;
+
       return {
         strike,
         expiry: "—",
         callAvail: 0,
-        callOI: 0,
+        callOI,
         callIV: iv ? Number((iv * 100).toFixed(1)) : undefined,
-        callVolume: 0, // No volume data yet
+        callVolume: 0,
         putAvail: 0,
-        putOI: 0,
+        putOI,
         putIV: iv ? Number((iv * 100).toFixed(1)) : undefined,
-        putVolume: 0, // No volume data yet
+        putVolume: 0,
       };
     });
-  }, [spotPrice, baseVol]);
+  }, [spotPrice, baseVol, onChainStrikes, oiByStrikeType]);
 
   // Max volume across all rows (for bar width scaling)
   const maxVolume = useMemo(() => {
@@ -348,9 +374,15 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, o
           <div className="flex items-center justify-between px-4 py-3 border-t border-[#1e293b] text-sm text-[#94a3b8]">
             <span>Click any row to trade</span>
             <span className="text-xs">
-              {rows.reduce((a, r) => a + r.callAvail + r.putAvail, 0) === 0
-                ? "No options listed yet — be the first to write"
-                : `${rows.reduce((a, r) => a + r.callAvail + r.putAvail, 0)} contracts available`}
+              {(() => {
+                const totalOI = rows.reduce((a, r) => a + r.callOI + r.putOI, 0);
+                const totalAvail = rows.reduce((a, r) => a + r.callAvail + r.putAvail, 0);
+                if (totalOI === 0 && totalAvail === 0) return "No options listed yet — be the first to write";
+                const parts: string[] = [];
+                if (totalOI > 0) parts.push(`${totalOI} contract${totalOI !== 1 ? "s" : ""} open`);
+                if (totalAvail > 0) parts.push(`${totalAvail} available`);
+                return parts.join(" / ");
+              })()}
             </span>
           </div>
         </div>

@@ -1,7 +1,11 @@
 import { OptionChain } from "./components/OptionChain";
 import { fetchSpotPriceByIndex, fetchVolByIndex } from "@/lib/oracle-parser";
+import { scanReserves } from "@/lib/reserve-scanner";
 import { hasPhysicalDelivery } from "@ergo-options/core";
 import Link from "next/link";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 30;
 
 // Map URL slugs to oracle feed indices and display info
 const ASSET_MAP: Record<string, { name: string; index: number; pair: string }> = {
@@ -48,11 +52,17 @@ export default async function TradePage({
     );
   }
 
-  // Fetch live spot price and realized volatility from oracle (server-side, cached 60s)
-  const [spotPrice, oracleVol] = await Promise.all([
+  // Fetch live spot price, realized volatility, and on-chain reserves (server-side)
+  const [spotPrice, oracleVol, allReserves] = await Promise.all([
     fetchSpotPriceByIndex(info.index),
     fetchVolByIndex(info.index),
+    scanReserves(),
   ]);
+
+  // Filter reserves for this asset
+  const assetReserves = allReserves.filter(
+    (r) => r.oracleIndex === info.index && r.state === "RESERVE"
+  );
 
   return (
     <div className="space-y-6">
@@ -71,7 +81,7 @@ export default async function TradePage({
       </div>
 
       {/* Option Chain */}
-      <OptionChain assetName={info.name} oracleIndex={info.index} spotPrice={spotPrice} oracleVol={oracleVol} hasPhysical={hasPhysicalDelivery(info.index)} />
+      <OptionChain assetName={info.name} oracleIndex={info.index} spotPrice={spotPrice} oracleVol={oracleVol} hasPhysical={hasPhysicalDelivery(info.index)} reserves={assetReserves} />
     </div>
   );
 }

@@ -1,29 +1,57 @@
 "use client";
 
-interface StatsBarProps {
-  volume?: number;
-  openInterest?: number;
-  activeContracts?: number;
-  callCount?: number;
-  putCount?: number;
-  avgIV?: number | null;
+import { useEffect, useState } from "react";
+
+interface StatsData {
+  activeContracts: number;
+  callCount: number;
+  putCount: number;
+  openInterestErg: number;
 }
 
-function formatUSE(value: number): string {
-  if (value === 0) return "0 USE";
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M USE`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K USE`;
-  return `${value.toLocaleString()} USE`;
+function formatERG(value: number): string {
+  if (value === 0) return "0 ERG";
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M ERG`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K ERG`;
+  if (value >= 1) return `${value.toFixed(2)} ERG`;
+  return `${value.toFixed(4)} ERG`;
 }
 
-export function StatsBar({
-  volume = 0,
-  openInterest = 0,
-  activeContracts = 0,
-  callCount = 0,
-  putCount = 0,
-  avgIV = null,
-}: StatsBarProps) {
+export function StatsBar() {
+  const [stats, setStats] = useState<StatsData>({
+    activeContracts: 0,
+    callCount: 0,
+    putCount: 0,
+    openInterestErg: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchStats() {
+      try {
+        const res = await fetch("/api/stats");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) {
+          setStats(data);
+          setLoading(false);
+        }
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    fetchStats();
+    // Refresh every 60s
+    const interval = setInterval(fetchStats, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
   return (
     <div className="bg-[#0a0e17] border-b border-[#1e293b]">
       <div className="max-w-7xl mx-auto px-4 py-3 grid grid-cols-4 gap-4">
@@ -33,10 +61,10 @@ export function StatsBar({
             24h Volume
           </div>
           <div className="text-[#e2e8f0] text-lg font-mono font-bold">
-            {formatUSE(volume)}
+            {"\u2014"}
           </div>
           <div className="text-[#94a3b8] text-xs">
-            {volume === 0 ? "\u2014" : ""}
+            coming soon
           </div>
         </div>
 
@@ -46,10 +74,10 @@ export function StatsBar({
             Open Interest
           </div>
           <div className="text-[#e2e8f0] text-lg font-mono font-bold">
-            {formatUSE(openInterest)}
+            {loading ? "\u2014" : formatERG(stats.openInterestErg)}
           </div>
           <div className="text-[#94a3b8] text-xs">
-            across {activeContracts} asset{activeContracts !== 1 ? "s" : ""}
+            across {stats.activeContracts} contract{stats.activeContracts !== 1 ? "s" : ""}
           </div>
         </div>
 
@@ -59,10 +87,10 @@ export function StatsBar({
             Active Contracts
           </div>
           <div className="text-[#e2e8f0] text-lg font-mono font-bold">
-            {activeContracts}
+            {loading ? "\u2014" : stats.activeContracts}
           </div>
           <div className="text-[#94a3b8] text-xs">
-            {callCount} call{callCount !== 1 ? "s" : ""} / {putCount} put{putCount !== 1 ? "s" : ""}
+            {stats.callCount} call{stats.callCount !== 1 ? "s" : ""} / {stats.putCount} put{stats.putCount !== 1 ? "s" : ""}
           </div>
         </div>
 
@@ -72,10 +100,10 @@ export function StatsBar({
             Avg IV (30d)
           </div>
           <div className="text-[#e2e8f0] text-lg font-mono font-bold">
-            {avgIV !== null && avgIV !== undefined ? `${avgIV.toFixed(1)}%` : "\u2014"}
+            {"\u2014"}
           </div>
           <div className="text-[#94a3b8] text-xs">
-            {avgIV !== null && avgIV !== undefined ? "" : "\u2014"}
+            {"\u2014"}
           </div>
         </div>
       </div>

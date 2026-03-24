@@ -18,6 +18,8 @@ export interface ParsedReserve {
   state: "DEFINITION" | "MINTED_UNDELIVERED" | "RESERVE" | "EXPIRED" | "UNKNOWN";
   collateralTokenId?: string;
   collateralAmount?: string;
+  /** Box value in nanoERG (collateral for ERG options) */
+  valueNanoErg: string;
 }
 
 /**
@@ -74,7 +76,7 @@ export async function scanReserves(currentHeight?: number): Promise<ParsedReserv
   let height = currentHeight;
   if (!height) {
     try {
-      const infoRes = await fetch(`${NODE_URL}/info`);
+      const infoRes = await fetch(`${NODE_URL}/info`, { cache: 'no-store' });
       if (infoRes.ok) {
         const info = await infoRes.json();
         height = info.fullHeight;
@@ -87,7 +89,12 @@ export async function scanReserves(currentHeight?: number): Promise<ParsedReserv
     try {
       const res = await fetch(
         `${NODE_URL}/blockchain/box/unspent/byErgoTree?offset=0&limit=100`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(contractInfo.ergoTree) } as any,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(contractInfo.ergoTree),
+          cache: 'no-store',
+        } as any,
       );
       if (!res.ok) continue;
       // Response may be { items: [...] } or array
@@ -159,5 +166,6 @@ function parseReserveBox(box: any, currentHeight: number, exerciseWindow: number
     state,
     collateralTokenId: box.assets?.[1]?.tokenId,
     collateralAmount: box.assets?.[1]?.amount?.toString(),
+    valueNanoErg: box.value?.toString() ?? "0",
   };
 }

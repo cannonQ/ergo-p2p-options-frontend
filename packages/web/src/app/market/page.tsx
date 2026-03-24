@@ -1,6 +1,9 @@
-import { scanReserves, type ParsedReserve } from "@/lib/reserve-scanner";
+import { scanReserves } from "@/lib/reserve-scanner";
 import { fetchSpotPrices } from "@/lib/oracle-parser";
 import { MarketFilters } from "./components/MarketFilters";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 30;
 
 export default async function MarketPage() {
   const [reserves, spotPrices] = await Promise.all([

@@ -44,7 +44,7 @@ export interface WriteOptionInput {
 }
 
 export interface WriteOptionResult {
-  /** 0=form, 1=signing create TX, 2=waiting for bot mint, 3=waiting for bot deliver, 4=done */
+  /** 0=form, 1=signing create, 2=bot minting, 3=bot delivering, 4=done */
   step: number;
   error: string | null;
   txIds: { create?: string };
@@ -365,7 +365,8 @@ export function useWriteOption(): WriteOptionResult {
       );
 
       // ---------------------------------------------------------------
-      // Step 4: Done — tokens are in the user's wallet
+      // Step 4: Done — tokens delivered to wallet
+      // User can list for sale from the Portfolio page
       // ---------------------------------------------------------------
       setStep(4);
     } catch (err: any) {
