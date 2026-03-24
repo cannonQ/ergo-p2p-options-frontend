@@ -1,120 +1,76 @@
-# Ergo P2P Options Frontend — Status (2026-03-23)
+# Ergo P2P Options Frontend — Status (2026-03-23 EOD)
 
-## What's Built
+## Proven on Mainnet
 
-### Core Library (`packages/core/`) — 15 files
-- Fleet SDK TX builders for all option lifecycle operations (create, mint, deliver, exercise physical/cash, close, sell orders)
-- Black-Scholes pricing with Greeks (delta, gamma, theta, vega) + Newton-Raphson IV solver
-- Safe box selector (protected token + option token exclusion)
-- Box state classifier (DEFINITION, MINTED_UNDELIVERED, RESERVE, EXPIRED)
-- All constants, token IDs, registry rates from Config.scala
+- **Write option** — single Nautilus signature, bot auto-mints + auto-delivers
+- **Bot auto-mint** — detects DEFINITION boxes, builds + signs + submits mint TX
+- **Bot auto-deliver** — detects MINTED_UNDELIVERED boxes, delivers tokens to writer
+- **List for Sale** — portfolio modal with B-S suggested premium, Nautilus signs sell order TX
+- **Option chain** — shows live OI from on-chain reserves, IV from oracle vol
+- **Market page** — scans contract via byErgoTree, shows active + expired reserves
+- **Stats bar** — live active contracts, OI in ERG, block height
+- **Sparklines** — 24h price history from Supabase oracle_events
+- **Wallet management** — multi-wallet discovery, disconnect, switch
 
-### Frontend (`packages/web/`) — ~40 files
-- **Landing page**: Live oracle prices from node, sparklines + 24h change from Supabase, Rosen Bridge badges, all 21 feeds across 4 categories
-- **Option chain**: Strikes generated around spot price, IV populated via oracle vol + smile skew, volume bar columns, settlement filter (Physical/Cash), ATM highlighting, ITM shading
-- **Trade panel**: Slide-out with buy/sell toggle, stablecoin-denominated premium + total, exercise preview (pay/receive in stablecoins), breakeven, slippage, stablecoin selector
-- **Write flow**: Full form (type, style with tooltip, settlement, strike defaulting to oracle, expiry, collateral, contracts calculator, B-S suggested premium with reset, summary, auto-list checkbox), 3-step TX stepper wired to `useWriteOption` hook
-- **Portfolio**: Wallet tokens via Nautilus + Zustand, filtered to relevant assets (ERG/USE/SigUSD/Rosen Bridge), pagination, exercise dialog, stuck box sections
-- **Market**: Reserve scanner + filterable table (asset, type, expiry, ITM only)
-- **Platform stats bar**: 24h Volume, OI, Active Contracts, Avg IV
-- **Activity feed**: Live activity component with TX classifier stub
-- **Wallet**: EIP-12 Nautilus connector with async polling + structured error codes (per MCP skill best practices)
-- **API routes**: /oracle, /boxes, /submit, /height, /mempool, /spot, /activity
+## Open Items (Not Yet Built)
 
-### Bot (`packages/bot/`) — 8 files
-- Poller (30s interval), scanner with full R7/R8 register parsing
-- Delivery retry action (MINTED_UNDELIVERED, max 3 retries)
-- Close expired action (returns collateral to writer)
-- Node wallet API signer (sign + submit)
-- SQLite state tracking
-- Health endpoint (:8090)
-- Fully permissionless — anyone can run
+### Portfolio
+- [ ] **Open Orders section** — needs to scan FixedPriceSell contract (USE + SigUSD) for sell orders belonging to wallet
+- [ ] **Written Options section** — should show reserves where wallet is issuer (R9 match), currently only "My Contract Boxes" does this
+- [ ] **Active Options (Holding)** — needs to match wallet tokens against known reserves to show positions
+- [ ] **Cancel sell order** — button to reclaim tokens from a sell order
+- [ ] **Batch listing** — select multiple options and list all in one TX
 
-### Infrastructure
-- Monorepo (pnpm workspaces)
-- GitHub repo: `cannonQ/ergo-p2p-options-frontend` (private)
-- AGPL-3.0 license
-- Supabase integration for price history (shared with oracle dashboard)
-- Public Ergo nodes: Jumei + TheStophe
+### Buy Flow
+- [ ] **Buy from sell order** — clicking a row in the option chain should allow buying tokens from a listed sell order
+- [ ] **Trade panel** — the slide-out exists but isn't wired to actual buy TXs
 
----
+### Exercise Flow
+- [ ] **Exercise button** — ExerciseDialog component exists but isn't wired to TX building
+- [ ] **Physical exercise TX** — buyer sends stablecoin, receives underlying from reserve
+- [ ] **Cash exercise TX** — buyer receives stablecoin payout based on oracle price
 
-## What's Ready to Test Tomorrow
+### Close/Refund
+- [ ] **Close expired** — button exists, TX building by agent but untested
+- [ ] **Reclaim definition** — button exists, TX building by agent but untested
 
-### Write an Option (needs Nautilus + wallet with tokens)
-1. Go to `/trade/ada/write`
-2. Fill form (Call, European, Physical, strike ~$0.25, 5 rsADA collateral, USE)
-3. Click "Lock Collateral & Mint"
-4. Nautilus signs 3 TXs: Create → Mint → Deliver
-5. Option tokens appear in wallet
+### Contract Issues
+- [ ] **FixedPriceSellV2** — stablecoin-based sell contract is compiled but NOT audited/tested on mainnet independently (the sell order TX was submitted but we haven't verified it can be bought from)
+- [ ] **BuyTokenRequestV2** — stablecoin bid contract compiled, NOT tested at all
 
-**Blockers for testing:**
-- `OPTION_CONTRACT_ERGOTREE` is a placeholder — needs the actual deployed V2 contract ErgoTree hex
-- `DAPP_UI_FEE_TREE` is zeroed — needs a real fee collection address (or set fee to 0)
-- `CONTRACT_ADDRESSES` in core config is empty — needs production contract address for scanner/market
-
-### What you need to provide before testing:
-1. **Contract ErgoTree hex** — compile OptionReserveV2.es with production constants (exercise window = 720) and get the ErgoTree
-2. **Contract address** — derive from the ErgoTree
-3. **FixedPriceSellV2 ErgoTree** — compile the updated stablecoin-based sell contract
-4. **Fee address** — your P2PK address for dApp UI fees (or set to 0n for testing)
-
-### Quick test without deploying new contracts:
-You could test against the existing test deployment (exercise window = 5 blocks) if you still have that contract address. Just add it to `CONTRACT_ADDRESSES` in `packages/core/src/config.ts`.
-
----
-
-## What's NOT Done Yet
-
-### Frontend
-- [ ] Option chain doesn't populate from on-chain data (shows generated strikes only)
-- [ ] Market page empty until CONTRACT_ADDRESSES populated
-- [ ] Portfolio doesn't match tokens against reserves yet
-- [ ] Exercise flow UI exists but isn't wired to TX building
+### UX Polish
+- [ ] Option chain "Available" column doesn't show listed sell orders (only shows 0)
+- [ ] Write page auto-list checkbox is non-functional (listing moved to portfolio)
+- [ ] No TX ID shown after sell order submission in modal
+- [ ] Contract boxes show incorrect exercise window for test contracts (uses production 720-block window)
+- [ ] Responsive mobile layout not tested
 - [ ] No ErgoPay (mobile QR) support
-- [ ] No price charts (Lightweight Charts / TradingView)
-- [ ] Responsive mobile layout not optimized
-- [ ] Settings page not built
-
-### Contracts
-- [ ] FixedPriceSellV2 (stablecoin-priced) needs audit + mainnet test
-- [ ] BuyTokenRequestV2 (stablecoin bid) needs audit + mainnet test
-- [ ] Production OptionReserveV2 deployment (exercise window = 720)
 
 ### Bot
-- [ ] TX signing works but untested against live contract addresses
-- [ ] Activity feed TX classifier is a stub
+- [ ] **Auto-close expired** — built but untested (no options have expired through the full 720-block window yet)
+- [ ] Activity feed TX classifier is still a stub
 
-### Data
-- [ ] Stats bar shows 0s (needs on-chain reserves to aggregate)
-- [ ] OI / IV rank on asset cards not populated
-- [ ] No 24h volume tracking (needs TX scanning or event logging)
+### Deployment
+- [ ] Not deployed to Vercel yet (running localhost only)
+- [ ] Supabase anon key in .env.local (needs Vercel env vars)
 
----
+## What Was Tested on Mainnet Today
 
-## File Count Summary
+1. Write ERG Call $0.30 — Nautilus signed Create TX ✓
+2. Bot detected DEFINITION box — auto-minted after 1 block ✓
+3. Bot detected MINTED_UNDELIVERED — auto-delivered ✓
+4. Portfolio shows contract box as Active with expiry info ✓
+5. List for Sale modal — set premium, Nautilus signed sell order TX ✓
+6. Option chain shows OI=1 at the $0.2966 strike ✓
+7. Market page shows ERG Call with spot price and expiry ✓
+8. Stats bar shows 1 active contract, 2.00 ERG OI ✓
 
-| Package | Files | Purpose |
-|---------|-------|---------|
-| `packages/core/src/` | 15 | TX builders, pricing, config |
-| `packages/web/src/` | ~40 | Next.js frontend |
-| `packages/bot/src/` | 8 | Scanner daemon |
-| **Total** | **~63** | |
+## Critical Bugs Found and Fixed During Testing
 
----
-
-## To Deploy to Vercel
-
-1. Connect GitHub repo to Vercel
-2. Set env vars: `ERGO_NODE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-3. Build command: `cd packages/core && npx tsc && cd ../web && npx next build`
-4. Output dir: `packages/web/.next`
-
----
-
-## To Run Bot
-
-```bash
-cd packages/bot
-ERGO_NODE=http://localhost:9053 CONTRACT_ADDRESSES=addr1,addr2 npm start
-```
+1. **byAddress URL too long** — P2S addresses are 2000+ chars, node returns 400. Fixed: use POST byErgoTree
+2. **Miner fee must be explicit output** — node rejects TX without fee output box. Fixed: add FEE_CONTRACT output
+3. **BigInt serialization** — JSON.stringify fails on BigInt. Fixed: .toString() all values
+4. **Conditional mint fee output** — 0-fee creates underfunded box. Fixed: skip output when fee < MIN_BOX_VALUE
+5. **EC point extraction** — Nautilus ergoTree format doesn't always start with 0008cd. Fixed: use node addressToRaw API
+6. **B-S premium for expired options** — blocksToExpiry < 0 caused early return. Fixed: fallback to intrinsic value
+7. **Sparkline data window** — 24 points only covered ~5 hours. Fixed: use full 24h of data (~120 epochs)
