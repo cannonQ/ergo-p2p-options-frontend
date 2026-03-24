@@ -26,10 +26,17 @@ export interface ClassifiedBox {
 
 /**
  * Fetch all unspent boxes at a contract address.
+ * Uses POST to avoid URL length limits (P2S addresses can be 2000+ chars).
  */
 async function fetchBoxes(address: string): Promise<NodeBox[]> {
+  // Use POST with address in body — the GET endpoint fails for long P2S addresses
   const res = await fetch(
-    `${config.nodeUrl}/blockchain/box/unspent/byAddress/${address}?offset=0&limit=200`,
+    `${config.nodeUrl}/blockchain/box/unspent/byAddress?offset=0&limit=200`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: address,
+    },
   );
   if (!res.ok) {
     throw new Error(`Node error ${res.status} fetching boxes for ${address.slice(0, 16)}...`);

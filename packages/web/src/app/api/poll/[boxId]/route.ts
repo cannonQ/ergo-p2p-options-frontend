@@ -80,7 +80,8 @@ export async function GET(
     const r7Hex = `0e20${boxId}`;
 
     const scanRes = await fetch(
-      `${NODE_URL}/blockchain/box/unspent/byAddress/${contractAddress}?offset=0&limit=100`,
+      `${NODE_URL}/blockchain/box/unspent/byAddress?offset=0&limit=100`,
+      { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: contractAddress },
     );
     if (!scanRes.ok) {
       return NextResponse.json({ state: 'NOT_FOUND' } satisfies PollResponse);

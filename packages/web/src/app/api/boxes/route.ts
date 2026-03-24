@@ -12,7 +12,8 @@ export async function GET(request: Request) {
 
   try {
     const res = await fetch(
-      `${NODE_URL}/blockchain/box/unspent/byAddress/${address}?offset=0&limit=100`,
+      `${NODE_URL}/blockchain/box/unspent/byAddress?offset=0&limit=100`,
+      { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: address },
     );
     if (!res.ok) throw new Error(`Node error: ${res.status}`);
     const boxes = await res.json();

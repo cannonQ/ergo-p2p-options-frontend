@@ -86,8 +86,8 @@ export async function scanReserves(currentHeight?: number): Promise<ParsedReserv
   for (const contractInfo of CONTRACT_ADDRESSES) {
     try {
       const res = await fetch(
-        `${NODE_URL}/blockchain/box/unspent/byAddress/${contractInfo.address}?offset=0&limit=100`,
-        { next: { revalidate: 60 } }
+        `${NODE_URL}/blockchain/box/unspent/byAddress?offset=0&limit=100`,
+        { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: contractInfo.address, next: { revalidate: 60 } } as any,
       );
       if (!res.ok) continue;
       const boxes = await res.json();
