@@ -79,15 +79,17 @@ export async function GET(
     // The serialized R7 hex = "0e20" + boxId (0e = Coll[Byte] type, 20 = 32 length).
     const r7Hex = `0e20${boxId}`;
 
+    // Use byErgoTree endpoint — contractAddress param is actually the ErgoTree hex
     const scanRes = await fetch(
-      `${NODE_URL}/blockchain/box/unspent/byAddress?offset=0&limit=100`,
-      { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: contractAddress },
+      `${NODE_URL}/blockchain/box/unspent/byErgoTree?offset=0&limit=100`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(contractAddress) },
     );
     if (!scanRes.ok) {
       return NextResponse.json({ state: 'NOT_FOUND' } satisfies PollResponse);
     }
 
-    const boxes: any[] = await scanRes.json();
+    const rawData = await scanRes.json();
+    const boxes: any[] = rawData.items ?? rawData;
 
     for (const box of boxes) {
       const registers = box.additionalRegisters || {};

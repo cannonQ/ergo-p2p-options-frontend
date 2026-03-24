@@ -25,7 +25,7 @@ const server = http.createServer((_req, res) => {
   res.end(JSON.stringify({
     status: 'ok',
     nodeUrl: config.nodeUrl,
-    contractAddresses: config.contractAddresses.length,
+    contracts: config.contractErgoTrees.length,
     pollInterval: config.pollInterval,
     autoCloseExpired: config.autoCloseExpired,
     uptime: process.uptime(),

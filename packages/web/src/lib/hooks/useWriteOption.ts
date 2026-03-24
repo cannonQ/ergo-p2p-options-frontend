@@ -220,11 +220,11 @@ async function waitForState(
  * Get the contract address for the current deployment.
  * Uses the first CONTRACT_ADDRESSES entry.
  */
-function getContractAddress(): string {
+function getContractErgoTree(): string {
   if (CONTRACT_ADDRESSES.length === 0) {
     throw new Error("No contract addresses configured");
   }
-  return CONTRACT_ADDRESSES[0].address;
+  return CONTRACT_ADDRESSES[0].ergoTree;
 }
 
 export function useWriteOption(): WriteOptionResult {
@@ -334,7 +334,7 @@ export function useWriteOption(): WriteOptionResult {
       // ---------------------------------------------------------------
       setStep(2);
 
-      const contractAddress = getContractAddress();
+      const contractAddress = getContractErgoTree();
 
       // Poll until the box transitions to MINTED or DELIVERED
       // (bot may mint+deliver so fast we skip straight to DELIVERED)

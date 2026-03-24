@@ -25,23 +25,24 @@ export interface ClassifiedBox {
 }
 
 /**
- * Fetch all unspent boxes at a contract address.
- * Uses POST to avoid URL length limits (P2S addresses can be 2000+ chars).
+ * Fetch all unspent boxes by ErgoTree hex.
+ * Uses POST /blockchain/box/unspent/byErgoTree (handles long P2S scripts).
  */
-async function fetchBoxes(address: string): Promise<NodeBox[]> {
-  // Use POST with address in body — the GET endpoint fails for long P2S addresses
+async function fetchBoxesByErgoTree(ergoTree: string): Promise<NodeBox[]> {
   const res = await fetch(
-    `${config.nodeUrl}/blockchain/box/unspent/byAddress?offset=0&limit=200`,
+    `${config.nodeUrl}/blockchain/box/unspent/byErgoTree?offset=0&limit=200`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: address,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ergoTree),
     },
   );
   if (!res.ok) {
-    throw new Error(`Node error ${res.status} fetching boxes for ${address.slice(0, 16)}...`);
+    throw new Error(`Node error ${res.status} fetching boxes by ErgoTree ${ergoTree.slice(0, 16)}...`);
   }
-  return res.json();
+  const data = await res.json();
+  // Response may be { items: [...], total: N } or just an array
+  return data.items ?? data;
 }
 
 /**
@@ -85,12 +86,12 @@ function parseBoxForClassification(box: NodeBox): {
 export async function scanAll(currentHeight: number): Promise<ClassifiedBox[]> {
   const results: ClassifiedBox[] = [];
 
-  for (let i = 0; i < config.contractAddresses.length; i++) {
-    const addr = config.contractAddresses[i];
+  for (let i = 0; i < config.contractErgoTrees.length; i++) {
+    const ergoTree = config.contractErgoTrees[i];
     const exerciseWindow = config.exerciseWindows[i] ?? 720;
 
     try {
-      const boxes = await fetchBoxes(addr);
+      const boxes = await fetchBoxesByErgoTree(ergoTree);
 
       for (const box of boxes) {
         const assets = box.assets.map(a => ({
@@ -109,13 +110,13 @@ export async function scanAll(currentHeight: number): Promise<ClassifiedBox[]> {
         results.push({
           boxId: box.boxId,
           state,
-          contractAddr: addr,
+          contractAddr: ergoTree,
           creationHeight: box.creationHeight,
           raw: box,
         });
       }
     } catch (err) {
-      console.error(`[SCAN] Error scanning ${addr.slice(0, 16)}...:`, err);
+      console.error(`[SCAN] Error scanning ${ergoTree.slice(0, 16)}...:`, err);
     }
   }
 

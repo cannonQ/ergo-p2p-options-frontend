@@ -101,7 +101,7 @@ export async function poll() {
     console.log(`[POLL] New block at height ${currentHeight}`);
 
     const boxes = await scanAll(currentHeight);
-    console.log(`[SCAN] Found ${boxes.length} boxes across ${config.contractAddresses.length} addresses`);
+    console.log(`[SCAN] Found ${boxes.length} boxes across ${config.contractErgoTrees.length} contracts`);
 
     for (const box of boxes) {
       await handleBox(box, currentHeight);
@@ -113,7 +113,7 @@ export async function poll() {
 
 export function startPolling() {
   console.log(`[BOT] Starting scanner — polling every ${config.pollInterval / 1000}s`);
-  console.log(`[BOT] Monitoring ${config.contractAddresses.length} contract address(es)`);
+  console.log(`[BOT] Monitoring ${config.contractErgoTrees.length} contract(s)`);
   console.log(`[BOT] Node: ${config.nodeUrl}`);
 
   // Initial poll

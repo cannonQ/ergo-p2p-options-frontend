@@ -86,18 +86,20 @@ export async function scanReserves(currentHeight?: number): Promise<ParsedReserv
   for (const contractInfo of CONTRACT_ADDRESSES) {
     try {
       const res = await fetch(
-        `${NODE_URL}/blockchain/box/unspent/byAddress?offset=0&limit=100`,
-        { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: contractInfo.address, next: { revalidate: 60 } } as any,
+        `${NODE_URL}/blockchain/box/unspent/byErgoTree?offset=0&limit=100`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(contractInfo.ergoTree) } as any,
       );
       if (!res.ok) continue;
-      const boxes = await res.json();
+      // Response may be { items: [...] } or array
+      const rawData = await res.json();
+      const boxes = rawData.items ?? rawData;
 
       for (const box of boxes) {
         const parsed = parseReserveBox(box, height, contractInfo.exerciseWindow);
         if (parsed) reserves.push(parsed);
       }
     } catch (err) {
-      console.error(`Scanner error for ${contractInfo.address.slice(0, 16)}...:`, err);
+      console.error(`Scanner error for ${contractInfo.ergoTree.slice(0, 16)}...:`, err);
     }
   }
 

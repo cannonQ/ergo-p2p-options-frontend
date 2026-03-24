@@ -30,10 +30,10 @@ export const config = {
   /** Alert blocks for stuck definition boxes (legacy, used if mint keeps failing) */
   stuckDefinitionBlocks: Number(process.env.STUCK_DEFINITION_BLOCKS || 10),
 
-  /** Contract addresses to monitor (comma-separated) */
-  contractAddresses: (process.env.CONTRACT_ADDRESSES || '').split(',').filter(Boolean),
+  /** Contract ErgoTrees to monitor (comma-separated hex, or use CONTRACT_ADDRESSES for legacy address format) */
+  contractErgoTrees: (process.env.CONTRACT_ERGOTREES || process.env.CONTRACT_ADDRESSES || '').split(',').filter(Boolean),
 
-  /** Exercise windows per contract address (comma-separated, same order) */
+  /** Exercise windows per contract (comma-separated, same order) */
   exerciseWindows: (process.env.EXERCISE_WINDOWS || '720').split(',').map(Number),
 
   /** SQLite database path */
