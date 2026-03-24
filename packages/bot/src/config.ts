@@ -16,7 +16,7 @@ export const config = {
   stuckDeliveryBlocks: Number(process.env.STUCK_DELIVERY_BLOCKS || 2),
 
   /** Max delivery retries before alerting */
-  maxDeliveryRetries: Number(process.env.MAX_DELIVERY_RETRIES || 3),
+  maxDeliveryRetries: Number(process.env.MAX_DELIVERY_RETRIES || 50),
 
   /** Auto-close expired reserves */
   autoCloseExpired: process.env.AUTO_CLOSE_EXPIRED !== 'false',
@@ -25,7 +25,7 @@ export const config = {
   stuckMintBlocks: Number(process.env.STUCK_MINT_BLOCKS || 1),
 
   /** Max mint retries before alerting */
-  maxMintRetries: Number(process.env.MAX_MINT_RETRIES || 3),
+  maxMintRetries: Number(process.env.MAX_MINT_RETRIES || 50),
 
   /** Alert blocks for stuck definition boxes (legacy, used if mint keeps failing) */
   stuckDefinitionBlocks: Number(process.env.STUCK_DEFINITION_BLOCKS || 10),
