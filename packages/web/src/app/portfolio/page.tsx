@@ -95,15 +95,30 @@ interface ContractBox {
   name: string;
   value: number;
   optionType?: string;
+  style?: string;
+  settlement?: string;
   strikePrice?: number;
   maturityDate?: number;
+  oracleIndex?: number;
   tokenCount?: number;
+}
+
+function formatBlocksToTime(blocks: number): string {
+  if (blocks <= 0) return "expired";
+  const minutes = blocks * 2;
+  if (minutes < 60) return `~${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `~${hours}h ${minutes % 60}m`;
+  const days = Math.floor(hours / 24);
+  return `~${days}d ${hours % 24}h`;
 }
 
 export default function PortfolioPage() {
   const { connected, address, api, ergBalance } = useWalletStore();
   const [tokens, setTokens] = useState<WalletToken[]>([]);
   const [contractBoxes, setContractBoxes] = useState<ContractBox[]>([]);
+  const [currentHeight, setCurrentHeight] = useState(0);
+  const [exerciseWindow, setExerciseWindow] = useState(720);
   const [loading, setLoading] = useState(false);
 
   const loadTokens = useCallback(async () => {
@@ -163,6 +178,8 @@ export default function PortfolioPage() {
             if (myBoxesRes.ok) {
               const data = await myBoxesRes.json();
               setContractBoxes(data.boxes ?? []);
+              if (data.currentHeight) setCurrentHeight(data.currentHeight);
+              if (data.exerciseWindow) setExerciseWindow(data.exerciseWindow);
             }
           }
         }
@@ -270,8 +287,8 @@ export default function PortfolioPage() {
                       <th className="text-left py-3 px-4 text-[#94a3b8] font-medium">Name</th>
                       <th className="text-left py-3 px-4 text-[#94a3b8] font-medium">State</th>
                       <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Strike</th>
+                      <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Expiry</th>
                       <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">ERG Locked</th>
-                      <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Box ID</th>
                       <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Action</th>
                     </tr>
                   </thead>
@@ -295,11 +312,42 @@ export default function PortfolioPage() {
                         <td className="py-2 px-4 text-right font-mono text-[#eab308]">
                           {box.strikePrice ? `$${box.strikePrice >= 100 ? box.strikePrice.toFixed(0) : box.strikePrice.toFixed(4)}` : "—"}
                         </td>
+                        {/* Expiry info */}
+                        <td className="py-2 px-4 text-right">
+                          {box.maturityDate ? (() => {
+                            const blocksToExpiry = box.maturityDate - currentHeight;
+                            const expiryWithWindow = box.maturityDate + exerciseWindow;
+                            const blocksToClose = expiryWithWindow - currentHeight;
+                            const isExpired = currentHeight > expiryWithWindow;
+                            const isExercisable = box.style === "american"
+                              ? currentHeight <= expiryWithWindow
+                              : currentHeight >= box.maturityDate && currentHeight <= expiryWithWindow;
+
+                            return (
+                              <div className="text-xs space-y-0.5">
+                                <div className="font-mono text-[#94a3b8]">
+                                  Block {box.maturityDate.toLocaleString()}
+                                </div>
+                                {isExpired ? (
+                                  <div className="text-[#ef4444]">Expired</div>
+                                ) : blocksToExpiry > 0 ? (
+                                  <div className="text-[#e2e8f0]">
+                                    {formatBlocksToTime(blocksToExpiry)} to maturity
+                                  </div>
+                                ) : (
+                                  <div className="text-[#f59e0b]">
+                                    Exercise window: {formatBlocksToTime(blocksToClose)}
+                                  </div>
+                                )}
+                                {isExercisable && (
+                                  <div className="text-[#22c55e] font-semibold">Exercisable</div>
+                                )}
+                              </div>
+                            );
+                          })() : "—"}
+                        </td>
                         <td className="py-2 px-4 text-right font-mono text-[#94a3b8]">
                           {(box.value / 1e9).toFixed(4)}
-                        </td>
-                        <td className="py-2 px-4 text-right font-mono text-xs text-[#94a3b8]">
-                          {box.boxId.slice(0, 8)}...{box.boxId.slice(-6)}
                         </td>
                         <td className="py-2 px-4 text-right">
                           {box.state === "DEFINITION" && (
@@ -313,7 +361,9 @@ export default function PortfolioPage() {
                             </button>
                           )}
                           {box.state === "RESERVE" && (
-                            <span className="text-xs text-[#22c55e]">Active</span>
+                            <button className="text-xs px-2 py-1 bg-[#3b82f6]/20 text-[#3b82f6] rounded hover:bg-[#3b82f6]/30">
+                              List for Sale
+                            </button>
                           )}
                           {box.state === "MINTED_UNDELIVERED" && (
                             <span className="text-xs text-[#3b82f6]">Bot handling...</span>

@@ -33,11 +33,11 @@ function ordinalSuffix(n: number): string {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
-function MiniSparkline({ data, isUp }: { data: number[]; isUp?: boolean }) {
+function MiniSparkline({ data, isUp: _isUp }: { data: number[]; isUp?: boolean }) {
   if (data.length < 2) return null;
 
-  const width = 60;
-  const height = 20;
+  const width = 120;
+  const height = 28;
   const padding = 1;
 
   const min = Math.min(...data);
@@ -52,12 +52,16 @@ function MiniSparkline({ data, isUp }: { data: number[]; isUp?: boolean }) {
     })
     .join(" ");
 
-  // Sparkline color follows its own visible shape (last vs first point)
-  // This matches what the user sees — line going up = green, down = red
+  // Color follows the 24h direction (first vs last data point)
   const color = data[data.length - 1] >= data[0] ? "#22c55e" : "#ef4444";
+  const fillColor = data[data.length - 1] >= data[0] ? "#22c55e10" : "#ef444410";
+
+  // Area fill path: line points + bottom-right + bottom-left
+  const areaPath = `M ${points.split(" ").join(" L ")} L ${width - padding},${height} L ${padding},${height} Z`;
 
   return (
-    <svg width={width} height={height} className="inline-block">
+    <svg width={width} height={height} className="block w-full">
+      <path d={areaPath} fill={fillColor} />
       <polyline
         points={points}
         fill="none"
@@ -65,6 +69,7 @@ function MiniSparkline({ data, isUp }: { data: number[]; isUp?: boolean }) {
         strokeWidth={1.5}
         strokeLinecap="round"
         strokeLinejoin="round"
+        opacity={0.8}
       />
     </svg>
   );
@@ -86,41 +91,40 @@ export function AssetCard({
       href={`/trade/${slug}`}
       className="block p-4 bg-[#131a2a] border border-[#1e293b] rounded-lg hover:border-[#3b82f6] transition-colors group"
     >
-      {/* Name + Badge */}
+      {/* Name + Badge + 24h change */}
       <div className="flex items-center justify-between mb-1">
-        <span className="text-lg font-bold text-[#e2e8f0] group-hover:text-[#3b82f6] transition-colors">
-          {name}
-        </span>
-        {badge && (
-          <span className="text-[9px] px-1 py-0.5 bg-[#22c55e]/10 text-[#22c55e] rounded">
-            {badge}
+        <div className="flex items-center gap-1.5">
+          <span className="text-lg font-bold text-[#e2e8f0] group-hover:text-[#3b82f6] transition-colors">
+            {name}
+          </span>
+          {badge && (
+            <span className="text-[9px] px-1 py-0.5 bg-[#22c55e]/10 text-[#22c55e] rounded">
+              {badge}
+            </span>
+          )}
+        </div>
+        {change24h !== undefined && (
+          <span
+            className={`text-xs font-mono font-semibold ${
+              change24h >= 0 ? "text-[#22c55e]" : "text-[#ef4444]"
+            }`}
+          >
+            {formatChange(change24h)}
           </span>
         )}
       </div>
 
-      {/* Sparkline + 24h change */}
-      {(sparkline || change24h !== undefined) && (
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex-shrink-0">
-            {sparkline && sparkline.length >= 2 && (
-              <MiniSparkline data={sparkline} isUp={change24h !== undefined ? change24h >= 0 : undefined} />
-            )}
-          </div>
-          {change24h !== undefined && (
-            <span
-              className={`text-xs font-mono font-semibold ${
-                change24h >= 0 ? "text-[#22c55e]" : "text-[#ef4444]"
-              }`}
-            >
-              {formatChange(change24h)}
-            </span>
-          )}
-        </div>
-      )}
-
-      <div className="text-xl font-mono text-[#eab308] mb-2">
+      {/* Price */}
+      <div className="text-xl font-mono text-[#eab308] mb-1">
         {price !== undefined && price > 0 ? `$${formatPrice(price)}` : "\u2014"}
       </div>
+
+      {/* Sparkline — full width, below price */}
+      {sparkline && sparkline.length >= 2 && (
+        <div className="mb-1 -mx-1">
+          <MiniSparkline data={sparkline} />
+        </div>
+      )}
 
       <div className="text-sm text-[#94a3b8]">
         {optionCount} option{optionCount !== 1 ? "s" : ""}

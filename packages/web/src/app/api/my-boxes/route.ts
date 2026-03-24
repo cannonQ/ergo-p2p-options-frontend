@@ -251,7 +251,11 @@ export async function GET(request: Request) {
       });
     }
 
-    return NextResponse.json({ boxes: myBoxes });
+    return NextResponse.json({
+      boxes: myBoxes,
+      currentHeight,
+      exerciseWindow: CONTRACT_ADDRESSES[0]?.exerciseWindow ?? 720,
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message, boxes: [] }, { status: 500 });
   }
