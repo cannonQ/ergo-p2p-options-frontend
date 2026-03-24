@@ -82,10 +82,11 @@ export async function signAndSubmitTx(unsignedTx: any): Promise<string> {
   const signedTx = signTx(unsignedTx);
 
   // Submit to network via node API (no wallet auth needed for submission)
+  // Use BigInt-safe serializer (Ergo TXs may contain BigInt values)
   const submitRes = await fetch(`${config.nodeUrl}/transactions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(signedTx),
+    body: JSON.stringify(signedTx, (_, v) => typeof v === 'bigint' ? v.toString() : v),
   });
   if (!submitRes.ok) {
     const body = await submitRes.text();

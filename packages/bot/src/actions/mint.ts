@@ -185,9 +185,13 @@ export async function executeMint(
     });
   }
 
-  // --- dApp UI fee output ---
+  // --- dApp UI fee output (only if mint fee > 0) ---
   const dAppUIFeeTreeHex = bytesToHex(r9parts[1]);
-  const feeValue = dAppUIMintFee < MIN_BOX_VALUE ? MIN_BOX_VALUE : dAppUIMintFee;
+  const hasMintFee = dAppUIMintFee >= MIN_BOX_VALUE;
+  const feeValue = hasMintFee ? dAppUIMintFee : 0n;
+
+  // Adjust reserve value: only deduct mint fee if we're creating the fee output
+  const reserveValueAdjusted = hasMintFee ? reserveValue : BigInt(raw.value) - txFee;
 
   // --- Fetch raw box bytes for signing ---
   const definitionBoxRaw = await fetchBoxRawBytes(definitionBoxId);
@@ -215,12 +219,12 @@ export async function executeMint(
     outputs: [
       // OUTPUT[0]: Reserve box with minted option tokens
       {
-        value: reserveValue,
+        value: reserveValueAdjusted.toString(),
         ergoTree: OPTION_RESERVE_ERGOTREE,
         creationHeight: currentHeight,
         assets: reserveAssets.map(a => ({
           tokenId: a.tokenId,
-          amount: a.amount,
+          amount: a.amount.toString(),
         })),
         additionalRegisters: {
           R4: raw.additionalRegisters.R4,
@@ -231,16 +235,16 @@ export async function executeMint(
           R9: raw.additionalRegisters.R9,
         },
       },
-      // OUTPUT[1]: dApp UI fee box
-      {
-        value: feeValue,
+      // OUTPUT[1]: dApp UI fee box (only if mint fee >= MIN_BOX_VALUE)
+      ...(hasMintFee ? [{
+        value: feeValue.toString(),
         ergoTree: dAppUIFeeTreeHex,
         creationHeight: currentHeight,
-        assets: [],
-        additionalRegisters: {},
-      },
+        assets: [] as { tokenId: string; amount: string }[],
+        additionalRegisters: {} as Record<string, string>,
+      }] : []),
     ],
-    fee: txFee,
+    fee: txFee.toString(),
     inputsRaw: [definitionBoxRaw],
     dataInputsRaw,
   };
