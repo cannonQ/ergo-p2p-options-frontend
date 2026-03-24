@@ -805,6 +805,11 @@ export default function PortfolioPage() {
     console.log("[Exercise] optionTokenId:", optionTokenId);
     console.log("[Exercise] optionTokenBoxes:", optionTokenBoxes.length, "paymentBoxes:", paymentBoxes.length);
 
+    // Guard: verify buyer actually has option tokens (may be stale wallet cache)
+    if (optionTokenBoxes.length === 0) {
+      throw new Error("No option tokens found in wallet — you may have already exercised this position. Refresh the page.");
+    }
+
     const walletErgoTree = rawUtxos[0]?.ergoTree;
     if (!walletErgoTree) throw new Error("No wallet UTXOs found");
 

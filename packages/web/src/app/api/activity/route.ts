@@ -63,7 +63,84 @@ export async function GET() {
       console.error("Activity scan error:", err);
     }
 
-    const result = items.slice(0, 20);
+    // Also scan reserve contract boxes (spent + unspent) to catch exercise/close TXs
+    // that don't go through the fee address
+    try {
+      const res = await fetch(
+        `${NODE_URL}/blockchain/box/byErgoTree?offset=0&limit=20`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(OPTION_RESERVE_ERGOTREE),
+          cache: "no-store",
+        } as any,
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        const boxes = data.items ?? data;
+
+        // Collect unique spending TX IDs (excluding those already found)
+        const existingTxIds = new Set(items.map((i) => i.txId));
+        const spentTxIds = new Set<string>();
+        for (const box of boxes) {
+          const stx = box.spentTransactionId;
+          if (stx && !existingTxIds.has(stx) && !spentTxIds.has(stx)) {
+            spentTxIds.add(stx);
+          }
+        }
+
+        // Fetch each spending TX and classify
+        for (const txId of spentTxIds) {
+          try {
+            const txRes = await fetch(`${NODE_URL}/blockchain/transaction/byId/${txId}`, { cache: "no-store" });
+            if (txRes.ok) {
+              const tx = await txRes.json();
+              const item = classifyTx(tx, currentHeight);
+              if (item) items.push(item);
+            }
+          } catch { /* skip */ }
+        }
+
+        // Also add unspent boxes as WRITE events (creation TXs)
+        for (const box of boxes) {
+          if (!box.spentTransactionId && box.transactionId && !existingTxIds.has(box.transactionId)) {
+            const boxHeight = box.settlementHeight ?? box.creationHeight ?? currentHeight;
+            const blocksAgo = currentHeight - boxHeight;
+            const r4name = box.additionalRegisters?.R4 ? parseR4Name(box.additionalRegisters.R4) : "Option";
+            items.push({
+              type: "WRITE",
+              timestamp: blocksToRelativeTime(blocksAgo),
+              description: r4name,
+              txId: box.transactionId,
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Activity scan error (reserve boxes):", err);
+    }
+
+    // Deduplicate by txId
+    const seen = new Set<string>();
+    const deduped = items.filter((item) => {
+      if (!item.txId || seen.has(item.txId)) return false;
+      seen.add(item.txId);
+      return true;
+    });
+
+    // Sort by timestamp (most recent first)
+    deduped.sort((a, b) => {
+      const parseMin = (t: string) => {
+        const n = parseInt(t) || 0;
+        if (t.includes("d")) return n * 1440;
+        if (t.includes("h")) return n * 60;
+        return n;
+      };
+      return parseMin(a.timestamp) - parseMin(b.timestamp);
+    });
+
+    const result = deduped.slice(0, 20);
     cache = { items: result, ts: Date.now() };
     return NextResponse.json({ items: result });
   } catch (error: any) {
