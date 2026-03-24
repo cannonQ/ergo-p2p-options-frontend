@@ -89,9 +89,21 @@ function PaginatedSection({
   );
 }
 
+interface ContractBox {
+  boxId: string;
+  state: "DEFINITION" | "MINTED_UNDELIVERED" | "RESERVE" | "EXPIRED";
+  name: string;
+  value: number;
+  optionType?: string;
+  strikePrice?: number;
+  maturityDate?: number;
+  tokenCount?: number;
+}
+
 export default function PortfolioPage() {
   const { connected, address, api, ergBalance } = useWalletStore();
   const [tokens, setTokens] = useState<WalletToken[]>([]);
+  const [contractBoxes, setContractBoxes] = useState<ContractBox[]>([]);
   const [loading, setLoading] = useState(false);
 
   const loadTokens = useCallback(async () => {
@@ -132,6 +144,31 @@ export default function PortfolioPage() {
       });
 
       setTokens(tokenList);
+
+      // Also scan contract address for boxes belonging to this wallet
+      try {
+        // Get wallet's EC point from the first used address
+        // P2PK address ErgoTree = 0008cd + 33-byte EC point
+        const addrs = await api.get_used_addresses();
+        const firstAddr = addrs?.[0];
+        if (firstAddr) {
+          // Fetch ErgoTree for this address via node API
+          const addrRes = await fetch(`/api/boxes?address=${firstAddr}&raw=true`);
+          // Alternative: derive EC point from address directly
+          // For now, try getting it from the wallet's UTXOs ergoTree
+          const walletUtxo = utxos?.[0];
+          if (walletUtxo?.ergoTree && walletUtxo.ergoTree.startsWith("0008cd")) {
+            const ecPoint = walletUtxo.ergoTree.slice(6); // 33-byte EC point hex
+            const myBoxesRes = await fetch(`/api/my-boxes?ecPoint=${ecPoint}`);
+            if (myBoxesRes.ok) {
+              const data = await myBoxesRes.json();
+              setContractBoxes(data.boxes ?? []);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to scan contract boxes:", err);
+      }
     } catch (err) {
       console.error("Failed to load tokens:", err);
     } finally {
@@ -220,13 +257,80 @@ export default function PortfolioPage() {
         )}
       </PaginatedSection>
 
-      {/* Stuck / Reclaimable */}
-      <PaginatedSection title="Stuck / Reclaimable" total={0} pageSize={PAGE_SIZE}>
-        {() => (
-          <div className="bg-[#131a2a] border border-[#1e293b] rounded-lg p-8 text-center text-[#94a3b8]">
-            No stuck boxes
-          </div>
-        )}
+      {/* Stuck / Reclaimable + Active Reserves */}
+      <PaginatedSection title="My Contract Boxes" total={contractBoxes.length} pageSize={PAGE_SIZE}>
+        {(page) => {
+          const pageBoxes = contractBoxes.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+          return (
+            <div className="bg-[#131a2a] border border-[#1e293b] rounded-lg overflow-hidden">
+              {pageBoxes.length > 0 ? (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[#1e293b]">
+                      <th className="text-left py-3 px-4 text-[#94a3b8] font-medium">Name</th>
+                      <th className="text-left py-3 px-4 text-[#94a3b8] font-medium">State</th>
+                      <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Strike</th>
+                      <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">ERG Locked</th>
+                      <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Box ID</th>
+                      <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageBoxes.map((box) => (
+                      <tr key={box.boxId} className="border-b border-[#1e293b]/50 hover:bg-[#1e293b]/30">
+                        <td className="py-2 px-4 text-[#e2e8f0]">{box.name}</td>
+                        <td className="py-2 px-4">
+                          <span className={`text-xs px-2 py-0.5 rounded ${
+                            box.state === "DEFINITION" ? "bg-[#f59e0b]/20 text-[#f59e0b]" :
+                            box.state === "MINTED_UNDELIVERED" ? "bg-[#3b82f6]/20 text-[#3b82f6]" :
+                            box.state === "RESERVE" ? "bg-[#22c55e]/20 text-[#22c55e]" :
+                            "bg-[#ef4444]/20 text-[#ef4444]"
+                          }`}>
+                            {box.state === "DEFINITION" ? "Pending Mint" :
+                             box.state === "MINTED_UNDELIVERED" ? "Pending Delivery" :
+                             box.state === "RESERVE" ? "Active" :
+                             "Expired"}
+                          </span>
+                        </td>
+                        <td className="py-2 px-4 text-right font-mono text-[#eab308]">
+                          {box.strikePrice ? `$${box.strikePrice >= 100 ? box.strikePrice.toFixed(0) : box.strikePrice.toFixed(4)}` : "—"}
+                        </td>
+                        <td className="py-2 px-4 text-right font-mono text-[#94a3b8]">
+                          {(box.value / 1e9).toFixed(4)}
+                        </td>
+                        <td className="py-2 px-4 text-right font-mono text-xs text-[#94a3b8]">
+                          {box.boxId.slice(0, 8)}...{box.boxId.slice(-6)}
+                        </td>
+                        <td className="py-2 px-4 text-right">
+                          {box.state === "DEFINITION" && (
+                            <button className="text-xs px-2 py-1 bg-[#f59e0b]/20 text-[#f59e0b] rounded hover:bg-[#f59e0b]/30">
+                              Reclaim
+                            </button>
+                          )}
+                          {box.state === "EXPIRED" && (
+                            <button className="text-xs px-2 py-1 bg-[#ef4444]/20 text-[#ef4444] rounded hover:bg-[#ef4444]/30">
+                              Close
+                            </button>
+                          )}
+                          {box.state === "RESERVE" && (
+                            <span className="text-xs text-[#22c55e]">Active</span>
+                          )}
+                          {box.state === "MINTED_UNDELIVERED" && (
+                            <span className="text-xs text-[#3b82f6]">Bot handling...</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="p-8 text-center text-[#94a3b8]">
+                  {loading ? "Scanning contract..." : "No boxes found at contract address"}
+                </div>
+              )}
+            </div>
+          );
+        }}
       </PaginatedSection>
 
       {/* Wallet Balances — only relevant assets */}
