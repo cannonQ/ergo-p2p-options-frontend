@@ -135,6 +135,7 @@ export function buildExercisePhysicalCallTx(
       .from(allInputs)
       .to([successor, exerciser, writer])
       .withDataFrom([registryBox])
+      .burnTokens({ tokenId: optionTokenId, amount: effectiveContracts })
       .sendChangeTo(changeErgoTree)
       .payFee(txFee)
       .build();
@@ -164,6 +165,7 @@ export function buildExercisePhysicalCallTx(
       .from(allInputs)
       .to([successor, exerciser, writer])
       .withDataFrom([registryBox])
+      .burnTokens({ tokenId: optionTokenId, amount: effectiveContracts })
       .sendChangeTo(changeErgoTree)
       .payFee(txFee)
       .build();
@@ -251,6 +253,7 @@ export function buildExercisePhysicalPutTx(
     .from(allInputs)
     .to([successor, exerciser, writer])
     .withDataFrom([registryBox])
+    .burnTokens({ tokenId: optionTokenId, amount: effectiveContracts })
     .sendChangeTo(changeErgoTree)
     .payFee(txFee)
     .build();
