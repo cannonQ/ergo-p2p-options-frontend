@@ -7,6 +7,7 @@ interface StatsData {
   callCount: number;
   putCount: number;
   openInterestErg: number;
+  currentHeight?: number;
 }
 
 function formatERG(value: number): string {
@@ -94,16 +95,16 @@ export function StatsBar() {
           </div>
         </div>
 
-        {/* Avg IV (30d) */}
+        {/* Block Height */}
         <div>
           <div className="text-[#94a3b8] text-xs uppercase tracking-wider mb-1">
-            Avg IV (30d)
+            Block Height
           </div>
           <div className="text-[#e2e8f0] text-lg font-mono font-bold">
-            {"\u2014"}
+            {loading ? "\u2014" : (stats.currentHeight?.toLocaleString() ?? "\u2014")}
           </div>
           <div className="text-[#94a3b8] text-xs">
-            {"\u2014"}
+            ~2 min/block
           </div>
         </div>
       </div>

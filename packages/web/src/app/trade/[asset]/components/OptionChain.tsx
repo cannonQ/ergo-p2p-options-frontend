@@ -282,11 +282,11 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, o
                 <th className="text-center py-1 px-2 text-[#22c55e]/70 font-normal text-xs w-[68px]">Vol</th>
                 <th className="text-left py-1 px-2 text-[#22c55e]/70 font-normal text-xs">Premium</th>
                 <th className="text-right py-1 px-2 text-[#22c55e]/70 font-normal text-xs">Avail</th>
-                <th className="text-right py-1 px-2 text-[#22c55e]/70 font-normal text-xs">OI</th>
+                <th className="text-right py-1 px-2 text-[#22c55e]/70 font-normal text-xs">Open</th>
                 <th className="text-right py-1 px-2 text-[#22c55e]/70 font-normal text-xs">IV</th>
                 <th className="bg-[#1e293b]"></th>
                 <th className="text-left py-1 px-2 text-[#ef4444]/70 font-normal text-xs">IV</th>
-                <th className="text-right py-1 px-2 text-[#ef4444]/70 font-normal text-xs">OI</th>
+                <th className="text-right py-1 px-2 text-[#ef4444]/70 font-normal text-xs">Open</th>
                 <th className="text-right py-1 px-2 text-[#ef4444]/70 font-normal text-xs">Avail</th>
                 <th className="text-left py-1 px-2 text-[#ef4444]/70 font-normal text-xs">Premium</th>
                 <th className="text-center py-1 px-2 text-[#ef4444]/70 font-normal text-xs w-[68px]">Vol</th>

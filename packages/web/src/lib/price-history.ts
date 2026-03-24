@@ -124,11 +124,11 @@ export async function fetchAllAssetPriceData(): Promise<Map<number, AssetPriceDa
         ? ((currentPrice - price24hAgo) / price24hAgo) * 100
         : 0;
 
-      // Sparkline: last 24 points, reversed to chronological order
-      const sparkline = prices
-        .slice(0, 24)
-        .map(p => p.price)
-        .reverse();
+      // Sparkline: all 24h of data points, reversed to chronological order
+      // ~120 epochs at 12min each = 24h. Downsample to ~48 points for smooth rendering.
+      const allPrices = prices.map(p => p.price).reverse();
+      const step = Math.max(1, Math.floor(allPrices.length / 48));
+      const sparkline = allPrices.filter((_, i) => i % step === 0);
 
       result.set(index, {
         sparkline,

@@ -5,14 +5,26 @@ import { MarketFilters } from "./components/MarketFilters";
 export const dynamic = "force-dynamic";
 export const revalidate = 30;
 
+const NODE_URL = process.env.ERGO_NODE_URL || "http://96.255.150.220:9053";
+
+async function fetchHeight(): Promise<number> {
+  try {
+    const res = await fetch(`${NODE_URL}/info`, { cache: "no-store" });
+    if (!res.ok) return 0;
+    const info = await res.json();
+    return info.fullHeight ?? 0;
+  } catch { return 0; }
+}
+
 export default async function MarketPage() {
-  const [reserves, spotPrices] = await Promise.all([
+  const [reserves, spotPrices, currentHeight] = await Promise.all([
     scanReserves(),
     fetchSpotPrices(),
+    fetchHeight(),
   ]);
 
-  // Only show active reserves (not definitions, not expired)
-  const activeReserves = reserves.filter((r) => r.state === "RESERVE");
+  // Show reserves + expired (not definitions or undelivered)
+  const visibleReserves = reserves.filter((r) => r.state === "RESERVE" || r.state === "EXPIRED");
 
   return (
     <div className="space-y-6">
@@ -21,7 +33,11 @@ export default async function MarketPage() {
         <p className="text-[#94a3b8]">All active options across all assets</p>
       </div>
 
-      <MarketFilters reserves={activeReserves} spotPrices={Object.fromEntries(spotPrices)} />
+      <MarketFilters
+        reserves={visibleReserves}
+        spotPrices={Object.fromEntries(spotPrices)}
+        currentHeight={currentHeight}
+      />
     </div>
   );
 }

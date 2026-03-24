@@ -52,9 +52,10 @@ function MiniSparkline({ data, isUp: _isUp }: { data: number[]; isUp?: boolean }
     })
     .join(" ");
 
-  // Color follows the 24h direction (first vs last data point)
-  const color = data[data.length - 1] >= data[0] ? "#22c55e" : "#ef4444";
-  const fillColor = data[data.length - 1] >= data[0] ? "#22c55e10" : "#ef444410";
+  // Color follows the 24h change % (passed from parent), falls back to shape
+  const isPositive = _isUp ?? (data[data.length - 1] >= data[0]);
+  const color = isPositive ? "#22c55e" : "#ef4444";
+  const fillColor = isPositive ? "#22c55e10" : "#ef444410";
 
   // Area fill path: line points + bottom-right + bottom-left
   const areaPath = `M ${points.split(" ").join(" L ")} L ${width - padding},${height} L ${padding},${height} Z`;
@@ -122,7 +123,7 @@ export function AssetCard({
       {/* Sparkline — full width, below price */}
       {sparkline && sparkline.length >= 2 && (
         <div className="mb-1 -mx-1">
-          <MiniSparkline data={sparkline} />
+          <MiniSparkline data={sparkline} isUp={change24h !== undefined ? change24h >= 0 : undefined} />
         </div>
       )}
 

@@ -6,8 +6,19 @@ import {
   USE_TOKEN_ID,
   SIGUSD_TOKEN_ID,
   REGISTRY_TOKEN_IDS,
-  REGISTRY_RATES,
+  SELL_CONTRACT_USE_ERGOTREE,
+  SELL_CONTRACT_SIGUSD_ERGOTREE,
+  MINER_FEE,
+  MIN_BOX_VALUE,
+  DAPP_FEE_ERGOTREE,
+  hexToBytes,
 } from "@ergo-options/core";
+import {
+  signTx,
+  getWalletUtxos,
+} from "@/lib/wallet";
+import { fetchHeight, submitTransaction } from "@/lib/api";
+import { ListForSaleModal } from "./components/ListForSaleModal";
 
 // Known tokens with human-readable names and decimals
 const KNOWN_TOKENS: Record<string, { name: string; decimals: number }> = {
@@ -34,6 +45,9 @@ for (let i = 0; i < REGISTRY_TOKEN_IDS.length; i++) {
 
 // Tokens relevant to options trading (filter wallet to these + ERG)
 const RELEVANT_TOKEN_IDS = new Set(Object.keys(KNOWN_TOKENS));
+
+// dApp UI fee: 1% = 10 per 1000
+const DAPP_UI_FEE_PER_1000 = 10n;
 
 interface WalletToken {
   tokenId: string;
@@ -101,6 +115,8 @@ interface ContractBox {
   maturityDate?: number;
   oracleIndex?: number;
   tokenCount?: number;
+  collateralTokenId?: string;
+  collateralAmount?: string;
 }
 
 function formatBlocksToTime(blocks: number): string {
@@ -113,6 +129,56 @@ function formatBlocksToTime(blocks: number): string {
   return `~${days}d ${hours % 24}h`;
 }
 
+/**
+ * Convert a Nautilus UTXO (EIP-12 format) to Fleet SDK Box format.
+ */
+function nautilusBoxToFleet(box: any): any {
+  return {
+    boxId: box.boxId,
+    transactionId: box.transactionId,
+    index: box.index,
+    ergoTree: box.ergoTree,
+    creationHeight: box.creationHeight,
+    value: box.value.toString(),
+    assets: (box.assets || []).map((a: any) => ({
+      tokenId: a.tokenId,
+      amount: a.amount.toString(),
+    })),
+    additionalRegisters: box.additionalRegisters || {},
+  };
+}
+
+/**
+ * Fetch a box by ID from the node (via our API proxy).
+ */
+async function fetchBoxById(boxId: string): Promise<any> {
+  const res = await fetch(`/api/box-by-id?boxId=${boxId}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to fetch box ${boxId}: ${text}`);
+  }
+  return res.json();
+}
+
+/**
+ * Convert node box format to Fleet SDK box format.
+ */
+function nodeBoxToFleet(box: any): any {
+  return {
+    boxId: box.boxId,
+    transactionId: box.transactionId,
+    index: box.index,
+    ergoTree: box.ergoTree,
+    creationHeight: box.creationHeight,
+    value: box.value.toString(),
+    assets: (box.assets || []).map((a: any) => ({
+      tokenId: a.tokenId,
+      amount: a.amount.toString(),
+    })),
+    additionalRegisters: box.additionalRegisters || {},
+  };
+}
+
 export default function PortfolioPage() {
   const { connected, address, api, ergBalance } = useWalletStore();
   const [tokens, setTokens] = useState<WalletToken[]>([]);
@@ -120,6 +186,14 @@ export default function PortfolioPage() {
   const [currentHeight, setCurrentHeight] = useState(0);
   const [exerciseWindow, setExerciseWindow] = useState(720);
   const [loading, setLoading] = useState(false);
+
+  // List for Sale modal state
+  const [sellModalOpen, setSellModalOpen] = useState(false);
+  const [sellModalBox, setSellModalBox] = useState<ContractBox | null>(null);
+  const [sellModalTokenBalance, setSellModalTokenBalance] = useState(0n);
+
+  // Action status for Reclaim/Close buttons
+  const [actionStatus, setActionStatus] = useState<Record<string, string>>({});
 
   const loadTokens = useCallback(async () => {
     if (!api) return;
@@ -162,24 +236,44 @@ export default function PortfolioPage() {
 
       // Also scan contract address for boxes belonging to this wallet
       try {
-        // Get wallet's EC point from the first used address
-        // P2PK address ErgoTree = 0008cd + 33-byte EC point
+        // Try all wallet addresses + all UTXOs to find EC points
         const addrs = await api.get_used_addresses();
-        const firstAddr = addrs?.[0];
-        if (firstAddr) {
-          // Fetch ErgoTree for this address via node API
-          const addrRes = await fetch(`/api/boxes?address=${firstAddr}&raw=true`);
-          // Alternative: derive EC point from address directly
-          // For now, try getting it from the wallet's UTXOs ergoTree
-          const walletUtxo = utxos?.[0];
-          if (walletUtxo?.ergoTree && walletUtxo.ergoTree.startsWith("0008cd")) {
-            const ecPoint = walletUtxo.ergoTree.slice(6); // 33-byte EC point hex
-            const myBoxesRes = await fetch(`/api/my-boxes?ecPoint=${ecPoint}`);
-            if (myBoxesRes.ok) {
-              const data = await myBoxesRes.json();
-              setContractBoxes(data.boxes ?? []);
+        const allECPoints = new Set<string>();
+
+        // Get EC point for each wallet address via node API
+        // Ergo P2PK addresses decode to a raw 33-byte public key
+        for (const addr of (addrs || []).slice(0, 5)) {
+          try {
+            const rawRes = await fetch(`/api/address-to-raw?address=${addr}`);
+            if (rawRes.ok) {
+              const rawData = await rawRes.json();
+              if (rawData.raw && rawData.raw.length === 66) {
+                allECPoints.add(rawData.raw);
+              }
+            }
+          } catch { /* ignore */ }
+        }
+
+        // Also try extracting from UTXOs as fallback
+        for (const utxo of (utxos || [])) {
+          const tree = utxo.ergoTree as string | undefined;
+          if (!tree) continue;
+          const idx = tree.indexOf("0008cd");
+          if (idx >= 0 && tree.length >= idx + 6 + 66) {
+            allECPoints.add(tree.slice(idx + 6, idx + 6 + 66));
+          }
+        }
+
+        // Try each EC point against the my-boxes API
+        for (const ecPoint of allECPoints) {
+          const myBoxesRes = await fetch(`/api/my-boxes?ecPoint=${ecPoint}`);
+          if (myBoxesRes.ok) {
+            const data = await myBoxesRes.json();
+            if (data.boxes && data.boxes.length > 0) {
+              setContractBoxes(data.boxes);
               if (data.currentHeight) setCurrentHeight(data.currentHeight);
               if (data.exerciseWindow) setExerciseWindow(data.exerciseWindow);
+              break;
             }
           }
         }
@@ -196,8 +290,331 @@ export default function PortfolioPage() {
   useEffect(() => {
     if (connected && api) {
       loadTokens();
+      const interval = setInterval(loadTokens, 120_000);
+      return () => clearInterval(interval);
     }
   }, [connected, api, loadTokens]);
+
+  // ═══════════════════════════════════════════════════════════════
+  // TX FLOW: List for Sale
+  // ═══════════════════════════════════════════════════════════════
+
+  const handleListForSaleClick = useCallback(async (box: ContractBox) => {
+    if (!api) return;
+
+    // The option token ID = the definition box ID (stored in R7 of the reserve box).
+    // The reserve box has boxId but the token ID is the *creation* box ID.
+    // For a RESERVE box, the singleton token ID = the token on the box.
+    // We need to find how many tokens the user holds in their wallet.
+    // The token ID is derived from the contract box's creation box ID (R7).
+    // Since the my-boxes API already parsed this, we can look for any token
+    // in the user's wallet that is NOT a known stablecoin/registry token.
+    // More reliably: the option token was delivered to the user's wallet with
+    // tokenId = the definition box ID. For RESERVE boxes, the singleton remains
+    // on-chain. The delivered tokens share the same token ID.
+    // We fetch the box to read R7 (creation box ID) = option token ID.
+
+    try {
+      const nodeBox = await fetchBoxById(box.boxId);
+      const r7hex = nodeBox.additionalRegisters?.R7;
+      if (!r7hex || !r7hex.startsWith("0e20")) {
+        throw new Error("Cannot read option token ID from reserve box R7");
+      }
+      const optionTokenId = r7hex.slice(4); // 32 bytes hex
+
+      // Find how many of this token the user holds
+      const utxos = await api.get_utxos();
+      let walletTokenBalance = 0n;
+      if (utxos) {
+        for (const utxo of utxos) {
+          if (utxo.assets) {
+            for (const asset of utxo.assets) {
+              if (asset.tokenId === optionTokenId) {
+                walletTokenBalance += BigInt(asset.amount);
+              }
+            }
+          }
+        }
+      }
+
+      if (walletTokenBalance <= 0n) {
+        alert("You don't have any option tokens for this contract in your wallet. They may not have been delivered yet.");
+        return;
+      }
+
+      setSellModalBox(box);
+      setSellModalTokenBalance(walletTokenBalance);
+      setSellModalOpen(true);
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    }
+  }, [api]);
+
+  const handleListForSaleSubmit = useCallback(async (params: {
+    stablecoin: "USE" | "SigUSD";
+    premiumPerToken: bigint;
+    tokenAmount: bigint;
+  }) => {
+    if (!api || !sellModalBox) throw new Error("Wallet not connected");
+
+    // Dynamically import Fleet SDK (only needed for TX building)
+    const { OutputBuilder, TransactionBuilder } = await import("@fleet-sdk/core");
+    const { SColl, SLong, SByte } = await import("@fleet-sdk/serializer");
+
+    // Determine which sell contract and payment token to use
+    const sellContractErgoTree = params.stablecoin === "USE"
+      ? SELL_CONTRACT_USE_ERGOTREE
+      : SELL_CONTRACT_SIGUSD_ERGOTREE;
+
+    // Get the option token ID from the reserve box
+    const nodeBox = await fetchBoxById(sellModalBox.boxId);
+    const r7hex = nodeBox.additionalRegisters?.R7;
+    if (!r7hex || !r7hex.startsWith("0e20")) {
+      throw new Error("Cannot read option token ID from reserve box R7");
+    }
+    const optionTokenId = r7hex.slice(4);
+
+    // Get wallet ErgoTree for change address and seller SigmaProp
+    const rawUtxos = await getWalletUtxos(api);
+    const fleetBoxes = rawUtxos.map(nautilusBoxToFleet);
+
+    // Find boxes containing the option token
+    const tokenBoxes = fleetBoxes.filter((b: any) =>
+      b.assets.some((a: any) => a.tokenId === optionTokenId),
+    );
+    if (tokenBoxes.length === 0) {
+      throw new Error("No wallet boxes contain the option token");
+    }
+
+    // Use all wallet boxes as potential inputs (Fleet SDK selects what's needed)
+    const walletErgoTree = rawUtxos[0].ergoTree;
+    const height = await fetchHeight();
+
+    const txFee = MINER_FEE;
+    const sellBoxValue = MIN_BOX_VALUE + txFee; // enough for miner fee on buy TX
+
+    // R4: Seller's SigmaProp — the ErgoTree hex is the pre-serialized representation
+    // For a P2PK ErgoTree (0008cd...), Nautilus expects the SigmaProp serialization:
+    // 08cd + 33-byte EC point (sigma type byte 0x08 = SigmaProp, cd = proveDlog)
+    const sellerSigmaPropHex = "08cd" + walletErgoTree.slice(6);
+
+    // R5: Coll[Long] = [premiumPerToken, dAppUIFeePer1000, txFee]
+    const r5 = SColl(SLong, [params.premiumPerToken, DAPP_UI_FEE_PER_1000, txFee]);
+
+    // R6: Coll[Byte] = dApp UI fee ErgoTree bytes
+    const dappFeeTreeBytes = hexToBytes(DAPP_FEE_ERGOTREE);
+    const r6 = SColl(SByte, dappFeeTreeBytes);
+
+    // Build sell order output
+    const sellOutput = new OutputBuilder(sellBoxValue, sellContractErgoTree)
+      .addTokens({ tokenId: optionTokenId, amount: params.tokenAmount })
+      .setAdditionalRegisters({
+        R4: sellerSigmaPropHex,
+        R5: r5,
+        R6: r6,
+      });
+
+    // Build the TX with explicit miner fee
+    const unsignedTx = new TransactionBuilder(height)
+      .from(fleetBoxes)
+      .to([sellOutput])
+      .sendChangeTo(walletErgoTree)
+      .payFee(txFee)
+      .build();
+
+    const eip12Tx = unsignedTx.toEIP12Object();
+    const signedTx = await signTx(api, eip12Tx);
+    const txId = await submitTransaction(signedTx);
+
+    console.log("Sell order TX submitted:", txId);
+
+    // Refresh after a short delay
+    setTimeout(() => loadTokens(), 5000);
+  }, [api, sellModalBox, loadTokens]);
+
+  // ═══════════════════════════════════════════════════════════════
+  // TX FLOW: Reclaim (Refund definition box)
+  // ═══════════════════════════════════════════════════════════════
+
+  const handleReclaim = useCallback(async (box: ContractBox) => {
+    if (!api) return;
+
+    setActionStatus((prev) => ({ ...prev, [box.boxId]: "Preparing..." }));
+
+    try {
+      const { OutputBuilder, TransactionBuilder } = await import("@fleet-sdk/core");
+
+      // Fetch the definition box from the node
+      const nodeBox = await fetchBoxById(box.boxId);
+      const contractBox = nodeBoxToFleet(nodeBox);
+
+      // Get wallet UTXOs for additional ERG input (to cover miner fee)
+      const rawUtxos = await getWalletUtxos(api);
+      const fleetWalletBoxes = rawUtxos.map(nautilusBoxToFleet);
+      const walletErgoTree = rawUtxos[0].ergoTree;
+
+      const height = await fetchHeight();
+      const txFee = MINER_FEE;
+
+      // Include wallet boxes as inputs to cover miner fee
+      const allInputs = [contractBox, ...fleetWalletBoxes];
+
+      // Refund output: definition box value goes back to user.
+      // Fleet SDK sendChangeTo handles wallet ERG change separately.
+      const refundOutput = new OutputBuilder(
+        BigInt(contractBox.value),
+        walletErgoTree,
+      );
+
+      // Return all tokens from the definition box to user
+      if (contractBox.assets && contractBox.assets.length > 0) {
+        for (const asset of contractBox.assets) {
+          if (BigInt(asset.amount) > 0n) {
+            refundOutput.addTokens({
+              tokenId: asset.tokenId,
+              amount: asset.amount,
+            });
+          }
+        }
+      }
+
+      const unsignedTx = new TransactionBuilder(height)
+        .from(allInputs)
+        .to([refundOutput])
+        .sendChangeTo(walletErgoTree)
+        .payFee(txFee)
+        .build();
+
+      setActionStatus((prev) => ({ ...prev, [box.boxId]: "Sign in wallet..." }));
+
+      const eip12Tx = unsignedTx.toEIP12Object();
+      const signedTx = await signTx(api, eip12Tx);
+      const txId = await submitTransaction(signedTx);
+
+      setActionStatus((prev) => ({ ...prev, [box.boxId]: `Submitted: ${txId.slice(0, 8)}...` }));
+      console.log("Reclaim TX submitted:", txId);
+
+      setTimeout(() => {
+        setActionStatus((prev) => {
+          const next = { ...prev };
+          delete next[box.boxId];
+          return next;
+        });
+        loadTokens();
+      }, 10000);
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      setActionStatus((prev) => ({ ...prev, [box.boxId]: `Error: ${msg.slice(0, 40)}` }));
+      console.error("Reclaim failed:", err);
+      setTimeout(() => {
+        setActionStatus((prev) => {
+          const next = { ...prev };
+          delete next[box.boxId];
+          return next;
+        });
+      }, 8000);
+    }
+  }, [api, loadTokens]);
+
+  // ═══════════════════════════════════════════════════════════════
+  // TX FLOW: Close (Expired reserve)
+  // ═══════════════════════════════════════════════════════════════
+
+  const handleClose = useCallback(async (box: ContractBox) => {
+    if (!api) return;
+
+    setActionStatus((prev) => ({ ...prev, [box.boxId]: "Preparing..." }));
+
+    try {
+      const { OutputBuilder, TransactionBuilder } = await import("@fleet-sdk/core");
+
+      // Fetch the expired reserve box from the node
+      const nodeBox = await fetchBoxById(box.boxId);
+      const reserveBox = nodeBoxToFleet(nodeBox);
+
+      // Get wallet UTXOs for miner fee
+      const rawUtxos = await getWalletUtxos(api);
+      const fleetWalletBoxes = rawUtxos.map(nautilusBoxToFleet);
+      const walletErgoTree = rawUtxos[0].ergoTree;
+
+      const height = await fetchHeight();
+      const txFee = MINER_FEE;
+
+      // Extract issuer address from R9 — the first Coll[Byte] in Coll[Coll[Byte]]
+      // The issuer is the user themselves (this is their box from portfolio)
+      // Issuer ErgoTree = 0008cd + R9[0] EC point
+      // Since this is the user's own box, the issuer ErgoTree = walletErgoTree
+      const issuerErgoTree = walletErgoTree;
+
+      // All inputs: the reserve box + wallet boxes for fee
+      const allInputs = [reserveBox, ...fleetWalletBoxes];
+
+      // Output[0]: collateral + ERG goes back to issuer (the user)
+      const issuerOutputValue = BigInt(reserveBox.value);
+      const issuerOutput = new OutputBuilder(issuerOutputValue, issuerErgoTree);
+
+      // Add collateral tokens (tokens[1]) if present
+      if (reserveBox.assets.length > 1) {
+        issuerOutput.addTokens({
+          tokenId: reserveBox.assets[1].tokenId,
+          amount: reserveBox.assets[1].amount,
+        });
+      }
+
+      // Singleton token (tokens[0]) is burned
+      const singletonTokenId = reserveBox.assets[0]?.tokenId;
+      const singletonAmount = reserveBox.assets[0]?.amount;
+
+      const builder = new TransactionBuilder(height)
+        .from(allInputs)
+        .to([issuerOutput])
+        .sendChangeTo(walletErgoTree)
+        .payFee(txFee);
+
+      // Burn the singleton option token
+      if (singletonTokenId && BigInt(singletonAmount) > 0n) {
+        builder.burnTokens({
+          tokenId: singletonTokenId,
+          amount: singletonAmount,
+        });
+      }
+
+      const unsignedTx = builder.build();
+
+      setActionStatus((prev) => ({ ...prev, [box.boxId]: "Sign in wallet..." }));
+
+      const eip12Tx = unsignedTx.toEIP12Object();
+      const signedTx = await signTx(api, eip12Tx);
+      const txId = await submitTransaction(signedTx);
+
+      setActionStatus((prev) => ({ ...prev, [box.boxId]: `Submitted: ${txId.slice(0, 8)}...` }));
+      console.log("Close TX submitted:", txId);
+
+      setTimeout(() => {
+        setActionStatus((prev) => {
+          const next = { ...prev };
+          delete next[box.boxId];
+          return next;
+        });
+        loadTokens();
+      }, 10000);
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      setActionStatus((prev) => ({ ...prev, [box.boxId]: `Error: ${msg.slice(0, 40)}` }));
+      console.error("Close failed:", err);
+      setTimeout(() => {
+        setActionStatus((prev) => {
+          const next = { ...prev };
+          delete next[box.boxId];
+          return next;
+        });
+      }, 8000);
+    }
+  }, [api, loadTokens]);
+
+  // ═══════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════
 
   if (!connected) {
     return (
@@ -310,7 +727,7 @@ export default function PortfolioPage() {
                           </span>
                         </td>
                         <td className="py-2 px-4 text-right font-mono text-[#eab308]">
-                          {box.strikePrice ? `$${box.strikePrice >= 100 ? box.strikePrice.toFixed(0) : box.strikePrice.toFixed(4)}` : "—"}
+                          {box.strikePrice ? `$${box.strikePrice >= 100 ? box.strikePrice.toFixed(0) : box.strikePrice.toFixed(4)}` : "\u2014"}
                         </td>
                         {/* Expiry info */}
                         <td className="py-2 px-4 text-right">
@@ -344,29 +761,44 @@ export default function PortfolioPage() {
                                 )}
                               </div>
                             );
-                          })() : "—"}
+                          })() : "\u2014"}
                         </td>
                         <td className="py-2 px-4 text-right font-mono text-[#94a3b8]">
                           {(box.value / 1e9).toFixed(4)}
                         </td>
                         <td className="py-2 px-4 text-right">
-                          {box.state === "DEFINITION" && (
-                            <button className="text-xs px-2 py-1 bg-[#f59e0b]/20 text-[#f59e0b] rounded hover:bg-[#f59e0b]/30">
-                              Reclaim
-                            </button>
-                          )}
-                          {box.state === "EXPIRED" && (
-                            <button className="text-xs px-2 py-1 bg-[#ef4444]/20 text-[#ef4444] rounded hover:bg-[#ef4444]/30">
-                              Close
-                            </button>
-                          )}
-                          {box.state === "RESERVE" && (
-                            <button className="text-xs px-2 py-1 bg-[#3b82f6]/20 text-[#3b82f6] rounded hover:bg-[#3b82f6]/30">
-                              List for Sale
-                            </button>
-                          )}
-                          {box.state === "MINTED_UNDELIVERED" && (
-                            <span className="text-xs text-[#3b82f6]">Bot handling...</span>
+                          {actionStatus[box.boxId] ? (
+                            <span className="text-xs text-[#94a3b8]">{actionStatus[box.boxId]}</span>
+                          ) : (
+                            <>
+                              {box.state === "DEFINITION" && (
+                                <button
+                                  onClick={() => handleReclaim(box)}
+                                  className="text-xs px-2 py-1 bg-[#f59e0b]/20 text-[#f59e0b] rounded hover:bg-[#f59e0b]/30"
+                                >
+                                  Reclaim
+                                </button>
+                              )}
+                              {box.state === "EXPIRED" && (
+                                <button
+                                  onClick={() => handleClose(box)}
+                                  className="text-xs px-2 py-1 bg-[#ef4444]/20 text-[#ef4444] rounded hover:bg-[#ef4444]/30"
+                                >
+                                  Close
+                                </button>
+                              )}
+                              {box.state === "RESERVE" && (
+                                <button
+                                  onClick={() => handleListForSaleClick(box)}
+                                  className="text-xs px-2 py-1 bg-[#3b82f6]/20 text-[#3b82f6] rounded hover:bg-[#3b82f6]/30"
+                                >
+                                  List for Sale
+                                </button>
+                              )}
+                              {box.state === "MINTED_UNDELIVERED" && (
+                                <span className="text-xs text-[#3b82f6]">Bot handling...</span>
+                              )}
+                            </>
                           )}
                         </td>
                       </tr>
@@ -386,7 +818,6 @@ export default function PortfolioPage() {
       {/* Wallet Balances — only relevant assets */}
       <PaginatedSection title="Wallet Balances" total={relevantTokens.length + 1} pageSize={PAGE_SIZE}>
         {(page) => {
-          // ERG is always first, then relevant tokens
           const allRows = [
             { tokenId: "ERG", name: "ERG", displayAmount: ergDisplay, isNative: true },
             ...relevantTokens.map((t) => ({ ...t, isNative: false })),
@@ -429,6 +860,25 @@ export default function PortfolioPage() {
           );
         }}
       </PaginatedSection>
+
+      {/* List for Sale Modal */}
+      {sellModalBox && (
+        <ListForSaleModal
+          isOpen={sellModalOpen}
+          onClose={() => {
+            setSellModalOpen(false);
+            setSellModalBox(null);
+          }}
+          optionTokenId={sellModalBox.boxId}
+          maxTokens={sellModalTokenBalance}
+          optionName={sellModalBox.name}
+          optionType={sellModalBox.optionType}
+          strikePrice={sellModalBox.strikePrice}
+          maturityDate={sellModalBox.maturityDate}
+          oracleIndex={sellModalBox.oracleIndex}
+          onSubmit={handleListForSaleSubmit}
+        />
+      )}
     </div>
   );
 }

@@ -2,14 +2,34 @@
 
 import { useState } from "react";
 import type { ParsedReserve } from "@/lib/reserve-scanner";
-import Link from "next/link";
 
 interface MarketFiltersProps {
   reserves: ParsedReserve[];
   spotPrices: Record<number, number>;
+  currentHeight: number;
 }
 
-export function MarketFilters({ reserves, spotPrices }: MarketFiltersProps) {
+// Time-based expiry buckets (blocks at ~2min each)
+const EXPIRY_BUCKETS = [
+  { label: "< 1h", maxBlocks: 30 },
+  { label: "< 12h", maxBlocks: 360 },
+  { label: "< 24h", maxBlocks: 720 },
+  { label: "< 48h", maxBlocks: 1440 },
+  { label: "> 48h", maxBlocks: Infinity },
+  { label: "Expired", maxBlocks: -1 },
+];
+
+function formatBlocksToTime(blocks: number): string {
+  if (blocks <= 0) return "expired";
+  const minutes = blocks * 2;
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ${minutes % 60}m`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ${hours % 24}h`;
+}
+
+export function MarketFilters({ reserves, spotPrices, currentHeight }: MarketFiltersProps) {
   const [assetFilter, setAssetFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [expiryFilter, setExpiryFilter] = useState("all");
@@ -17,16 +37,22 @@ export function MarketFilters({ reserves, spotPrices }: MarketFiltersProps) {
 
   const assets = [...new Set(reserves.map((r) => r.assetName))].sort();
 
-  // Group expiries by approximate date (round to nearest week)
-  const expiries = [...new Set(reserves.map((r) => {
-    const blocksFromNow = r.maturityHeight; // Will compare against current height
-    return r.maturityHeight.toString();
-  }))].sort();
-
   const filtered = reserves.filter((r) => {
     if (assetFilter !== "all" && r.assetName !== assetFilter) return false;
     if (typeFilter !== "all" && r.optionType !== typeFilter) return false;
-    if (expiryFilter !== "all" && r.maturityHeight.toString() !== expiryFilter) return false;
+    if (expiryFilter !== "all") {
+      const blocksToExpiry = r.maturityHeight - currentHeight;
+      if (expiryFilter === "Expired") {
+        if (blocksToExpiry > 0) return false;
+      } else {
+        if (blocksToExpiry <= 0) return false; // Don't show expired in time buckets
+        const bucket = EXPIRY_BUCKETS.find(b => b.label === expiryFilter);
+        if (bucket) {
+          const prevMax = EXPIRY_BUCKETS[EXPIRY_BUCKETS.indexOf(bucket) - 1]?.maxBlocks ?? 0;
+          if (blocksToExpiry < prevMax || blocksToExpiry >= bucket.maxBlocks) return false;
+        }
+      }
+    }
     if (itmOnly) {
       const spot = spotPrices[r.oracleIndex];
       if (spot === undefined) return false;
@@ -38,6 +64,11 @@ export function MarketFilters({ reserves, spotPrices }: MarketFiltersProps) {
 
   return (
     <>
+      {/* Current height */}
+      <div className="text-xs text-[#94a3b8]">
+        Chain height: <span className="font-mono text-[#e2e8f0]">{currentHeight.toLocaleString()}</span>
+      </div>
+
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">
         <select
@@ -65,8 +96,8 @@ export function MarketFilters({ reserves, spotPrices }: MarketFiltersProps) {
           className="bg-[#131a2a] border border-[#1e293b] rounded-lg px-3 py-1.5 text-sm text-[#e2e8f0]"
         >
           <option value="all">All Expiries</option>
-          {expiries.map((exp) => (
-            <option key={exp} value={exp}>Block {exp}</option>
+          {EXPIRY_BUCKETS.map((b) => (
+            <option key={b.label} value={b.label}>{b.label}</option>
           ))}
         </select>
         <label className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#94a3b8] cursor-pointer">
@@ -89,7 +120,7 @@ export function MarketFilters({ reserves, spotPrices }: MarketFiltersProps) {
               <th className="text-left py-3 px-4 text-[#94a3b8] font-medium">Type</th>
               <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Strike</th>
               <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Spot</th>
-              <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Expiry (block)</th>
+              <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Expiry</th>
               <th className="text-left py-3 px-4 text-[#94a3b8] font-medium">Settlement</th>
               <th className="text-left py-3 px-4 text-[#94a3b8] font-medium">Style</th>
             </tr>
@@ -98,6 +129,7 @@ export function MarketFilters({ reserves, spotPrices }: MarketFiltersProps) {
             {filtered.length > 0 ? (
               filtered.map((r) => {
                 const spot = spotPrices[r.oracleIndex];
+                const blocksToExpiry = r.maturityHeight - currentHeight;
                 const isITM = r.optionType === "call"
                   ? spot !== undefined && spot > r.strikePrice
                   : spot !== undefined && spot < r.strikePrice;
@@ -105,7 +137,9 @@ export function MarketFilters({ reserves, spotPrices }: MarketFiltersProps) {
                 return (
                   <tr
                     key={r.boxId}
-                    className="border-b border-[#1e293b]/50 hover:bg-[#1e293b]/30 cursor-pointer"
+                    className={`border-b border-[#1e293b]/50 hover:bg-[#1e293b]/30 cursor-pointer ${
+                      isITM ? "bg-[#22c55e]/5" : ""
+                    }`}
                   >
                     <td className="py-2 px-4 text-[#e2e8f0] font-medium">{r.assetName}</td>
                     <td className="py-2 px-4">
@@ -119,8 +153,28 @@ export function MarketFilters({ reserves, spotPrices }: MarketFiltersProps) {
                     <td className="py-2 px-4 text-right font-mono text-[#94a3b8]">
                       {spot !== undefined ? `$${spot >= 100 ? spot.toFixed(0) : spot.toFixed(spot >= 1 ? 2 : 4)}` : "—"}
                     </td>
-                    <td className="py-2 px-4 text-right font-mono text-[#94a3b8]">
-                      {r.maturityHeight.toLocaleString()}
+                    <td className="py-2 px-4 text-right">
+                      <div className="text-xs space-y-0.5">
+                        {blocksToExpiry > 0 ? (
+                          <>
+                            <div className="font-mono text-[#e2e8f0]">
+                              {formatBlocksToTime(blocksToExpiry)} to maturity
+                            </div>
+                          </>
+                        ) : blocksToExpiry > -720 ? (
+                          <>
+                            <div className="font-mono text-[#f59e0b]">
+                              Exercise window: {formatBlocksToTime(720 + blocksToExpiry)}
+                            </div>
+                            <div className="text-[#22c55e] font-semibold">Exercisable</div>
+                          </>
+                        ) : (
+                          <div className="font-mono text-[#ef4444]">Expired</div>
+                        )}
+                        <div className="text-[#94a3b8]">
+                          blk {r.maturityHeight.toLocaleString()}
+                        </div>
+                      </div>
                     </td>
                     <td className="py-2 px-4 text-[#94a3b8] capitalize">{r.settlement}</td>
                     <td className="py-2 px-4 text-[#94a3b8] capitalize">{r.style}</td>

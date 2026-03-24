@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@ergo-options/core": "workspace:*",
+    "@fleet-sdk/core": "^0.6.4",
+    "@fleet-sdk/serializer": "^0.6.4",
     "@supabase/supabase-js": "^2.99.3",
     "next": "14.2.35",
     "react": "^18",

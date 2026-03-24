@@ -3,9 +3,23 @@ import { scanReserves } from "@/lib/reserve-scanner";
 
 export const dynamic = "force-dynamic";
 
+const NODE_URL = process.env.ERGO_NODE_URL || "http://96.255.150.220:9053";
+
+async function fetchHeight(): Promise<number> {
+  try {
+    const res = await fetch(`${NODE_URL}/info`, { cache: "no-store" });
+    if (!res.ok) return 0;
+    const info = await res.json();
+    return info.fullHeight ?? 0;
+  } catch { return 0; }
+}
+
 export async function GET() {
   try {
-    const reserves = await scanReserves();
+    const [reserves, currentHeight] = await Promise.all([
+      scanReserves(),
+      fetchHeight(),
+    ]);
     const active = reserves.filter((r) => r.state === "RESERVE");
 
     const callCount = active.filter((r) => r.optionType === "call").length;
@@ -25,7 +39,7 @@ export async function GET() {
       callCount,
       putCount,
       openInterestErg,
-      // Total reserves found (all states)
+      currentHeight,
       totalBoxes: reserves.length,
     });
   } catch (err) {
