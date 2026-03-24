@@ -52,12 +52,10 @@ function MiniSparkline({ data, isUp: _isUp }: { data: number[]; isUp?: boolean }
     })
     .join(" ");
 
-  // Color follows the 24h change % (passed from parent), falls back to shape
   const isPositive = _isUp ?? (data[data.length - 1] >= data[0]);
-  const color = isPositive ? "#22c55e" : "#ef4444";
-  const fillColor = isPositive ? "#22c55e10" : "#ef444410";
+  const color = isPositive ? "#34d399" : "#f87171";
+  const fillColor = isPositive ? "#34d39910" : "#f8717110";
 
-  // Area fill path: line points + bottom-right + bottom-left
   const areaPath = `M ${points.split(" ").join(" L ")} L ${width - padding},${height} L ${padding},${height} Z`;
 
   return (
@@ -89,17 +87,17 @@ export function AssetCard({
 }: AssetCardProps) {
   return (
     <Link
-      href={`/trade/${slug}`}
-      className="block p-4 bg-[#131a2a] border border-[#1e293b] rounded-lg hover:border-[#3b82f6] transition-colors group"
+      href={`/app/trade/${slug}`}
+      className="block p-4 bg-[#12151c] border border-[#1e2330] rounded-lg hover:border-[#c87941] transition-colors group"
     >
       {/* Name + Badge + 24h change */}
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-1.5">
-          <span className="text-lg font-bold text-[#e2e8f0] group-hover:text-[#3b82f6] transition-colors">
+          <span className="text-lg font-bold text-[#e8eaf0] group-hover:text-[#e09a5f] transition-colors">
             {name}
           </span>
           {badge && (
-            <span className="text-[9px] px-1 py-0.5 bg-[#22c55e]/10 text-[#22c55e] rounded">
+            <span className="text-[9px] px-1 py-0.5 bg-[#34d399]/10 text-[#34d399] rounded">
               {badge}
             </span>
           )}
@@ -107,7 +105,7 @@ export function AssetCard({
         {change24h !== undefined && (
           <span
             className={`text-xs font-mono font-semibold ${
-              change24h >= 0 ? "text-[#22c55e]" : "text-[#ef4444]"
+              change24h >= 0 ? "text-[#34d399]" : "text-[#f87171]"
             }`}
           >
             {formatChange(change24h)}
@@ -116,23 +114,23 @@ export function AssetCard({
       </div>
 
       {/* Price */}
-      <div className="text-xl font-mono text-[#eab308] mb-1">
+      <div className="text-xl font-mono text-[#e09a5f] mb-1">
         {price !== undefined && price > 0 ? `$${formatPrice(price)}` : "\u2014"}
       </div>
 
-      {/* Sparkline — full width, below price */}
+      {/* Sparkline */}
       {sparkline && sparkline.length >= 2 && (
         <div className="mb-1 -mx-1">
           <MiniSparkline data={sparkline} isUp={change24h !== undefined ? change24h >= 0 : undefined} />
         </div>
       )}
 
-      <div className="text-sm text-[#94a3b8]">
+      <div className="text-sm text-[#8891a5]">
         {optionCount} option{optionCount !== 1 ? "s" : ""}
       </div>
 
       {(openInterest !== undefined || ivRank !== undefined) && (
-        <div className="text-xs text-[#94a3b8] mt-1">
+        <div className="text-xs text-[#8891a5] mt-1">
           {openInterest !== undefined && (
             <span>OI: {openInterest.toLocaleString()} USE</span>
           )}

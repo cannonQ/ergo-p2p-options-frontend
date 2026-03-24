@@ -18,7 +18,9 @@ import {
   getWalletUtxos,
 } from "@/lib/wallet";
 import { fetchHeight, submitTransaction } from "@/lib/api";
+import { parseCollLong, hexToBytes as hexToBytesOracle } from "@/lib/oracle-parser";
 import { ListForSaleModal } from "./components/ListForSaleModal";
+import { ExerciseDialog } from "./components/ExerciseDialog";
 
 // Known tokens with human-readable names and decimals
 const KNOWN_TOKENS: Record<string, { name: string; decimals: number }> = {
@@ -76,22 +78,22 @@ function PaginatedSection({
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold">
           {title}
-          {total > 0 && <span className="ml-2 text-sm font-normal text-[#94a3b8]">({total})</span>}
+          {total > 0 && <span className="ml-2 text-sm font-normal text-[#8891a5]">({total})</span>}
         </h2>
         {totalPages > 1 && (
           <div className="flex items-center gap-2 text-sm">
             <button
               onClick={() => setPage(Math.max(0, page - 1))}
               disabled={page === 0}
-              className="px-2 py-1 bg-[#1e293b] rounded text-[#94a3b8] hover:text-[#e2e8f0] disabled:opacity-30"
+              className="px-2 py-1 bg-[#1e2330] rounded text-[#8891a5] hover:text-[#e8eaf0] disabled:opacity-30"
             >
               &larr;
             </button>
-            <span className="text-[#94a3b8]">{page + 1}/{totalPages}</span>
+            <span className="text-[#8891a5]">{page + 1}/{totalPages}</span>
             <button
               onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
               disabled={page >= totalPages - 1}
-              className="px-2 py-1 bg-[#1e293b] rounded text-[#94a3b8] hover:text-[#e2e8f0] disabled:opacity-30"
+              className="px-2 py-1 bg-[#1e2330] rounded text-[#8891a5] hover:text-[#e8eaf0] disabled:opacity-30"
             >
               &rarr;
             </button>
@@ -129,23 +131,52 @@ function formatBlocksToTime(blocks: number): string {
   return `~${days}d ${hours % 24}h`;
 }
 
-/**
- * Convert a Nautilus UTXO (EIP-12 format) to Fleet SDK Box format.
- */
-function nautilusBoxToFleet(box: any): any {
-  return {
-    boxId: box.boxId,
-    transactionId: box.transactionId,
-    index: box.index,
-    ergoTree: box.ergoTree,
-    creationHeight: box.creationHeight,
-    value: box.value.toString(),
-    assets: (box.assets || []).map((a: any) => ({
-      tokenId: a.tokenId,
-      amount: a.amount.toString(),
-    })),
-    additionalRegisters: box.additionalRegisters || {},
-  };
+import { nautilusBoxToFleet, nodeBoxToFleet } from "@/lib/box-utils";
+
+/** Read VLQ-encoded unsigned integer from bytes */
+function readVLQ(bytes: Uint8Array, startOffset: number): { value: number; offset: number } {
+  let value = 0;
+  let shift = 0;
+  let offset = startOffset;
+  while (offset < bytes.length) {
+    const b = bytes[offset++];
+    value |= (b & 0x7f) << shift;
+    if ((b & 0x80) === 0) break;
+    shift += 7;
+  }
+  return { value, offset };
+}
+
+/** Extract issuer EC point (33 bytes) from R9 Coll[Coll[Byte]] */
+function extractECPointFromR9(bytes: Uint8Array): Uint8Array | null {
+  let offset = 0;
+  if (bytes[offset] !== 0x1a) return null; // type 0x1a = Coll[Coll[Byte]]
+  offset++;
+  const outer = readVLQ(bytes, offset);
+  offset = outer.offset;
+  if (outer.value < 1) return null;
+  const inner = readVLQ(bytes, offset);
+  offset = inner.offset;
+  if (inner.value !== 33) return null;
+  return bytes.slice(offset, offset + 33);
+}
+
+/** Parse Coll[Coll[Byte]] to array of hex strings (for registry R4 token IDs) */
+function parseCollCollByteToHexStrings(bytes: Uint8Array): string[] | null {
+  let offset = 0;
+  if (bytes[offset] !== 0x1a) return null;
+  offset++;
+  const outer = readVLQ(bytes, offset);
+  offset = outer.offset;
+  const results: string[] = [];
+  for (let i = 0; i < outer.value; i++) {
+    const inner = readVLQ(bytes, offset);
+    offset = inner.offset;
+    const raw = bytes.slice(offset, offset + inner.value);
+    results.push(Array.from(raw).map(b => b.toString(16).padStart(2, '0')).join(''));
+    offset += inner.value;
+  }
+  return results;
 }
 
 /**
@@ -160,28 +191,25 @@ async function fetchBoxById(boxId: string): Promise<any> {
   return res.json();
 }
 
-/**
- * Convert node box format to Fleet SDK box format.
- */
-function nodeBoxToFleet(box: any): any {
-  return {
-    boxId: box.boxId,
-    transactionId: box.transactionId,
-    index: box.index,
-    ergoTree: box.ergoTree,
-    creationHeight: box.creationHeight,
-    value: box.value.toString(),
-    assets: (box.assets || []).map((a: any) => ({
-      tokenId: a.tokenId,
-      amount: a.amount.toString(),
-    })),
-    additionalRegisters: box.additionalRegisters || {},
-  };
+interface HoldingPosition {
+  optionTokenId: string;
+  quantity: bigint;
+  reserveBoxId: string;
+  name: string;
+  optionType: string;
+  settlement: string;
+  style: string;
+  strikePrice: number;
+  maturityHeight: number;
+  oracleIndex: number;
+  assetName: string;
+  state: string;
 }
 
 export default function PortfolioPage() {
-  const { connected, address, api, ergBalance } = useWalletStore();
+  const { connected, address: _address, api, ergBalance } = useWalletStore();
   const [tokens, setTokens] = useState<WalletToken[]>([]);
+  const [holdings, setHoldings] = useState<HoldingPosition[]>([]);
   const [contractBoxes, setContractBoxes] = useState<ContractBox[]>([]);
   const [currentHeight, setCurrentHeight] = useState(0);
   const [exerciseWindow, setExerciseWindow] = useState(720);
@@ -192,6 +220,12 @@ export default function PortfolioPage() {
   const [sellModalBox, setSellModalBox] = useState<ContractBox | null>(null);
   const [sellModalTokenBalance, setSellModalTokenBalance] = useState(0n);
 
+  // Exercise modal state
+  const [exerciseModalOpen, setExerciseModalOpen] = useState(false);
+  const [exerciseModalBox, setExerciseModalBox] = useState<ContractBox | null>(null);
+  const [exerciseModalTokenBalance, setExerciseModalTokenBalance] = useState(0n);
+  const [exerciseModalSpotPrice, setExerciseModalSpotPrice] = useState<number | undefined>();
+
   // Action status for Reclaim/Close buttons
   const [actionStatus, setActionStatus] = useState<Record<string, string>>({});
 
@@ -199,6 +233,12 @@ export default function PortfolioPage() {
     if (!api) return;
     setLoading(true);
     try {
+      // Always fetch current height first
+      try {
+        const h = await fetchHeight();
+        if (h > 0) setCurrentHeight(h);
+      } catch { /* ignore */ }
+
       const utxos = await api.get_utxos();
       if (!utxos) { setLoading(false); return; }
 
@@ -233,6 +273,40 @@ export default function PortfolioPage() {
       });
 
       setTokens(tokenList);
+
+      // Scan reserves and match wallet tokens to identify held options
+      try {
+        const reservesRes = await fetch("/api/reserves");
+        if (reservesRes.ok) {
+          const { reserves } = await reservesRes.json();
+          const holdingPositions: HoldingPosition[] = [];
+
+          for (const reserve of reserves) {
+            if (!reserve.optionTokenId || reserve.state !== "RESERVE") continue;
+            const walletQty = tokenMap.get(reserve.optionTokenId);
+            if (walletQty && walletQty > 0n) {
+              holdingPositions.push({
+                optionTokenId: reserve.optionTokenId,
+                quantity: walletQty,
+                reserveBoxId: reserve.boxId,
+                name: reserve.name,
+                optionType: reserve.optionType,
+                settlement: reserve.settlement,
+                style: reserve.style,
+                strikePrice: reserve.strikePrice,
+                maturityHeight: reserve.maturityHeight,
+                oracleIndex: reserve.oracleIndex,
+                assetName: reserve.assetName,
+                state: reserve.state,
+              });
+            }
+          }
+
+          setHoldings(holdingPositions);
+        }
+      } catch (err) {
+        console.error("Failed to scan holdings:", err);
+      }
 
       // Also scan contract address for boxes belonging to this wallet
       try {
@@ -613,6 +687,234 @@ export default function PortfolioPage() {
   }, [api, loadTokens]);
 
   // ═══════════════════════════════════════════════════════════════
+  // TX FLOW: Exercise
+  // ═══════════════════════════════════════════════════════════════
+
+  const handleExerciseClick = useCallback(async (box: ContractBox) => {
+    if (!api) return;
+
+    try {
+      // Get option token ID from reserve box R7
+      const nodeBox = await fetchBoxById(box.boxId);
+      const r7hex = nodeBox.additionalRegisters?.R7;
+      if (!r7hex || !r7hex.startsWith("0e20")) {
+        throw new Error("Cannot read option token ID from reserve box R7");
+      }
+      const optionTokenId = r7hex.slice(4);
+
+      // Count option tokens in wallet
+      const utxos = await api.get_utxos();
+      let walletTokenBalance = 0n;
+      if (utxos) {
+        for (const utxo of utxos) {
+          if (utxo.assets) {
+            for (const asset of utxo.assets) {
+              if (asset.tokenId === optionTokenId) {
+                walletTokenBalance += BigInt(asset.amount);
+              }
+            }
+          }
+        }
+      }
+
+      if (walletTokenBalance <= 0n) {
+        alert("You don't have any option tokens for this contract.");
+        return;
+      }
+
+      // Fetch spot price for cash-settled options
+      let spotPrice: number | undefined;
+      if (box.settlement === "cash" && box.oracleIndex !== undefined) {
+        try {
+          const oracleRes = await fetch("/api/oracle");
+          if (oracleRes.ok) {
+            const oracleData = await oracleRes.json();
+            const rawSpot = oracleData.spotPrices?.[box.oracleIndex];
+            if (rawSpot) {
+              spotPrice = Number(BigInt(rawSpot)) / 1_000_000; // ORACLE_DECIMAL
+            }
+          }
+        } catch { /* will show as undefined in dialog */ }
+      }
+
+      setExerciseModalBox(box);
+      setExerciseModalTokenBalance(walletTokenBalance);
+      setExerciseModalSpotPrice(spotPrice);
+      setExerciseModalOpen(true);
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    }
+  }, [api]);
+
+  const handleExerciseSubmit = useCallback(async (params: { quantity: number }): Promise<string> => {
+    if (!api || !exerciseModalBox) throw new Error("Wallet not connected");
+
+    const box = exerciseModalBox;
+    console.log("[Exercise] Starting for box:", box.boxId, "settlement:", box.settlement, "type:", box.optionType);
+
+    // 1. Fetch reserve box from node
+    const nodeBox = await fetchBoxById(box.boxId);
+    console.log("[Exercise] Reserve box fetched, value:", nodeBox.value, "tokens:", nodeBox.assets?.length);
+    const reserveBox = nodeBoxToFleet(nodeBox);
+    const regs = nodeBox.additionalRegisters;
+
+    // 2. Parse R8 (OptionParams)
+    const r8Params = parseCollLong(hexToBytesOracle(regs.R8));
+    if (!r8Params || r8Params.length < 11) throw new Error("Invalid R8 params");
+
+    console.log("[Exercise] R8 params:", r8Params.map(String));
+
+    const optionParams = {
+      optionType: Number(r8Params[0]) as 0 | 1,
+      style: Number(r8Params[1]) as 0 | 1,
+      shareSize: r8Params[2],
+      maturityDate: r8Params[3],
+      strikePrice: r8Params[4],
+      dAppUIMintFee: r8Params[5],
+      txFee: r8Params[6],
+      oracleIndex: Number(r8Params[7]),
+      settlementType: Number(r8Params[8]) as 0 | 1,
+      collateralCap: r8Params[9],
+      stablecoinDecimal: r8Params[10],
+    };
+
+    // 3. Parse R9 for issuer EC point (first 33 bytes of Coll[Coll[Byte]])
+    const r9bytes = hexToBytesOracle(regs.R9);
+    const issuerECPoint = extractECPointFromR9(r9bytes);
+    if (!issuerECPoint) throw new Error("Cannot parse issuer EC point from R9");
+
+    // 4. Preserved registers
+    const registers: Record<string, string> = {};
+    for (const key of ["R4", "R5", "R6", "R7", "R8", "R9"]) {
+      if (regs[key]) registers[key] = regs[key];
+    }
+
+    // 5. Get wallet UTXOs, separate option token boxes from payment boxes
+    const r7hex = regs.R7;
+    const optionTokenId = r7hex.startsWith("0e20") ? r7hex.slice(4) : "";
+    const rawUtxos = await getWalletUtxos(api);
+    const allBoxes = rawUtxos.map(nautilusBoxToFleet);
+
+    const optionTokenBoxes = allBoxes.filter((b: any) =>
+      b.assets.some((a: any) => a.tokenId === optionTokenId)
+    );
+    const paymentBoxes = allBoxes.filter((b: any) =>
+      !b.assets.some((a: any) => a.tokenId === optionTokenId)
+    );
+
+    console.log("[Exercise] optionTokenId:", optionTokenId);
+    console.log("[Exercise] optionTokenBoxes:", optionTokenBoxes.length, "paymentBoxes:", paymentBoxes.length);
+
+    const walletErgoTree = rawUtxos[0]?.ergoTree;
+    if (!walletErgoTree) throw new Error("No wallet UTXOs found");
+
+    let height = await fetchHeight();
+
+    // Ensure height >= max creationHeight of all inputs to avoid
+    // "Creation height of any output should be not less than" node error.
+    // Fleet SDK uses this height for output creationHeight.
+    const allBoxesForHeight = [reserveBox, ...allBoxes];
+    for (const b of allBoxesForHeight) {
+      const ch = Number(b.creationHeight ?? 0);
+      if (ch > height) height = ch;
+    }
+
+    console.log("[Exercise] height:", height, "maturityDate:", optionParams.maturityDate.toString(), "settlementType:", optionParams.settlementType);
+
+    let unsignedTx: any;
+
+    if (optionParams.settlementType === 0) {
+      // Physical exercise
+      // Need Registry box as data input
+      const { REGISTRY_NFT_ID } = await import("@ergo-options/core");
+
+      // Fetch registry box by token ID
+      const registryBoxRes = await fetch(`/api/box-by-token?tokenId=${REGISTRY_NFT_ID}`);
+      if (!registryBoxRes.ok) {
+        throw new Error("Cannot find Token Registry box — needed for physical exercise");
+      }
+      const registryNodeBox = await registryBoxRes.json();
+      const regR4 = registryNodeBox.additionalRegisters?.R4;
+      const regR5 = registryNodeBox.additionalRegisters?.R5;
+
+      // Parse R4: Coll[Coll[Byte]] — token IDs
+      const tokenIds = parseCollCollByteToHexStrings(hexToBytesOracle(regR4));
+      // Parse R5: Coll[Long] — rates
+      const rates = parseCollLong(hexToBytesOracle(regR5));
+      if (!tokenIds || !rates) throw new Error("Cannot parse registry data");
+
+      const registryData = { tokenIds, rates };
+
+      const { buildExercisePhysicalCallTx, buildExercisePhysicalPutTx } = await import("@ergo-options/core");
+
+      const exerciseParams = {
+        reserveBox,
+        registryBox: nodeBoxToFleet(registryNodeBox),
+        params: optionParams,
+        registry: registryData,
+        optionTokenBoxes,
+        paymentBoxes,
+        issuerECPoint,
+        registers,
+        changeErgoTree: walletErgoTree,
+      };
+
+      if (optionParams.optionType === 0) {
+        unsignedTx = buildExercisePhysicalCallTx(exerciseParams, height);
+      } else {
+        unsignedTx = buildExercisePhysicalPutTx(exerciseParams, height);
+      }
+    } else {
+      // Cash exercise
+      // Need Oracle Companion box as data input
+      const { COMPANION_NFT_ID } = await import("@ergo-options/core");
+
+      const companionRes = await fetch(`/api/box-by-token?tokenId=${COMPANION_NFT_ID}`);
+      if (!companionRes.ok) throw new Error("Cannot find Oracle Companion box");
+      const companionNodeBox = await companionRes.json();
+      const companionBox = nodeBoxToFleet(companionNodeBox);
+
+      // Extract spot price from companion R8[oracleIndex]
+      const companionR8 = companionNodeBox.additionalRegisters?.R8;
+      const spotPrices = parseCollLong(hexToBytesOracle(companionR8));
+      if (!spotPrices || spotPrices.length <= optionParams.oracleIndex) {
+        throw new Error("Cannot read spot price from oracle companion");
+      }
+      const spotPrice = spotPrices[optionParams.oracleIndex];
+
+      const { buildExerciseCashTx } = await import("@ergo-options/core");
+
+      unsignedTx = buildExerciseCashTx(
+        {
+          reserveBox,
+          oracleBox: companionBox,
+          params: optionParams,
+          spotPrice,
+          optionTokenBoxes,
+          registers,
+          changeErgoTree: walletErgoTree,
+        },
+        height,
+      );
+    }
+
+    // Sign and submit
+    console.log("[Exercise] TX built successfully, converting to EIP-12...");
+    const eip12Tx = unsignedTx.toEIP12Object();
+    console.log("[Exercise] EIP-12 TX:", JSON.stringify(eip12Tx, (_, v) => typeof v === 'bigint' ? v.toString() : v).slice(0, 500));
+
+    console.log("[Exercise] Requesting Nautilus signature...");
+    const signedTx = await signTx(api, eip12Tx);
+    console.log("[Exercise] Signed, submitting...");
+
+    const txId = await submitTransaction(signedTx);
+
+    console.log("[Exercise] TX submitted:", txId);
+    setTimeout(() => loadTokens(), 5000);
+    return txId;
+  }, [api, exerciseModalBox, loadTokens]);
+
+  // ═══════════════════════════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════════════════════════
 
@@ -620,8 +922,8 @@ export default function PortfolioPage() {
     return (
       <div className="text-center py-20">
         <h1 className="text-xl font-bold mb-2">Portfolio</h1>
-        <p className="text-[#94a3b8] mb-4">Connect your wallet to view positions</p>
-        <p className="text-sm text-[#94a3b8]/60">
+        <p className="text-[#8891a5] mb-4">Connect your wallet to view positions</p>
+        <p className="text-sm text-[#8891a5]/60">
           Click &quot;Connect Wallet&quot; in the top right to get started
         </p>
       </div>
@@ -639,44 +941,135 @@ export default function PortfolioPage() {
         <button
           onClick={loadTokens}
           disabled={loading}
-          className="px-3 py-1.5 bg-[#1e293b] text-[#94a3b8] rounded-lg text-sm hover:text-[#e2e8f0] transition-colors disabled:opacity-50"
+          className="px-3 py-1.5 bg-[#1e2330] text-[#8891a5] rounded-lg text-sm hover:text-[#e8eaf0] transition-colors disabled:opacity-50"
         >
           {loading ? "Loading..." : "Refresh"}
         </button>
       </div>
 
       {/* Active Options (Holding) */}
-      <PaginatedSection title="Active Options (Holding)" total={0} pageSize={PAGE_SIZE}>
-        {() => (
-          <div className="bg-[#131a2a] border border-[#1e293b] rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[#1e293b]">
-                  <th className="text-left py-3 px-4 text-[#94a3b8] font-medium">Asset</th>
-                  <th className="text-left py-3 px-4 text-[#94a3b8] font-medium">Type</th>
-                  <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Strike</th>
-                  <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Expiry</th>
-                  <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Qty</th>
-                  <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Status</th>
-                  <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td colSpan={7} className="text-center py-8 text-[#94a3b8]">
-                    No active option positions
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        )}
+      <PaginatedSection title="Active Options (Holding)" total={holdings.length} pageSize={PAGE_SIZE}>
+        {(page) => {
+          const pageHoldings = holdings.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+          return (
+            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[#1e2330]">
+                    <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Asset</th>
+                    <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Type</th>
+                    <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Strike</th>
+                    <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Expiry</th>
+                    <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Qty</th>
+                    <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Status</th>
+                    <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageHoldings.length > 0 ? pageHoldings.map((h) => {
+                    const blocksToExpiry = h.maturityHeight - currentHeight;
+                    const isExercisable = h.style === "american"
+                      ? currentHeight <= h.maturityHeight + exerciseWindow
+                      : currentHeight >= h.maturityHeight && currentHeight <= h.maturityHeight + exerciseWindow;
+                    const isExpired = currentHeight > h.maturityHeight + exerciseWindow;
+
+                    return (
+                      <tr key={h.optionTokenId} className="border-b border-[#1e2330]/50 hover:bg-[#1e2330]/30">
+                        <td className="py-2 px-4 text-[#e8eaf0] font-medium">{h.assetName}</td>
+                        <td className="py-2 px-4">
+                          <span className={`text-xs px-2 py-0.5 rounded ${
+                            h.optionType === "call" ? "bg-[#34d399]/20 text-[#34d399]" : "bg-[#f87171]/20 text-[#f87171]"
+                          }`}>
+                            {h.optionType === "call" ? "Call" : "Put"}
+                          </span>
+                          <span className="text-xs ml-1 text-[#8891a5]">{h.settlement}</span>
+                        </td>
+                        <td className="py-2 px-4 text-right font-mono text-[#e09a5f]">
+                          ${h.strikePrice >= 100 ? h.strikePrice.toFixed(0) : h.strikePrice.toFixed(4)}
+                        </td>
+                        <td className="py-2 px-4 text-right text-xs">
+                          {isExpired ? (
+                            <span className="text-[#f87171]">Expired</span>
+                          ) : blocksToExpiry > 0 ? (
+                            <span className="text-[#e8eaf0]">{formatBlocksToTime(blocksToExpiry)}</span>
+                          ) : (
+                            <span className="text-[#e09a5f]">Exercise window</span>
+                          )}
+                        </td>
+                        <td className="py-2 px-4 text-right font-mono text-[#e8eaf0]">
+                          {h.quantity.toString()}
+                        </td>
+                        <td className="py-2 px-4 text-right">
+                          {isExercisable && (
+                            <span className="text-xs text-[#34d399] font-semibold">Exercisable</span>
+                          )}
+                          {!isExercisable && !isExpired && (
+                            <span className="text-xs text-[#8891a5]">Active</span>
+                          )}
+                          {isExpired && (
+                            <span className="text-xs text-[#f87171]">Expired</span>
+                          )}
+                        </td>
+                        <td className="py-2 px-4 text-right">
+                          <div className="flex gap-1 justify-end">
+                            {isExercisable && (
+                              <button
+                                onClick={() => handleExerciseClick({
+                                  boxId: h.reserveBoxId,
+                                  state: "RESERVE",
+                                  name: h.name,
+                                  value: 0,
+                                  optionType: h.optionType,
+                                  style: h.style,
+                                  settlement: h.settlement,
+                                  strikePrice: h.strikePrice,
+                                  maturityDate: h.maturityHeight,
+                                  oracleIndex: h.oracleIndex,
+                                })}
+                                className="text-xs px-2 py-1 bg-[#34d399]/20 text-[#34d399] rounded hover:bg-[#34d399]/30"
+                              >
+                                Exercise
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleListForSaleClick({
+                                boxId: h.reserveBoxId,
+                                state: "RESERVE",
+                                name: h.name,
+                                value: 0,
+                                optionType: h.optionType,
+                                style: h.style,
+                                settlement: h.settlement,
+                                strikePrice: h.strikePrice,
+                                maturityDate: h.maturityHeight,
+                                oracleIndex: h.oracleIndex,
+                              })}
+                              className="text-xs px-2 py-1 bg-[#c87941]/20 text-[#c87941] rounded hover:bg-[#c87941]/30"
+                            >
+                              List
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }) : (
+                    <tr>
+                      <td colSpan={7} className="text-center py-8 text-[#8891a5]">
+                        {loading ? "Scanning..." : "No active option positions"}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          );
+        }}
       </PaginatedSection>
 
       {/* Written Options (Issuer) */}
       <PaginatedSection title="Written Options (Issuer)" total={0} pageSize={PAGE_SIZE}>
         {() => (
-          <div className="bg-[#131a2a] border border-[#1e293b] rounded-lg p-8 text-center text-[#94a3b8]">
+          <div className="bg-[#12151c] border border-[#1e2330] rounded-lg p-8 text-center text-[#8891a5]">
             No written options
           </div>
         )}
@@ -685,7 +1078,7 @@ export default function PortfolioPage() {
       {/* Open Orders */}
       <PaginatedSection title="Open Orders" total={0} pageSize={PAGE_SIZE}>
         {() => (
-          <div className="bg-[#131a2a] border border-[#1e293b] rounded-lg p-8 text-center text-[#94a3b8]">
+          <div className="bg-[#12151c] border border-[#1e2330] rounded-lg p-8 text-center text-[#8891a5]">
             No open orders
           </div>
         )}
@@ -696,29 +1089,29 @@ export default function PortfolioPage() {
         {(page) => {
           const pageBoxes = contractBoxes.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
           return (
-            <div className="bg-[#131a2a] border border-[#1e293b] rounded-lg overflow-hidden">
+            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-hidden">
               {pageBoxes.length > 0 ? (
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-[#1e293b]">
-                      <th className="text-left py-3 px-4 text-[#94a3b8] font-medium">Name</th>
-                      <th className="text-left py-3 px-4 text-[#94a3b8] font-medium">State</th>
-                      <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Strike</th>
-                      <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Expiry</th>
-                      <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">ERG Locked</th>
-                      <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Action</th>
+                    <tr className="border-b border-[#1e2330]">
+                      <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Name</th>
+                      <th className="text-left py-3 px-4 text-[#8891a5] font-medium">State</th>
+                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Strike</th>
+                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Expiry</th>
+                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">ERG Locked</th>
+                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pageBoxes.map((box) => (
-                      <tr key={box.boxId} className="border-b border-[#1e293b]/50 hover:bg-[#1e293b]/30">
-                        <td className="py-2 px-4 text-[#e2e8f0]">{box.name}</td>
+                      <tr key={box.boxId} className="border-b border-[#1e2330]/50 hover:bg-[#1e2330]/30">
+                        <td className="py-2 px-4 text-[#e8eaf0]">{box.name}</td>
                         <td className="py-2 px-4">
                           <span className={`text-xs px-2 py-0.5 rounded ${
-                            box.state === "DEFINITION" ? "bg-[#f59e0b]/20 text-[#f59e0b]" :
-                            box.state === "MINTED_UNDELIVERED" ? "bg-[#3b82f6]/20 text-[#3b82f6]" :
-                            box.state === "RESERVE" ? "bg-[#22c55e]/20 text-[#22c55e]" :
-                            "bg-[#ef4444]/20 text-[#ef4444]"
+                            box.state === "DEFINITION" ? "bg-[#e09a5f]/20 text-[#e09a5f]" :
+                            box.state === "MINTED_UNDELIVERED" ? "bg-[#c87941]/20 text-[#c87941]" :
+                            box.state === "RESERVE" ? "bg-[#34d399]/20 text-[#34d399]" :
+                            "bg-[#f87171]/20 text-[#f87171]"
                           }`}>
                             {box.state === "DEFINITION" ? "Pending Mint" :
                              box.state === "MINTED_UNDELIVERED" ? "Pending Delivery" :
@@ -726,7 +1119,7 @@ export default function PortfolioPage() {
                              "Expired"}
                           </span>
                         </td>
-                        <td className="py-2 px-4 text-right font-mono text-[#eab308]">
+                        <td className="py-2 px-4 text-right font-mono text-[#e09a5f]">
                           {box.strikePrice ? `$${box.strikePrice >= 100 ? box.strikePrice.toFixed(0) : box.strikePrice.toFixed(4)}` : "\u2014"}
                         </td>
                         {/* Expiry info */}
@@ -742,39 +1135,39 @@ export default function PortfolioPage() {
 
                             return (
                               <div className="text-xs space-y-0.5">
-                                <div className="font-mono text-[#94a3b8]">
+                                <div className="font-mono text-[#8891a5]">
                                   Block {box.maturityDate.toLocaleString()}
                                 </div>
                                 {isExpired ? (
-                                  <div className="text-[#ef4444]">Expired</div>
+                                  <div className="text-[#f87171]">Expired</div>
                                 ) : blocksToExpiry > 0 ? (
-                                  <div className="text-[#e2e8f0]">
+                                  <div className="text-[#e8eaf0]">
                                     {formatBlocksToTime(blocksToExpiry)} to maturity
                                   </div>
                                 ) : (
-                                  <div className="text-[#f59e0b]">
+                                  <div className="text-[#e09a5f]">
                                     Exercise window: {formatBlocksToTime(blocksToClose)}
                                   </div>
                                 )}
                                 {isExercisable && (
-                                  <div className="text-[#22c55e] font-semibold">Exercisable</div>
+                                  <div className="text-[#34d399] font-semibold">Exercisable</div>
                                 )}
                               </div>
                             );
                           })() : "\u2014"}
                         </td>
-                        <td className="py-2 px-4 text-right font-mono text-[#94a3b8]">
+                        <td className="py-2 px-4 text-right font-mono text-[#8891a5]">
                           {(box.value / 1e9).toFixed(4)}
                         </td>
                         <td className="py-2 px-4 text-right">
                           {actionStatus[box.boxId] ? (
-                            <span className="text-xs text-[#94a3b8]">{actionStatus[box.boxId]}</span>
+                            <span className="text-xs text-[#8891a5]">{actionStatus[box.boxId]}</span>
                           ) : (
                             <>
                               {box.state === "DEFINITION" && (
                                 <button
                                   onClick={() => handleReclaim(box)}
-                                  className="text-xs px-2 py-1 bg-[#f59e0b]/20 text-[#f59e0b] rounded hover:bg-[#f59e0b]/30"
+                                  className="text-xs px-2 py-1 bg-[#e09a5f]/20 text-[#e09a5f] rounded hover:bg-[#e09a5f]/30"
                                 >
                                   Reclaim
                                 </button>
@@ -782,21 +1175,29 @@ export default function PortfolioPage() {
                               {box.state === "EXPIRED" && (
                                 <button
                                   onClick={() => handleClose(box)}
-                                  className="text-xs px-2 py-1 bg-[#ef4444]/20 text-[#ef4444] rounded hover:bg-[#ef4444]/30"
+                                  className="text-xs px-2 py-1 bg-[#f87171]/20 text-[#f87171] rounded hover:bg-[#f87171]/30"
                                 >
                                   Close
                                 </button>
                               )}
                               {box.state === "RESERVE" && (
-                                <button
-                                  onClick={() => handleListForSaleClick(box)}
-                                  className="text-xs px-2 py-1 bg-[#3b82f6]/20 text-[#3b82f6] rounded hover:bg-[#3b82f6]/30"
-                                >
-                                  List for Sale
-                                </button>
+                                <div className="flex gap-1">
+                                  <button
+                                    onClick={() => handleExerciseClick(box)}
+                                    className="text-xs px-2 py-1 bg-[#34d399]/20 text-[#34d399] rounded hover:bg-[#34d399]/30"
+                                  >
+                                    Exercise
+                                  </button>
+                                  <button
+                                    onClick={() => handleListForSaleClick(box)}
+                                    className="text-xs px-2 py-1 bg-[#c87941]/20 text-[#c87941] rounded hover:bg-[#c87941]/30"
+                                  >
+                                    List
+                                  </button>
+                                </div>
                               )}
                               {box.state === "MINTED_UNDELIVERED" && (
-                                <span className="text-xs text-[#3b82f6]">Bot handling...</span>
+                                <span className="text-xs text-[#c87941]">Bot handling...</span>
                               )}
                             </>
                           )}
@@ -806,7 +1207,7 @@ export default function PortfolioPage() {
                   </tbody>
                 </table>
               ) : (
-                <div className="p-8 text-center text-[#94a3b8]">
+                <div className="p-8 text-center text-[#8891a5]">
                   {loading ? "Scanning contract..." : "No boxes found at contract address"}
                 </div>
               )}
@@ -825,31 +1226,31 @@ export default function PortfolioPage() {
           const pageRows = allRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
           return (
-            <div className="bg-[#131a2a] border border-[#1e293b] rounded-lg overflow-hidden">
+            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-[#1e293b]">
-                    <th className="text-left py-3 px-4 text-[#94a3b8] font-medium">Asset</th>
-                    <th className="text-left py-3 px-4 text-[#94a3b8] font-medium">Token ID</th>
-                    <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Balance</th>
+                  <tr className="border-b border-[#1e2330]">
+                    <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Asset</th>
+                    <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Token ID</th>
+                    <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Balance</th>
                   </tr>
                 </thead>
                 <tbody>
                   {pageRows.length > 0 ? pageRows.map((t) => (
-                    <tr key={t.tokenId} className="border-b border-[#1e293b]/50 hover:bg-[#1e293b]/30">
-                      <td className="py-2 px-4 text-[#e2e8f0] font-medium">
+                    <tr key={t.tokenId} className="border-b border-[#1e2330]/50 hover:bg-[#1e2330]/30">
+                      <td className="py-2 px-4 text-[#e8eaf0] font-medium">
                         {t.name}
                       </td>
-                      <td className="py-2 px-4 font-mono text-xs text-[#94a3b8]">
+                      <td className="py-2 px-4 font-mono text-xs text-[#8891a5]">
                         {t.isNative ? "native" : `${t.tokenId.slice(0, 12)}...${t.tokenId.slice(-6)}`}
                       </td>
-                      <td className="py-2 px-4 text-right font-mono text-[#eab308]">
+                      <td className="py-2 px-4 text-right font-mono text-[#e09a5f]">
                         {t.displayAmount}
                       </td>
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={3} className="text-center py-8 text-[#94a3b8]">
+                      <td colSpan={3} className="text-center py-8 text-[#8891a5]">
                         {loading ? "Loading..." : "No relevant tokens found"}
                       </td>
                     </tr>
@@ -877,6 +1278,31 @@ export default function PortfolioPage() {
           maturityDate={sellModalBox.maturityDate}
           oracleIndex={sellModalBox.oracleIndex}
           onSubmit={handleListForSaleSubmit}
+        />
+      )}
+
+      {/* Exercise Modal */}
+      {exerciseModalBox && (
+        <ExerciseDialog
+          isOpen={exerciseModalOpen}
+          onClose={() => {
+            setExerciseModalOpen(false);
+            setExerciseModalBox(null);
+          }}
+          optionTokenId={exerciseModalBox.boxId}
+          quantity={exerciseModalTokenBalance}
+          optionType={(exerciseModalBox.optionType as "call" | "put") ?? "call"}
+          settlementType={(exerciseModalBox.settlement as "physical" | "cash") ?? "cash"}
+          strikePrice={exerciseModalBox.strikePrice ?? 0}
+          assetName={exerciseModalBox.name?.split(" ")[0] ?? ""}
+          assetUnit={exerciseModalBox.name?.split(" ")[0] ?? ""}
+          expiryBlocks={(exerciseModalBox.maturityDate ?? 0) - currentHeight}
+          style={(exerciseModalBox.style as "european" | "american") ?? "european"}
+          spotPrice={exerciseModalSpotPrice}
+          collateralCap={undefined}
+          stablecoin="USE"
+          reserveBoxId={exerciseModalBox.boxId}
+          onExercise={handleExerciseSubmit}
         />
       )}
     </div>

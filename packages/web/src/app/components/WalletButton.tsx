@@ -86,29 +86,29 @@ export function WalletButton() {
       <div className="relative">
         <button
           onClick={() => setShowMenu(!showMenu)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-[#1e293b] text-[#e2e8f0] rounded-lg text-sm font-mono hover:bg-[#334155] transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 bg-[#1e2330] text-[#e8eaf0] rounded-lg text-sm font-mono hover:bg-[#334155] transition-colors"
         >
-          <span className="text-xs text-[#94a3b8] hidden sm:inline">
+          <span className="text-xs text-[#8891a5] hidden sm:inline">
             {useWalletStore.getState().ergBalance
               ? `${(Number(useWalletStore.getState().ergBalance) / 1e9).toFixed(2)} ERG`
               : ""}
           </span>
           <span>{address.slice(0, 6)}...{address.slice(-4)}</span>
-          <svg className="w-3 h-3 text-[#94a3b8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-3 h-3 text-[#8891a5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
 
         {showMenu && (
           <div
-            className="absolute right-0 top-full mt-2 w-56 bg-[#0a0e17] border border-[#1e293b] rounded-lg shadow-xl z-50"
+            className="absolute right-0 top-full mt-2 w-56 bg-[#0a0c10] border border-[#1e2330] rounded-lg shadow-xl z-50"
             onMouseLeave={() => setShowMenu(false)}
           >
             {/* Connected address (full, copyable) */}
-            <div className="px-3 py-2 border-b border-[#1e293b]">
-              <p className="text-[10px] text-[#94a3b8] uppercase tracking-wider mb-1">Connected</p>
+            <div className="px-3 py-2 border-b border-[#1e2330]">
+              <p className="text-[10px] text-[#8891a5] uppercase tracking-wider mb-1">Connected</p>
               <p
-                className="text-xs font-mono text-[#e2e8f0] cursor-pointer hover:text-[#3b82f6] truncate"
+                className="text-xs font-mono text-[#e8eaf0] cursor-pointer hover:text-[#c87941] truncate"
                 onClick={() => {
                   navigator.clipboard.writeText(address);
                   setShowMenu(false);
@@ -120,9 +120,9 @@ export function WalletButton() {
             </div>
 
             {/* Balance */}
-            <div className="px-3 py-2 border-b border-[#1e293b]">
-              <p className="text-xs text-[#94a3b8]">
-                Balance: <span className="text-[#eab308] font-mono">
+            <div className="px-3 py-2 border-b border-[#1e2330]">
+              <p className="text-xs text-[#8891a5]">
+                Balance: <span className="text-[#e09a5f] font-mono">
                   {useWalletStore.getState().ergBalance
                     ? `${(Number(useWalletStore.getState().ergBalance) / 1e9).toFixed(4)} ERG`
                     : "—"}
@@ -132,8 +132,8 @@ export function WalletButton() {
 
             {/* Switch wallet */}
             {wallets.length > 1 && (
-              <div className="border-b border-[#1e293b]">
-                <p className="px-3 py-1 text-[10px] text-[#94a3b8] uppercase tracking-wider">Switch Wallet</p>
+              <div className="border-b border-[#1e2330]">
+                <p className="px-3 py-1 text-[10px] text-[#8891a5] uppercase tracking-wider">Switch Wallet</p>
                 {wallets.map((w) => (
                   <button
                     key={w.id}
@@ -141,7 +141,7 @@ export function WalletButton() {
                       handleDisconnect();
                       setTimeout(() => connectToWallet(w.id), 300);
                     }}
-                    className="w-full text-left px-3 py-1.5 text-sm text-[#e2e8f0] hover:bg-[#1e293b] transition-colors"
+                    className="w-full text-left px-3 py-1.5 text-sm text-[#e8eaf0] hover:bg-[#1e2330] transition-colors"
                   >
                     {w.name}
                   </button>
@@ -152,7 +152,7 @@ export function WalletButton() {
             {/* Disconnect */}
             <button
               onClick={handleDisconnect}
-              className="w-full text-left px-3 py-2 text-sm text-[#ef4444] hover:bg-[#1e293b] transition-colors rounded-b-lg"
+              className="w-full text-left px-3 py-2 text-sm text-[#f87171] hover:bg-[#1e2330] transition-colors rounded-b-lg"
             >
               Disconnect
             </button>
@@ -165,7 +165,7 @@ export function WalletButton() {
   // Not connected — show connect button or wallet picker
   if (connecting) {
     return (
-      <button disabled className="px-4 py-1.5 bg-[#3b82f6] text-white rounded-lg text-sm font-medium opacity-50">
+      <button disabled className="px-4 py-1.5 bg-[#c87941] text-white rounded-lg text-sm font-medium opacity-50">
         Connecting...
       </button>
     );
@@ -197,7 +197,7 @@ export function WalletButton() {
             alert("No Ergo wallet found. Please install the Nautilus browser extension.");
           }
         }}
-        className="px-4 py-1.5 bg-[#3b82f6] text-white rounded-lg text-sm font-medium hover:bg-[#2563eb] transition-colors"
+        className="px-4 py-1.5 bg-[#c87941] text-white rounded-lg text-sm font-medium hover:bg-[#2563eb] transition-colors"
       >
         Connect Wallet
       </button>
@@ -209,24 +209,24 @@ export function WalletButton() {
     <div className="relative">
       <button
         onClick={() => setShowMenu(!showMenu)}
-        className="px-4 py-1.5 bg-[#3b82f6] text-white rounded-lg text-sm font-medium hover:bg-[#2563eb] transition-colors"
+        className="px-4 py-1.5 bg-[#c87941] text-white rounded-lg text-sm font-medium hover:bg-[#2563eb] transition-colors"
       >
         Connect Wallet
       </button>
 
       {showMenu && (
         <div
-          className="absolute right-0 top-full mt-2 w-48 bg-[#0a0e17] border border-[#1e293b] rounded-lg shadow-xl z-50 py-1"
+          className="absolute right-0 top-full mt-2 w-48 bg-[#0a0c10] border border-[#1e2330] rounded-lg shadow-xl z-50 py-1"
           onMouseLeave={() => setShowMenu(false)}
         >
-          <p className="px-3 py-1 text-[10px] text-[#3b82f6] uppercase tracking-wider font-bold">
+          <p className="px-3 py-1 text-[10px] text-[#c87941] uppercase tracking-wider font-bold">
             Select Wallet
           </p>
           {wallets.map((w) => (
             <button
               key={w.id}
               onClick={() => connectToWallet(w.id)}
-              className="w-full text-left px-3 py-2 text-sm text-[#e2e8f0] hover:bg-[#1e293b] transition-colors"
+              className="w-full text-left px-3 py-2 text-sm text-[#e8eaf0] hover:bg-[#1e2330] transition-colors"
             >
               {w.name}
             </button>

@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { oracleVolToDecimal } from "@ergo-options/core";
 import { TradePanel } from "./TradePanel";
 import type { ParsedReserve } from "@/lib/reserve-scanner";
+import type { ParsedSellOrder } from "@/lib/sell-order-scanner";
 
 interface OptionChainProps {
   assetName: string;
@@ -12,6 +13,9 @@ interface OptionChainProps {
   oracleVol?: number; // bps from companion R5
   hasPhysical?: boolean;
   reserves?: ParsedReserve[];
+  sellOrders?: ParsedSellOrder[];
+  /** Map of optionTokenId → { strikePrice, optionType } for matching sell orders to strikes */
+  tokenToReserve?: Record<string, { strikePrice: number; optionType: "call" | "put" }>;
 }
 
 interface ChainRow {
@@ -22,11 +26,13 @@ interface ChainRow {
   callOI: number;
   callIV?: number;
   callVolume: number;
+  callSellOrders: ParsedSellOrder[];
   putPremium?: number;
   putAvail: number;
   putOI: number;
   putIV?: number;
   putVolume: number;
+  putSellOrders: ParsedSellOrder[];
 }
 
 interface SelectedOption {
@@ -35,6 +41,7 @@ interface SelectedOption {
   type: "call" | "put";
   premium: number;
   available: number;
+  sellOrder?: ParsedSellOrder;
 }
 
 /**
@@ -44,11 +51,8 @@ interface SelectedOption {
 function generateStrikes(spot: number, count: number = 7): number[] {
   if (spot <= 0) return [];
 
-  // Pick increment: ~2-3% of spot, rounded to a "nice" number
-  // BTC $68K → $1000, Gold $4600 → $100, ADA $0.25 → $0.01
-  const rawStep = spot * 0.02; // 2% of spot
+  const rawStep = spot * 0.02;
   const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
-  // Round to 1, 2, or 5 × magnitude (standard financial increments)
   const normalized = rawStep / magnitude;
   let step: number;
   if (normalized < 1.5) step = magnitude;
@@ -56,7 +60,6 @@ function generateStrikes(spot: number, count: number = 7): number[] {
   else if (normalized < 7.5) step = 5 * magnitude;
   else step = 10 * magnitude;
 
-  // Center around spot
   const center = Math.round(spot / step) * step;
   const half = Math.floor(count / 2);
   const strikes: number[] = [];
@@ -78,15 +81,13 @@ function formatStrike(strike: number): string {
 
 /**
  * Compute approximate IV for a strike using oracle realized vol + smile skew.
- * ATM uses oracle vol; OTM/ITM adds a skew proportional to log-moneyness.
  */
 function computeSmileIV(strike: number, spot: number, baseVol: number): number {
   const moneyness = Math.abs(Math.log(strike / spot));
-  const skew = moneyness * 0.3; // 30% skew per unit of log-moneyness
+  const skew = moneyness * 0.3;
   return baseVol * (1 + skew);
 }
 
-/** Volume bar component — horizontal bar with colored background */
 function VolumeBar({
   volume,
   maxVolume,
@@ -112,15 +113,35 @@ function VolumeBar({
   );
 }
 
-export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, oracleVol, hasPhysical, reserves = [] }: OptionChainProps) {
+/**
+ * Convert sell order premium from raw stablecoin units to USD.
+ * USE: 1000 raw = $1.  SigUSD: 100 raw = $1.
+ */
+function premiumToUsd(premiumPerToken: string, paymentTokenId: string): number {
+  const raw = BigInt(premiumPerToken);
+  // USE token ID starts with "a55b"
+  const isUSE = paymentTokenId.startsWith("a55b");
+  const divisor = isUSE ? 1000 : 100;
+  return Number(raw) / divisor;
+}
+
+export function OptionChain({
+  assetName,
+  oracleIndex: _oracleIndex,
+  spotPrice,
+  oracleVol,
+  hasPhysical,
+  reserves = [],
+  sellOrders = [],
+  tokenToReserve = {},
+}: OptionChainProps) {
   const [selectedExpiry, setSelectedExpiry] = useState<string>("all");
   const [settlement, setSettlement] = useState<"all" | "physical" | "cash">(hasPhysical ? "all" : "cash");
   const [selectedOption, setSelectedOption] = useState<SelectedOption | null>(null);
 
-  // Base vol: convert oracle bps to decimal
   const baseVol = oracleVol ? oracleVolToDecimal(oracleVol) : undefined;
 
-  // Build OI lookup from on-chain reserves: { "call:0.30": 1, "put:0.30": 0, ... }
+  // Build OI lookup from on-chain reserves
   const oiByStrikeType = useMemo(() => {
     const map = new Map<string, number>();
     for (const r of reserves) {
@@ -130,18 +151,57 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, o
     return map;
   }, [reserves]);
 
-  // Collect on-chain strike prices to ensure they appear in the chain
+  // Build sell order aggregation by strike+type
+  // For each strike+type: cheapest premium + total available + list of orders (sorted by price)
+  const sellByStrikeType = useMemo(() => {
+    const map = new Map<string, { cheapestPremium: number; totalAvail: number; orders: ParsedSellOrder[] }>();
+
+    for (const so of sellOrders) {
+      const reserveInfo = tokenToReserve[so.optionTokenId];
+      if (!reserveInfo) continue;
+
+      const key = `${reserveInfo.optionType}:${reserveInfo.strikePrice}`;
+      const premiumUsd = premiumToUsd(so.premiumPerToken, so.paymentTokenId);
+      const tokenCount = Number(BigInt(so.tokenAmount));
+
+      const existing = map.get(key);
+      if (existing) {
+        existing.totalAvail += tokenCount;
+        existing.orders.push(so);
+        if (premiumUsd < existing.cheapestPremium) {
+          existing.cheapestPremium = premiumUsd;
+        }
+      } else {
+        map.set(key, {
+          cheapestPremium: premiumUsd,
+          totalAvail: tokenCount,
+          orders: [so],
+        });
+      }
+    }
+
+    // Sort orders within each group by premium (cheapest first)
+    for (const group of map.values()) {
+      group.orders.sort((a, b) => {
+        const pa = premiumToUsd(a.premiumPerToken, a.paymentTokenId);
+        const pb = premiumToUsd(b.premiumPerToken, b.paymentTokenId);
+        return pa - pb;
+      });
+    }
+
+    return map;
+  }, [sellOrders, tokenToReserve]);
+
+  // Collect on-chain strike prices
   const onChainStrikes = useMemo(() => {
     return [...new Set(reserves.map((r) => r.strikePrice))];
   }, [reserves]);
 
-  // Generate strike rows from spot price (even with 0 options on-chain)
-  // Merges on-chain reserve OI data into the chain rows
+  // Generate strike rows
   const rows: ChainRow[] = useMemo(() => {
     if (!spotPrice || spotPrice <= 0) return [];
 
     const strikes = generateStrikes(spotPrice);
-    // Merge on-chain strikes that might not be in the generated list
     for (const s of onChainStrikes) {
       if (!strikes.includes(s)) strikes.push(s);
     }
@@ -155,35 +215,47 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, o
       const callOI = oiByStrikeType.get(`call:${strike}`) ?? 0;
       const putOI = oiByStrikeType.get(`put:${strike}`) ?? 0;
 
+      const callSell = sellByStrikeType.get(`call:${strike}`);
+      const putSell = sellByStrikeType.get(`put:${strike}`);
+
       return {
         strike,
         expiry: "—",
-        callAvail: 0,
+        callPremium: callSell?.cheapestPremium,
+        callAvail: callSell?.totalAvail ?? 0,
         callOI,
         callIV: iv ? Number((iv * 100).toFixed(1)) : undefined,
         callVolume: 0,
-        putAvail: 0,
+        callSellOrders: callSell?.orders ?? [],
+        putPremium: putSell?.cheapestPremium,
+        putAvail: putSell?.totalAvail ?? 0,
         putOI,
         putIV: iv ? Number((iv * 100).toFixed(1)) : undefined,
         putVolume: 0,
+        putSellOrders: putSell?.orders ?? [],
       };
     });
-  }, [spotPrice, baseVol, onChainStrikes, oiByStrikeType]);
+  }, [spotPrice, baseVol, onChainStrikes, oiByStrikeType, sellByStrikeType]);
 
-  // Max volume across all rows (for bar width scaling)
   const maxVolume = useMemo(() => {
     return Math.max(1, ...rows.map((r) => Math.max(r.callVolume, r.putVolume)));
   }, [rows]);
 
-  const expiries: string[] = []; // Will be populated from on-chain data
+  const expiries: string[] = [];
 
   const handleRowClick = (row: ChainRow, type: "call" | "put") => {
+    const orders = type === "call" ? row.callSellOrders : row.putSellOrders;
+    const cheapestOrder = orders.length > 0 ? orders[0] : undefined;
+    const premium = type === "call" ? (row.callPremium ?? 0) : (row.putPremium ?? 0);
+    const available = type === "call" ? row.callAvail : row.putAvail;
+
     setSelectedOption({
       strike: row.strike,
       expiry: row.expiry,
       type,
-      premium: type === "call" ? (row.callPremium ?? 0) : (row.putPremium ?? 0),
-      available: type === "call" ? row.callAvail : row.putAvail,
+      premium,
+      available,
+      sellOrder: cheapestOrder,
     });
   };
 
@@ -192,18 +264,18 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, o
       {/* Header bar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-4 text-sm">
-          <span className="text-[#94a3b8]">Spot:</span>
-          <span className="text-[#eab308] font-mono text-lg">
+          <span className="text-[#8891a5]">Spot:</span>
+          <span className="text-[#e09a5f] font-mono text-lg">
             {spotPrice && spotPrice > 0
               ? formatStrike(spotPrice)
               : "Unavailable"}
           </span>
           {spotPrice && spotPrice > 0 && (
-            <span className="text-[#94a3b8]/60 text-xs">via oracle</span>
+            <span className="text-[#8891a5]/60 text-xs">via oracle</span>
           )}
           {baseVol !== undefined && (
             <>
-              <span className="text-[#94a3b8] ml-2">RV:</span>
+              <span className="text-[#8891a5] ml-2">RV:</span>
               <span className="text-[#a78bfa] font-mono">
                 {(baseVol * 100).toFixed(1)}%
               </span>
@@ -223,10 +295,10 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, o
               disabled={disabled}
               className={`px-3 py-1 text-sm rounded-lg transition-colors ${
                 settlement === s
-                  ? "bg-[#3b82f6] text-white"
+                  ? "bg-[#c87941] text-white"
                   : disabled
-                  ? "bg-[#1e293b]/50 text-[#94a3b8]/30 cursor-not-allowed"
-                  : "bg-[#1e293b] text-[#94a3b8] hover:text-[#e2e8f0]"
+                  ? "bg-[#1e2330]/50 text-[#8891a5]/30 cursor-not-allowed"
+                  : "bg-[#1e2330] text-[#8891a5] hover:text-[#e8eaf0]"
               }`}
             >
               {s === "all" ? "All" : s === "physical" ? "Physical" : "Cash"}
@@ -241,8 +313,8 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, o
           onClick={() => setSelectedExpiry("all")}
           className={`px-3 py-1 text-sm rounded-lg whitespace-nowrap transition-colors ${
             selectedExpiry === "all"
-              ? "bg-[#3b82f6] text-white"
-              : "bg-[#1e293b] text-[#94a3b8] hover:text-[#e2e8f0]"
+              ? "bg-[#c87941] text-white"
+              : "bg-[#1e2330] text-[#8891a5] hover:text-[#e8eaf0]"
           }`}
         >
           All Expiries
@@ -253,8 +325,8 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, o
             onClick={() => setSelectedExpiry(exp)}
             className={`px-3 py-1 text-sm rounded-lg whitespace-nowrap transition-colors ${
               selectedExpiry === exp
-                ? "bg-[#3b82f6] text-white"
-                : "bg-[#1e293b] text-[#94a3b8] hover:text-[#e2e8f0]"
+                ? "bg-[#c87941] text-white"
+                : "bg-[#1e2330] text-[#8891a5] hover:text-[#e8eaf0]"
             }`}
           >
             {exp}
@@ -262,34 +334,34 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, o
         ))}
       </div>
 
-      {/* Chain Table — always show if we have a spot price */}
+      {/* Chain Table */}
       {rows.length > 0 ? (
-        <div className="overflow-x-auto bg-[#131a2a] border border-[#1e293b] rounded-lg">
+        <div className="overflow-x-auto bg-[#12151c] border border-[#1e2330] rounded-lg">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[#1e293b]">
-                <th colSpan={5} className="py-2 px-2 text-center text-[#22c55e] font-semibold text-xs uppercase tracking-wider">
+              <tr className="border-b border-[#1e2330]">
+                <th colSpan={5} className="py-2 px-2 text-center text-[#34d399] font-semibold text-xs uppercase tracking-wider">
                   Calls
                 </th>
-                <th className="py-2 px-3 text-center text-[#e2e8f0] font-bold bg-[#1e293b]">
+                <th className="py-2 px-3 text-center text-[#e8eaf0] font-bold bg-[#1e2330]">
                   Strike
                 </th>
-                <th colSpan={5} className="py-2 px-2 text-center text-[#ef4444] font-semibold text-xs uppercase tracking-wider">
+                <th colSpan={5} className="py-2 px-2 text-center text-[#f87171] font-semibold text-xs uppercase tracking-wider">
                   Puts
                 </th>
               </tr>
-              <tr className="border-b border-[#1e293b]/50">
-                <th className="text-center py-1 px-2 text-[#22c55e]/70 font-normal text-xs w-[68px]">Vol</th>
-                <th className="text-left py-1 px-2 text-[#22c55e]/70 font-normal text-xs">Premium</th>
-                <th className="text-right py-1 px-2 text-[#22c55e]/70 font-normal text-xs">Avail</th>
-                <th className="text-right py-1 px-2 text-[#22c55e]/70 font-normal text-xs">Open</th>
-                <th className="text-right py-1 px-2 text-[#22c55e]/70 font-normal text-xs">IV</th>
-                <th className="bg-[#1e293b]"></th>
-                <th className="text-left py-1 px-2 text-[#ef4444]/70 font-normal text-xs">IV</th>
-                <th className="text-right py-1 px-2 text-[#ef4444]/70 font-normal text-xs">Open</th>
-                <th className="text-right py-1 px-2 text-[#ef4444]/70 font-normal text-xs">Avail</th>
-                <th className="text-left py-1 px-2 text-[#ef4444]/70 font-normal text-xs">Premium</th>
-                <th className="text-center py-1 px-2 text-[#ef4444]/70 font-normal text-xs w-[68px]">Vol</th>
+              <tr className="border-b border-[#1e2330]/50">
+                <th className="text-center py-1 px-2 text-[#34d399]/70 font-normal text-xs w-[68px]">Vol</th>
+                <th className="text-left py-1 px-2 text-[#34d399]/70 font-normal text-xs">Premium</th>
+                <th className="text-right py-1 px-2 text-[#34d399]/70 font-normal text-xs">Avail</th>
+                <th className="text-right py-1 px-2 text-[#34d399]/70 font-normal text-xs">Open</th>
+                <th className="text-right py-1 px-2 text-[#34d399]/70 font-normal text-xs">IV</th>
+                <th className="bg-[#1e2330]"></th>
+                <th className="text-left py-1 px-2 text-[#f87171]/70 font-normal text-xs">IV</th>
+                <th className="text-right py-1 px-2 text-[#f87171]/70 font-normal text-xs">Open</th>
+                <th className="text-right py-1 px-2 text-[#f87171]/70 font-normal text-xs">Avail</th>
+                <th className="text-left py-1 px-2 text-[#f87171]/70 font-normal text-xs">Premium</th>
+                <th className="text-center py-1 px-2 text-[#f87171]/70 font-normal text-xs w-[68px]">Vol</th>
               </tr>
             </thead>
             <tbody>
@@ -301,67 +373,67 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, o
                 const isITMCall = spotPrice !== undefined && row.strike < spotPrice;
                 const isITMPut = spotPrice !== undefined && row.strike > spotPrice;
 
-                const callBarColor = isATM ? "#3b82f6" : "#22c55e";
-                const putBarColor = isATM ? "#3b82f6" : "#ef4444";
+                const callBarColor = isATM ? "#c87941" : "#34d399";
+                const putBarColor = isATM ? "#c87941" : "#f87171";
 
                 return (
                   <tr
                     key={i}
-                    className={`border-b border-[#1e293b]/30 hover:bg-[#1e293b]/30 transition-colors ${
-                      isATM ? "bg-[#3b82f6]/8" : ""
+                    className={`border-b border-[#1e2330]/30 hover:bg-[#1e2330]/30 transition-colors ${
+                      isATM ? "bg-[#c87941]/8" : ""
                     }`}
                   >
                     {/* Call volume bar */}
-                    <td className={`py-2 px-2 ${isITMCall ? "bg-[#22c55e]/5" : ""}`}>
+                    <td className={`py-2 px-2 ${isITMCall ? "bg-[#34d399]/5" : ""}`}>
                       <div className="flex justify-end">
                         <VolumeBar volume={row.callVolume} maxVolume={maxVolume} color={callBarColor} />
                       </div>
                     </td>
                     {/* Call side */}
                     <td
-                      className={`py-2 px-2 font-mono cursor-pointer hover:bg-[#22c55e]/10 transition-colors ${
-                        row.callPremium ? "text-[#eab308]" : "text-[#94a3b8]/40"
-                      } ${isITMCall ? "bg-[#22c55e]/5" : ""}`}
+                      className={`py-2 px-2 font-mono cursor-pointer hover:bg-[#34d399]/10 transition-colors ${
+                        row.callPremium ? "text-[#e09a5f]" : "text-[#8891a5]/40"
+                      } ${isITMCall ? "bg-[#34d399]/5" : ""}`}
                       onClick={() => handleRowClick(row, "call")}
                     >
                       {row.callPremium?.toFixed(4) ?? "—"}
                     </td>
-                    <td className={`py-2 px-2 text-right ${row.callAvail > 0 ? "text-[#94a3b8]" : "text-[#94a3b8]/30"} ${isITMCall ? "bg-[#22c55e]/5" : ""}`}>
+                    <td className={`py-2 px-2 text-right ${row.callAvail > 0 ? "text-[#8891a5]" : "text-[#8891a5]/30"} ${isITMCall ? "bg-[#34d399]/5" : ""}`}>
                       {row.callAvail}
                     </td>
-                    <td className={`py-2 px-2 text-right ${row.callOI > 0 ? "text-[#94a3b8]" : "text-[#94a3b8]/30"} ${isITMCall ? "bg-[#22c55e]/5" : ""}`}>
+                    <td className={`py-2 px-2 text-right ${row.callOI > 0 ? "text-[#8891a5]" : "text-[#8891a5]/30"} ${isITMCall ? "bg-[#34d399]/5" : ""}`}>
                       {row.callOI}
                     </td>
-                    <td className={`py-2 px-2 text-right ${row.callIV ? "text-[#a78bfa]" : "text-[#94a3b8]/30"} ${isITMCall ? "bg-[#22c55e]/5" : ""}`}>
+                    <td className={`py-2 px-2 text-right ${row.callIV ? "text-[#a78bfa]" : "text-[#8891a5]/30"} ${isITMCall ? "bg-[#34d399]/5" : ""}`}>
                       {row.callIV ? `${row.callIV}%` : "—"}
                     </td>
                     {/* Strike */}
-                    <td className={`py-2 px-3 text-center font-mono font-bold bg-[#1e293b]/50 ${
-                      isATM ? "text-[#3b82f6]" : "text-[#e2e8f0]"
+                    <td className={`py-2 px-3 text-center font-mono font-bold bg-[#1e2330]/50 ${
+                      isATM ? "text-[#c87941]" : "text-[#e8eaf0]"
                     }`}>
                       {formatStrike(row.strike)}
-                      {isATM && <span className="ml-1 text-[10px] text-[#3b82f6]">ATM</span>}
+                      {isATM && <span className="ml-1 text-[10px] text-[#c87941]">ATM</span>}
                     </td>
-                    {/* Put side (mirrored: IV | OI | Avail | Premium | Vol) */}
-                    <td className={`py-2 px-2 text-left ${row.putIV ? "text-[#a78bfa]" : "text-[#94a3b8]/30"} ${isITMPut ? "bg-[#ef4444]/5" : ""}`}>
+                    {/* Put side */}
+                    <td className={`py-2 px-2 text-left ${row.putIV ? "text-[#a78bfa]" : "text-[#8891a5]/30"} ${isITMPut ? "bg-[#f87171]/5" : ""}`}>
                       {row.putIV ? `${row.putIV}%` : "—"}
                     </td>
-                    <td className={`py-2 px-2 text-right ${row.putOI > 0 ? "text-[#94a3b8]" : "text-[#94a3b8]/30"} ${isITMPut ? "bg-[#ef4444]/5" : ""}`}>
+                    <td className={`py-2 px-2 text-right ${row.putOI > 0 ? "text-[#8891a5]" : "text-[#8891a5]/30"} ${isITMPut ? "bg-[#f87171]/5" : ""}`}>
                       {row.putOI}
                     </td>
-                    <td className={`py-2 px-2 text-right ${row.putAvail > 0 ? "text-[#94a3b8]" : "text-[#94a3b8]/30"} ${isITMPut ? "bg-[#ef4444]/5" : ""}`}>
+                    <td className={`py-2 px-2 text-right ${row.putAvail > 0 ? "text-[#8891a5]" : "text-[#8891a5]/30"} ${isITMPut ? "bg-[#f87171]/5" : ""}`}>
                       {row.putAvail}
                     </td>
                     <td
-                      className={`py-2 px-2 font-mono cursor-pointer hover:bg-[#ef4444]/10 transition-colors ${
-                        row.putPremium ? "text-[#eab308]" : "text-[#94a3b8]/40"
-                      } ${isITMPut ? "bg-[#ef4444]/5" : ""}`}
+                      className={`py-2 px-2 font-mono cursor-pointer hover:bg-[#f87171]/10 transition-colors ${
+                        row.putPremium ? "text-[#e09a5f]" : "text-[#8891a5]/40"
+                      } ${isITMPut ? "bg-[#f87171]/5" : ""}`}
                       onClick={() => handleRowClick(row, "put")}
                     >
                       {row.putPremium?.toFixed(4) ?? "—"}
                     </td>
                     {/* Put volume bar */}
-                    <td className={`py-2 px-2 ${isITMPut ? "bg-[#ef4444]/5" : ""}`}>
+                    <td className={`py-2 px-2 ${isITMPut ? "bg-[#f87171]/5" : ""}`}>
                       <VolumeBar volume={row.putVolume} maxVolume={maxVolume} color={putBarColor} />
                     </td>
                   </tr>
@@ -371,7 +443,7 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, o
           </table>
 
           {/* Footer */}
-          <div className="flex items-center justify-between px-4 py-3 border-t border-[#1e293b] text-sm text-[#94a3b8]">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-[#1e2330] text-sm text-[#8891a5]">
             <span>Click any row to trade</span>
             <span className="text-xs">
               {(() => {
@@ -387,9 +459,9 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, o
           </div>
         </div>
       ) : (
-        <div className="text-center py-16 bg-[#131a2a] border border-[#1e293b] rounded-lg">
-          <p className="text-[#94a3b8] mb-2">Oracle price unavailable for {assetName}</p>
-          <p className="text-sm text-[#94a3b8]/70">
+        <div className="text-center py-16 bg-[#12151c] border border-[#1e2330] rounded-lg">
+          <p className="text-[#8891a5] mb-2">Oracle price unavailable for {assetName}</p>
+          <p className="text-sm text-[#8891a5]/70">
             Cannot generate option chain without a spot price
           </p>
         </div>
@@ -405,6 +477,7 @@ export function OptionChain({ assetName, oracleIndex: _oracleIndex, spotPrice, o
           expiry={selectedOption.expiry}
           premium={selectedOption.premium}
           available={selectedOption.available}
+          sellOrder={selectedOption.sellOrder}
           onClose={() => setSelectedOption(null)}
         />
       )}

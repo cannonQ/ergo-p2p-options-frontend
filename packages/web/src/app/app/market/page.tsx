@@ -30,7 +30,7 @@ export default async function MarketPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Market Overview</h1>
-        <p className="text-[#94a3b8]">All active options across all assets</p>
+        <p className="text-[#8891a5]">All active options across all assets</p>
       </div>
 
       <MarketFilters

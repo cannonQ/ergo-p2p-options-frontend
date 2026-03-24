@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import { Navbar } from "./components/Navbar";
-import { StatsBar } from "./components/StatsBar";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -16,8 +14,9 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Ergo Options",
-  description: "P2P options trading on Ergo blockchain",
+  title: "Etcha — Decentralized Options on Ergo",
+  description:
+    "Write calls and puts on crypto, commodities, and indices — peer-to-peer, settled in stablecoins, fully on-chain.",
 };
 
 export default function RootLayout({
@@ -26,15 +25,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" style={{ scrollBehavior: "smooth" }}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#0a0e17] text-[#e2e8f0] min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#0a0c10] text-[#e8eaf0] min-h-screen`}
       >
-        <Navbar />
-        <StatsBar />
-        <main className="max-w-7xl mx-auto px-4 py-6">
-          {children}
-        </main>
+        {children}
       </body>
     </html>
   );

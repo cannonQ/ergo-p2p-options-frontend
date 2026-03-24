@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import { WalletButton } from "./WalletButton";
 
@@ -49,11 +50,13 @@ export function Navbar() {
   const [tradeOpen, setTradeOpen] = useState(false);
 
   return (
-    <nav className="border-b border-[#1e293b] bg-[#131a2a] sticky top-0 z-50">
+    <nav className="border-b border-[#1e2330] bg-[#0a0c10]/85 backdrop-blur-xl sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-        <Link href="/" className="flex items-baseline gap-2">
-          <span className="text-lg font-bold text-[#3b82f6]">Ergo P2P Options</span>
-          <span className="text-xs text-[#94a3b8] hidden sm:inline">Decentralized options trading on Ergo</span>
+        <Link href="/" className="flex items-center gap-2">
+          <Image src="/etcha-icon.svg" alt="Etcha" width={28} height={28} />
+          <span className="font-mono text-base font-medium tracking-[3px] uppercase text-[#e09a5f]">
+            Etcha
+          </span>
         </Link>
 
         <div className="flex items-center gap-6">
@@ -64,7 +67,7 @@ export function Navbar() {
           >
             <button
               onClick={() => setTradeOpen(!tradeOpen)}
-              className="text-[#94a3b8] hover:text-[#e2e8f0] transition-colors flex items-center gap-1"
+              className="text-[#8891a5] hover:text-[#e8eaf0] transition-colors flex items-center gap-1 font-mono text-sm"
             >
               Trade
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -74,22 +77,22 @@ export function Navbar() {
 
             {tradeOpen && (
               <div className="absolute top-full left-0 pt-2 w-72 z-50">
-              <div className="bg-[#0a0e17] border border-[#1e293b] rounded-lg shadow-xl py-1">
+              <div className="bg-[#0a0c10] border border-[#1e2330] rounded-lg shadow-xl py-1">
                 {ASSET_CATEGORIES.map((cat) => (
                   <div key={cat.label}>
-                    <div className="px-3 py-2 text-[10px] font-bold text-[#3b82f6] uppercase tracking-widest border-b border-[#1e293b]/50 bg-[#131a2a]">
+                    <div className="px-3 py-2 text-[10px] font-bold text-[#c87941] uppercase tracking-widest border-b border-[#1e2330]/50 bg-[#12151c]">
                       {cat.label}
                     </div>
                     {cat.assets.map((asset) => (
                       <Link
                         key={asset.slug}
-                        href={`/trade/${asset.slug}`}
-                        className="flex items-center justify-between px-4 py-2 text-sm text-[#e2e8f0] hover:bg-[#1e293b] transition-colors"
+                        href={`/app/trade/${asset.slug}`}
+                        className="flex items-center justify-between px-4 py-2 text-sm text-[#e8eaf0] hover:bg-[#1e2330] transition-colors"
                         onClick={() => setTradeOpen(false)}
                       >
                         <span>{asset.name}</span>
                         {"badge" in asset && asset.badge && (
-                          <span className="text-[9px] px-1.5 py-0.5 bg-[#22c55e]/10 text-[#22c55e] rounded">
+                          <span className="text-[9px] px-1.5 py-0.5 bg-[#34d399]/10 text-[#34d399] rounded">
                             {asset.badge}
                           </span>
                         )}
@@ -102,11 +105,15 @@ export function Navbar() {
             )}
           </div>
 
-          <Link href="/market" className="text-[#94a3b8] hover:text-[#e2e8f0] transition-colors">
+          <Link href="/app" className="text-[#8891a5] hover:text-[#e8eaf0] transition-colors font-mono text-sm">
+            Dashboard
+          </Link>
+
+          <Link href="/app/market" className="text-[#8891a5] hover:text-[#e8eaf0] transition-colors font-mono text-sm">
             Market
           </Link>
 
-          <Link href="/portfolio" className="text-[#94a3b8] hover:text-[#e2e8f0] transition-colors">
+          <Link href="/app/portfolio" className="text-[#8891a5] hover:text-[#e8eaf0] transition-colors font-mono text-sm">
             Portfolio
           </Link>
 

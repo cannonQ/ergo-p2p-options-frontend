@@ -65,8 +65,8 @@ export function MarketFilters({ reserves, spotPrices, currentHeight }: MarketFil
   return (
     <>
       {/* Current height */}
-      <div className="text-xs text-[#94a3b8]">
-        Chain height: <span className="font-mono text-[#e2e8f0]">{currentHeight.toLocaleString()}</span>
+      <div className="text-xs text-[#8891a5]">
+        Chain height: <span className="font-mono text-[#e8eaf0]">{currentHeight.toLocaleString()}</span>
       </div>
 
       {/* Filters */}
@@ -74,7 +74,7 @@ export function MarketFilters({ reserves, spotPrices, currentHeight }: MarketFil
         <select
           value={assetFilter}
           onChange={(e) => setAssetFilter(e.target.value)}
-          className="bg-[#131a2a] border border-[#1e293b] rounded-lg px-3 py-1.5 text-sm text-[#e2e8f0]"
+          className="bg-[#12151c] border border-[#1e2330] rounded-lg px-3 py-1.5 text-sm text-[#e8eaf0]"
         >
           <option value="all">All Assets</option>
           {assets.map((a) => (
@@ -84,7 +84,7 @@ export function MarketFilters({ reserves, spotPrices, currentHeight }: MarketFil
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="bg-[#131a2a] border border-[#1e293b] rounded-lg px-3 py-1.5 text-sm text-[#e2e8f0]"
+          className="bg-[#12151c] border border-[#1e2330] rounded-lg px-3 py-1.5 text-sm text-[#e8eaf0]"
         >
           <option value="all">All Types</option>
           <option value="call">Calls</option>
@@ -93,36 +93,36 @@ export function MarketFilters({ reserves, spotPrices, currentHeight }: MarketFil
         <select
           value={expiryFilter}
           onChange={(e) => setExpiryFilter(e.target.value)}
-          className="bg-[#131a2a] border border-[#1e293b] rounded-lg px-3 py-1.5 text-sm text-[#e2e8f0]"
+          className="bg-[#12151c] border border-[#1e2330] rounded-lg px-3 py-1.5 text-sm text-[#e8eaf0]"
         >
           <option value="all">All Expiries</option>
           {EXPIRY_BUCKETS.map((b) => (
             <option key={b.label} value={b.label}>{b.label}</option>
           ))}
         </select>
-        <label className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#94a3b8] cursor-pointer">
+        <label className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#8891a5] cursor-pointer">
           <input
             type="checkbox"
             checked={itmOnly}
             onChange={(e) => setItmOnly(e.target.checked)}
-            className="w-4 h-4 rounded border-[#1e293b] bg-[#0a0e17] text-[#3b82f6]"
+            className="w-4 h-4 rounded border-[#1e2330] bg-[#0a0c10] text-[#c87941]"
           />
           ITM only
         </label>
       </div>
 
       {/* Table */}
-      <div className="bg-[#131a2a] border border-[#1e293b] rounded-lg overflow-hidden">
+      <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[#1e293b]">
-              <th className="text-left py-3 px-4 text-[#94a3b8] font-medium">Asset</th>
-              <th className="text-left py-3 px-4 text-[#94a3b8] font-medium">Type</th>
-              <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Strike</th>
-              <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Spot</th>
-              <th className="text-right py-3 px-4 text-[#94a3b8] font-medium">Expiry</th>
-              <th className="text-left py-3 px-4 text-[#94a3b8] font-medium">Settlement</th>
-              <th className="text-left py-3 px-4 text-[#94a3b8] font-medium">Style</th>
+            <tr className="border-b border-[#1e2330]">
+              <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Asset</th>
+              <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Type</th>
+              <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Strike</th>
+              <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Spot</th>
+              <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Expiry</th>
+              <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Settlement</th>
+              <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Style</th>
             </tr>
           </thead>
           <tbody>
@@ -137,53 +137,53 @@ export function MarketFilters({ reserves, spotPrices, currentHeight }: MarketFil
                 return (
                   <tr
                     key={r.boxId}
-                    className={`border-b border-[#1e293b]/50 hover:bg-[#1e293b]/30 cursor-pointer ${
-                      isITM ? "bg-[#22c55e]/5" : ""
+                    className={`border-b border-[#1e2330]/50 hover:bg-[#1e2330]/30 cursor-pointer ${
+                      isITM ? "bg-[#34d399]/5" : ""
                     }`}
                   >
-                    <td className="py-2 px-4 text-[#e2e8f0] font-medium">{r.assetName}</td>
+                    <td className="py-2 px-4 text-[#e8eaf0] font-medium">{r.assetName}</td>
                     <td className="py-2 px-4">
-                      <span className={r.optionType === "call" ? "text-[#22c55e]" : "text-[#ef4444]"}>
+                      <span className={r.optionType === "call" ? "text-[#34d399]" : "text-[#f87171]"}>
                         {r.optionType === "call" ? "Call" : "Put"}
                       </span>
                     </td>
-                    <td className="py-2 px-4 text-right font-mono text-[#eab308]">
+                    <td className="py-2 px-4 text-right font-mono text-[#e09a5f]">
                       ${r.strikePrice >= 100 ? r.strikePrice.toFixed(0) : r.strikePrice.toFixed(r.strikePrice >= 1 ? 2 : 4)}
                     </td>
-                    <td className="py-2 px-4 text-right font-mono text-[#94a3b8]">
+                    <td className="py-2 px-4 text-right font-mono text-[#8891a5]">
                       {spot !== undefined ? `$${spot >= 100 ? spot.toFixed(0) : spot.toFixed(spot >= 1 ? 2 : 4)}` : "—"}
                     </td>
                     <td className="py-2 px-4 text-right">
                       <div className="text-xs space-y-0.5">
                         {blocksToExpiry > 0 ? (
                           <>
-                            <div className="font-mono text-[#e2e8f0]">
+                            <div className="font-mono text-[#e8eaf0]">
                               {formatBlocksToTime(blocksToExpiry)} to maturity
                             </div>
                           </>
                         ) : blocksToExpiry > -720 ? (
                           <>
-                            <div className="font-mono text-[#f59e0b]">
+                            <div className="font-mono text-[#e09a5f]">
                               Exercise window: {formatBlocksToTime(720 + blocksToExpiry)}
                             </div>
-                            <div className="text-[#22c55e] font-semibold">Exercisable</div>
+                            <div className="text-[#34d399] font-semibold">Exercisable</div>
                           </>
                         ) : (
-                          <div className="font-mono text-[#ef4444]">Expired</div>
+                          <div className="font-mono text-[#f87171]">Expired</div>
                         )}
-                        <div className="text-[#94a3b8]">
+                        <div className="text-[#8891a5]">
                           blk {r.maturityHeight.toLocaleString()}
                         </div>
                       </div>
                     </td>
-                    <td className="py-2 px-4 text-[#94a3b8] capitalize">{r.settlement}</td>
-                    <td className="py-2 px-4 text-[#94a3b8] capitalize">{r.style}</td>
+                    <td className="py-2 px-4 text-[#8891a5] capitalize">{r.settlement}</td>
+                    <td className="py-2 px-4 text-[#8891a5] capitalize">{r.style}</td>
                   </tr>
                 );
               })
             ) : (
               <tr>
-                <td colSpan={7} className="text-center py-12 text-[#94a3b8]">
+                <td colSpan={7} className="text-center py-12 text-[#8891a5]">
                   {reserves.length === 0
                     ? "No options currently listed. Be the first to write one."
                     : "No options match your filters."}

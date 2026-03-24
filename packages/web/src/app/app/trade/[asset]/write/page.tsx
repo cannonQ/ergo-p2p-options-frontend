@@ -255,7 +255,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
   ]);
 
   if (!info) {
-    return <div className="text-center py-20 text-[#94a3b8]">Asset not found</div>;
+    return <div className="text-center py-20 text-[#8891a5]">Asset not found</div>;
   }
 
   // Summary calculations
@@ -271,18 +271,18 @@ export default function WritePage({ params }: { params: { asset: string } }) {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <Link href={`/trade/${params.asset}`} className="text-sm text-[#3b82f6] hover:underline">
+        <Link href={`/app/trade/${params.asset}`} className="text-sm text-[#c87941] hover:underline">
           &larr; Back to {info.name} chain
         </Link>
         <h1 className="text-xl font-bold mt-2">Write an Option on {info.name}</h1>
       </div>
 
       {step === 0 ? (
-        <div className="bg-[#131a2a] border border-[#1e293b] rounded-lg p-6 space-y-5">
+        <div className="bg-[#12151c] border border-[#1e2330] rounded-lg p-6 space-y-5">
           {/* Row 1: Type + Style */}
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm text-[#94a3b8] mb-2">
+              <label className="block text-sm text-[#8891a5] mb-2">
                 Type
                 <Tooltip text="Call: You profit when the price goes UP. You lock the underlying asset and buyers pay the strike price to claim it. Put: You profit when the price goes DOWN. You lock stablecoin and buyers deliver the underlying asset to claim it." />
               </label>
@@ -292,9 +292,9 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                     className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       optionType === t
                         ? t === "call"
-                          ? "bg-[#22c55e]/20 text-[#22c55e] border border-[#22c55e]/30"
-                          : "bg-[#ef4444]/20 text-[#ef4444] border border-[#ef4444]/30"
-                        : "bg-[#1e293b] text-[#94a3b8] hover:text-[#e2e8f0]"
+                          ? "bg-[#34d399]/20 text-[#34d399] border border-[#34d399]/30"
+                          : "bg-[#f87171]/20 text-[#f87171] border border-[#f87171]/30"
+                        : "bg-[#1e2330] text-[#8891a5] hover:text-[#e8eaf0]"
                     }`}>
                     {t.charAt(0).toUpperCase() + t.slice(1)}
                   </button>
@@ -302,7 +302,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
               </div>
             </div>
             <div>
-              <label className="block text-sm text-[#94a3b8] mb-2">
+              <label className="block text-sm text-[#8891a5] mb-2">
                 Style
                 <Tooltip text={style === "european"
                   ? "European: Buyer can only exercise during the ~24h window after maturity. Better for writers — price spikes during the term don't matter."
@@ -314,8 +314,8 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                   <button key={s} onClick={() => setStyle(s)}
                     className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       style === s
-                        ? "bg-[#3b82f6]/20 text-[#3b82f6] border border-[#3b82f6]/30"
-                        : "bg-[#1e293b] text-[#94a3b8] hover:text-[#e2e8f0]"
+                        ? "bg-[#c87941]/20 text-[#c87941] border border-[#c87941]/30"
+                        : "bg-[#1e2330] text-[#8891a5] hover:text-[#e8eaf0]"
                     }`}>
                     {s.charAt(0).toUpperCase() + s.slice(1)}
                   </button>
@@ -326,7 +326,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
 
           {/* Settlement */}
           <div>
-            <label className="block text-sm text-[#94a3b8] mb-2">Settlement</label>
+            <label className="block text-sm text-[#8891a5] mb-2">Settlement</label>
             <div className="flex gap-2">
               {(["physical", "cash"] as const).map((s) => {
                 const disabled = s === "physical" && !hasPhysicalDelivery(info.index);
@@ -336,10 +336,10 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                     disabled={disabled}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       settlement === s
-                        ? "bg-[#3b82f6]/20 text-[#3b82f6] border border-[#3b82f6]/30"
+                        ? "bg-[#c87941]/20 text-[#c87941] border border-[#c87941]/30"
                         : disabled
-                        ? "bg-[#1e293b]/50 text-[#94a3b8]/40 cursor-not-allowed"
-                        : "bg-[#1e293b] text-[#94a3b8] hover:text-[#e2e8f0]"
+                        ? "bg-[#1e2330]/50 text-[#8891a5]/40 cursor-not-allowed"
+                        : "bg-[#1e2330] text-[#8891a5] hover:text-[#e8eaf0]"
                     }`}>
                     {s.charAt(0).toUpperCase() + s.slice(1)}
                     {disabled && " (N/A)"}
@@ -352,7 +352,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           {/* Row 2: Strike + Expiry */}
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm text-[#94a3b8] mb-2">
+              <label className="block text-sm text-[#8891a5] mb-2">
                 Strike Price (USD)
                 {spotPrice > 0 && (
                   <button
@@ -362,7 +362,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                       const d = p >= 100 ? 0 : p >= 1 ? 2 : p >= 0.01 ? 4 : 6;
                       setStrike(p.toFixed(d));
                     }}
-                    className="ml-2 text-[#eab308] hover:underline cursor-pointer"
+                    className="ml-2 text-[#e09a5f] hover:underline cursor-pointer"
                   >
                     Current: ${spotPrice.toFixed(spotPrice >= 100 ? 2 : 4)}
                   </button>
@@ -376,15 +376,15 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                   const mag = Math.pow(10, Math.max(0, Math.floor(Math.log10(val)) - 1));
                   return mag.toString();
                 })()}
-                className="w-full bg-[#0a0e17] border border-[#1e293b] rounded-lg px-4 py-2 text-[#e2e8f0] font-mono focus:border-[#3b82f6] focus:outline-none" />
+                className="w-full bg-[#0a0c10] border border-[#1e2330] rounded-lg px-4 py-2 text-[#e8eaf0] font-mono focus:border-[#c87941] focus:outline-none" />
             </div>
             <div>
-              <label className="block text-sm text-[#94a3b8] mb-2">Expiry</label>
+              <label className="block text-sm text-[#8891a5] mb-2">Expiry</label>
               <div className="flex gap-2">
                 <input type="number" value={expiryDays} onChange={(e) => setExpiryDays(e.target.value)}
                   min="1" step="1"
-                  className="w-20 bg-[#0a0e17] border border-[#1e293b] rounded-lg px-3 py-2 text-[#e2e8f0] font-mono focus:border-[#3b82f6] focus:outline-none" />
-                <span className="self-center text-sm text-[#94a3b8]">
+                  className="w-20 bg-[#0a0c10] border border-[#1e2330] rounded-lg px-3 py-2 text-[#e8eaf0] font-mono focus:border-[#c87941] focus:outline-none" />
+                <span className="self-center text-sm text-[#8891a5]">
                   days ({expiryBlocks} blocks)
                 </span>
               </div>
@@ -393,7 +393,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
 
           {/* Contract Size */}
           <div>
-            <label className="block text-sm text-[#94a3b8] mb-2">
+            <label className="block text-sm text-[#8891a5] mb-2">
               Contract Size ({optionType === "call" && settlement === "physical" ? info.unit : "USD equivalent"})
             </label>
             <div className="flex items-center gap-3">
@@ -406,44 +406,44 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                   const mag = Math.pow(10, Math.floor(Math.log10(val)));
                   return mag.toString();
                 })()}
-                className="w-40 bg-[#0a0e17] border border-[#1e293b] rounded-lg px-4 py-2 text-[#e2e8f0] font-mono focus:border-[#3b82f6] focus:outline-none" />
-              <span className="text-sm text-[#94a3b8]">
+                className="w-40 bg-[#0a0c10] border border-[#1e2330] rounded-lg px-4 py-2 text-[#e8eaf0] font-mono focus:border-[#c87941] focus:outline-none" />
+              <span className="text-sm text-[#8891a5]">
                 {optionType === "call" && settlement === "physical" ? info.unit : "USD"} per contract
               </span>
             </div>
             {cSize > 0 && spotPrice > 0 && (
-              <p className="mt-1 text-sm text-[#94a3b8]">
-                1 contract = <span className="text-[#e2e8f0] font-semibold">{contractSize} {info.unit}</span>
-                {" "}(~<span className="text-[#eab308]">${contractUsdValue.toFixed(2)}</span>)
+              <p className="mt-1 text-sm text-[#8891a5]">
+                1 contract = <span className="text-[#e8eaf0] font-semibold">{contractSize} {info.unit}</span>
+                {" "}(~<span className="text-[#e09a5f]">${contractUsdValue.toFixed(2)}</span>)
               </p>
             )}
           </div>
 
           {/* Number of Contracts */}
           <div>
-            <label className="block text-sm text-[#94a3b8] mb-2">
+            <label className="block text-sm text-[#8891a5] mb-2">
               Number of Contracts
             </label>
             <input type="number" value={numContracts} onChange={(e) => setNumContracts(e.target.value)}
               placeholder="10" min="1" step="1"
-              className="w-full bg-[#0a0e17] border border-[#1e293b] rounded-lg px-4 py-2 text-[#e2e8f0] font-mono focus:border-[#3b82f6] focus:outline-none" />
+              className="w-full bg-[#0a0c10] border border-[#1e2330] rounded-lg px-4 py-2 text-[#e8eaf0] font-mono focus:border-[#c87941] focus:outline-none" />
           </div>
 
           {/* Collateral Required (auto-computed) */}
           {contracts > 0 && cSize > 0 && (
-            <div className="p-4 bg-[#0a0e17] rounded-lg border border-[#1e293b]">
-              <h3 className="text-sm font-semibold text-[#e2e8f0] mb-2">Collateral Required</h3>
+            <div className="p-4 bg-[#0a0c10] rounded-lg border border-[#1e2330]">
+              <h3 className="text-sm font-semibold text-[#e8eaf0] mb-2">Collateral Required</h3>
               <div className="text-sm space-y-1">
                 <div className="flex justify-between">
-                  <span className="text-[#94a3b8]">{contracts} contracts × {contractSize} {info.unit}</span>
-                  <span className="text-[#e2e8f0] font-mono font-semibold">
+                  <span className="text-[#8891a5]">{contracts} contracts × {contractSize} {info.unit}</span>
+                  <span className="text-[#e8eaf0] font-mono font-semibold">
                     {collateral.toFixed(collateral >= 1 ? 4 : 6)} {optionType === "call" && settlement === "physical" ? info.unit : stablecoin}
                   </span>
                 </div>
                 {spotPrice > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-[#94a3b8]">USD value</span>
-                    <span className="text-[#eab308] font-mono">~${(collateral * (optionType === "call" && settlement === "physical" ? spotPrice : 1)).toFixed(2)}</span>
+                    <span className="text-[#8891a5]">USD value</span>
+                    <span className="text-[#e09a5f] font-mono">~${(collateral * (optionType === "call" && settlement === "physical" ? spotPrice : 1)).toFixed(2)}</span>
                   </div>
                 )}
               </div>
@@ -452,29 +452,29 @@ export default function WritePage({ params }: { params: { asset: string } }) {
 
           {/* Stablecoin */}
           <div>
-            <label className="block text-sm text-[#94a3b8] mb-2">Stablecoin for Strike Payment</label>
+            <label className="block text-sm text-[#8891a5] mb-2">Stablecoin for Strike Payment</label>
             <div className="flex gap-2">
               {(["USE", "SigUSD"] as const).map((s) => (
                 <button key={s} onClick={() => setStablecoin(s)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     stablecoin === s
-                      ? "bg-[#eab308]/20 text-[#eab308] border border-[#eab308]/30"
-                      : "bg-[#1e293b] text-[#94a3b8] hover:text-[#e2e8f0]"
+                      ? "bg-[#e09a5f]/20 text-[#e09a5f] border border-[#e09a5f]/30"
+                      : "bg-[#1e2330] text-[#8891a5] hover:text-[#e8eaf0]"
                   }`}>
                   {s} (${s === "USE" ? "1.000" : "1.00"})
                 </button>
               ))}
             </div>
             {strike && (
-              <p className="mt-1 text-xs text-[#94a3b8]">
+              <p className="mt-1 text-xs text-[#8891a5]">
                 Strike payment per contract: {strikeUsdPerContract.toFixed(stablecoin === "USE" ? 3 : 2)} {stablecoin}
               </p>
             )}
           </div>
 
           {/* B-S Suggested Premium */}
-          <div className="p-4 bg-[#0a0e17] rounded-lg border border-[#1e293b]">
-            <h3 className="text-sm font-semibold text-[#e2e8f0] mb-2">
+          <div className="p-4 bg-[#0a0c10] rounded-lg border border-[#1e2330]">
+            <h3 className="text-sm font-semibold text-[#e8eaf0] mb-2">
               Suggested Premium (Black-Scholes)
             </h3>
             <div className="flex items-center gap-3">
@@ -487,24 +487,24 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                   const mag = Math.floor(Math.log10(val));
                   return Math.pow(10, mag).toString();
                 })()}
-                className="w-40 bg-[#131a2a] border border-[#1e293b] rounded-lg px-3 py-2 text-[#eab308] font-mono focus:border-[#3b82f6] focus:outline-none" />
-              <span className="text-sm text-[#94a3b8]">{stablecoin}/contract</span>
+                className="w-40 bg-[#12151c] border border-[#1e2330] rounded-lg px-3 py-2 text-[#e09a5f] font-mono focus:border-[#c87941] focus:outline-none" />
+              <span className="text-sm text-[#8891a5]">{stablecoin}/contract</span>
               {premium && suggestedPremium > 0 && (
                 <button
                   onClick={() => setPremium("")}
-                  className="text-xs text-[#3b82f6] hover:underline"
+                  className="text-xs text-[#c87941] hover:underline"
                 >
                   Reset to B-S
                 </button>
               )}
               {suggestedPremium > 0 && !premium && (
-                <span className="text-xs text-[#94a3b8]">
+                <span className="text-xs text-[#8891a5]">
                   (σ={(oracleVolToDecimal(oracleVol) * 100).toFixed(1)}%)
                 </span>
               )}
             </div>
             {suggestedPremium <= 0 && spotPrice <= 0 && (
-              <p className="mt-1 text-xs text-[#f59e0b]">
+              <p className="mt-1 text-xs text-[#e09a5f]">
                 Connect wallet and wait for oracle price to compute suggested premium
               </p>
             )}
@@ -512,52 +512,52 @@ export default function WritePage({ params }: { params: { asset: string } }) {
 
           {/* Summary */}
           {contracts > 0 && (
-            <div className="p-4 bg-[#0a0e17] rounded-lg border border-[#1e293b] space-y-2">
-              <h3 className="text-sm font-semibold text-[#e2e8f0] mb-3">Summary</h3>
+            <div className="p-4 bg-[#0a0c10] rounded-lg border border-[#1e2330] space-y-2">
+              <h3 className="text-sm font-semibold text-[#e8eaf0] mb-3">Summary</h3>
               <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-                <span className="text-[#94a3b8]">Lock:</span>
-                <span className="text-[#e2e8f0] font-mono">
+                <span className="text-[#8891a5]">Lock:</span>
+                <span className="text-[#e8eaf0] font-mono">
                   {collateral.toFixed(collateral >= 1 ? 4 : 6)} {optionType === "call" && settlement === "physical" ? info.unit : stablecoin}
                   {info.index !== ERG_ORACLE_INDEX && (
-                    <span className="text-[#94a3b8]"> + {ergDeposit.toFixed(4)} ERG (fees)</span>
+                    <span className="text-[#8891a5]"> + {ergDeposit.toFixed(4)} ERG (fees)</span>
                   )}
                 </span>
 
-                <span className="text-[#94a3b8]">Receive:</span>
-                <span className="text-[#e2e8f0] font-mono">{contracts} option tokens</span>
+                <span className="text-[#8891a5]">Receive:</span>
+                <span className="text-[#e8eaf0] font-mono">{contracts} option tokens</span>
 
-                <span className="text-[#94a3b8]">If all exercised:</span>
-                <span className="text-[#22c55e] font-mono">
+                <span className="text-[#8891a5]">If all exercised:</span>
+                <span className="text-[#34d399] font-mono">
                   you receive {totalStrikeUsd.toFixed(stablecoin === "USE" ? 3 : 2)} {stablecoin}
                 </span>
 
-                <span className="text-[#94a3b8]">If expired:</span>
-                <span className="text-[#e2e8f0] font-mono">you keep all {optionType === "call" && settlement === "physical" ? info.unit : stablecoin}</span>
+                <span className="text-[#8891a5]">If expired:</span>
+                <span className="text-[#e8eaf0] font-mono">you keep all {optionType === "call" && settlement === "physical" ? info.unit : stablecoin}</span>
               </div>
             </div>
           )}
 
           {/* Auto-list checkbox */}
-          <label className="flex items-center gap-2 text-sm text-[#94a3b8] cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-[#8891a5] cursor-pointer">
             <input type="checkbox" checked={autoList} onChange={(e) => setAutoList(e.target.checked)}
-              className="w-4 h-4 rounded border-[#1e293b] bg-[#0a0e17] text-[#3b82f6] focus:ring-[#3b82f6]" />
+              className="w-4 h-4 rounded border-[#1e2330] bg-[#0a0c10] text-[#c87941] focus:ring-[#c87941]" />
             Auto-list on market at {premium || suggestedPremium.toFixed(6) || "—"} {stablecoin} after minting
           </label>
 
           {/* Submit */}
           <button
             onClick={handleWrite}
-            className="w-full py-3 bg-[#3b82f6] text-white rounded-lg font-medium hover:bg-[#2563eb] transition-colors disabled:opacity-50"
+            className="w-full py-3 bg-[#c87941] text-white rounded-lg font-medium hover:bg-[#2563eb] transition-colors disabled:opacity-50"
             disabled={!strike || contracts <= 0 || cSize <= 0}>
             Lock Collateral &amp; Mint
           </button>
-          <p className="text-xs text-[#94a3b8] text-center">
+          <p className="text-xs text-[#8891a5] text-center">
             You sign once. Our bot handles the rest in ~1 minute.
           </p>
         </div>
       ) : (
         /* Step progress for TX chain */
-        <div className="bg-[#131a2a] border border-[#1e293b] rounded-lg p-6 space-y-4">
+        <div className="bg-[#12151c] border border-[#1e2330] rounded-lg p-6 space-y-4">
           <h2 className="text-lg font-semibold mb-2">
             {step >= 4 ? "Option Created" : "Creating Option..."}
           </h2>
@@ -587,27 +587,27 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           ].map((s) => (
             <div key={s.num} className="flex items-start gap-3">
               <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold ${
-                step > s.num ? "bg-[#22c55e] text-white"
-                  : step === s.num && !writeError ? "bg-[#3b82f6] text-white animate-pulse"
-                  : step === s.num && writeError ? "bg-[#ef4444] text-white"
-                  : "bg-[#1e293b] text-[#94a3b8]"
+                step > s.num ? "bg-[#34d399] text-white"
+                  : step === s.num && !writeError ? "bg-[#c87941] text-white animate-pulse"
+                  : step === s.num && writeError ? "bg-[#f87171] text-white"
+                  : "bg-[#1e2330] text-[#8891a5]"
               }`}>
                 {step > s.num ? "\u2713" : s.num}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className={step >= s.num ? "text-[#e2e8f0]" : "text-[#94a3b8]"}>
+                  <span className={step >= s.num ? "text-[#e8eaf0]" : "text-[#8891a5]"}>
                     {s.label}
                   </span>
                   {!s.isUserAction && step >= s.num && step <= s.num && (
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-[#3b82f6]/10 text-[#3b82f6]">
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-[#c87941]/10 text-[#c87941]">
                       automatic
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-[#94a3b8]">{s.desc}</p>
+                <p className="text-xs text-[#8891a5]">{s.desc}</p>
                 {s.num === 1 && txIds.create && (
-                  <p className="text-xs text-[#3b82f6] font-mono mt-0.5 truncate">
+                  <p className="text-xs text-[#c87941] font-mono mt-0.5 truncate">
                     TX: {txIds.create}
                   </p>
                 )}
@@ -616,26 +616,26 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           ))}
 
           {writeError && (
-            <div className="mt-4 p-3 bg-[#ef4444]/10 border border-[#ef4444]/30 rounded-lg text-sm text-[#ef4444]">
+            <div className="mt-4 p-3 bg-[#f87171]/10 border border-[#f87171]/30 rounded-lg text-sm text-[#f87171]">
               <p className="font-semibold mb-1">Error at step {step}:</p>
               <p className="break-words">{writeError}</p>
             </div>
           )}
 
           {step >= 4 && !writeError && (
-            <div className="mt-4 p-3 bg-[#22c55e]/10 border border-[#22c55e]/30 rounded-lg text-sm text-[#22c55e]">
+            <div className="mt-4 p-3 bg-[#34d399]/10 border border-[#34d399]/30 rounded-lg text-sm text-[#34d399]">
               Option created successfully! {contracts} tokens are in your wallet.
             </div>
           )}
 
           {step < 4 && step >= 2 && !writeError && (
-            <p className="text-xs text-[#94a3b8] mt-2">
+            <p className="text-xs text-[#8891a5] mt-2">
               You can safely wait. The bot handles minting and delivery automatically.
             </p>
           )}
 
           {step === 1 && !writeError && (
-            <p className="text-xs text-[#f59e0b] mt-2">
+            <p className="text-xs text-[#e09a5f] mt-2">
               Approve the transaction in your Nautilus wallet.
             </p>
           )}
@@ -645,11 +645,11 @@ export default function WritePage({ params }: { params: { asset: string } }) {
             <div className="flex gap-3 mt-4">
               <button
                 onClick={resetWrite}
-                className="px-4 py-2 bg-[#1e293b] text-[#e2e8f0] rounded-lg text-sm hover:bg-[#334155] transition-colors">
+                className="px-4 py-2 bg-[#1e2330] text-[#e8eaf0] rounded-lg text-sm hover:bg-[#334155] transition-colors">
                 {writeError ? "Back to Form" : "Write Another"}
               </button>
               {writeError && step < 4 && (
-                <p className="self-center text-xs text-[#94a3b8]">
+                <p className="self-center text-xs text-[#8891a5]">
                   Check your portfolio for stuck boxes before retrying.
                 </p>
               )}

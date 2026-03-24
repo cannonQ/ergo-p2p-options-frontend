@@ -20,6 +20,8 @@ export interface ParsedReserve {
   collateralAmount?: string;
   /** Box value in nanoERG (collateral for ERG options) */
   valueNanoErg: string;
+  /** The option token ID (= definition box ID from R7, same as tokens[0] for minted boxes) */
+  optionTokenId?: string;
 }
 
 /**
@@ -167,5 +169,6 @@ function parseReserveBox(box: any, currentHeight: number, exerciseWindow: number
     collateralTokenId: box.assets?.[1]?.tokenId,
     collateralAmount: box.assets?.[1]?.amount?.toString(),
     valueNanoErg: box.value?.toString() ?? "0",
+    optionTokenId: creationBoxId ?? (tokenId || undefined),
   };
 }

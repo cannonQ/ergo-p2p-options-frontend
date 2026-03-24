@@ -1,6 +1,7 @@
 import { OptionChain } from "./components/OptionChain";
 import { fetchSpotPriceByIndex, fetchVolByIndex } from "@/lib/oracle-parser";
 import { scanReserves } from "@/lib/reserve-scanner";
+import { scanSellOrders } from "@/lib/sell-order-scanner";
 import { hasPhysicalDelivery } from "@ergo-options/core";
 import Link from "next/link";
 
@@ -44,24 +45,36 @@ export default async function TradePage({
     return (
       <div className="text-center py-20">
         <h1 className="text-xl font-bold mb-2">Asset Not Found</h1>
-        <p className="text-[#94a3b8]">Unknown asset: {params.asset}</p>
-        <Link href="/" className="text-[#3b82f6] hover:underline mt-4 inline-block">
+        <p className="text-[#8891a5]">Unknown asset: {params.asset}</p>
+        <Link href="/app" className="text-[#c87941] hover:underline mt-4 inline-block">
           Back to home
         </Link>
       </div>
     );
   }
 
-  // Fetch live spot price, realized volatility, and on-chain reserves (server-side)
-  const [spotPrice, oracleVol, allReserves] = await Promise.all([
+  // Fetch live spot price, realized volatility, reserves, and sell orders (server-side)
+  const [spotPrice, oracleVol, allReserves, allSellOrders] = await Promise.all([
     fetchSpotPriceByIndex(info.index),
     fetchVolByIndex(info.index),
     scanReserves(),
+    scanSellOrders(),
   ]);
 
   // Filter reserves for this asset
   const assetReserves = allReserves.filter(
     (r) => r.oracleIndex === info.index && r.state === "RESERVE"
+  );
+
+  // Build optionTokenId → reserve lookup for matching sell orders
+  const tokenToReserve = new Map<string, typeof assetReserves[number]>();
+  for (const r of assetReserves) {
+    if (r.optionTokenId) tokenToReserve.set(r.optionTokenId, r);
+  }
+
+  // Filter sell orders to only those matching this asset's reserves
+  const assetSellOrders = allSellOrders.filter(
+    (so) => tokenToReserve.has(so.optionTokenId)
   );
 
   return (
@@ -70,18 +83,29 @@ export default async function TradePage({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">{info.pair}</h1>
-          <p className="text-[#94a3b8] text-sm">Option chain for {info.name}</p>
+          <p className="text-[#8891a5] text-sm">Option chain for {info.name}</p>
         </div>
         <Link
-          href={`/trade/${params.asset}/write`}
-          className="px-4 py-2 bg-[#3b82f6] text-white rounded-lg text-sm font-medium hover:bg-[#2563eb] transition-colors"
+          href={`/app/trade/${params.asset}/write`}
+          className="px-4 py-2 bg-[#c87941] text-white rounded-lg text-sm font-medium hover:bg-[#2563eb] transition-colors"
         >
           Write New Option
         </Link>
       </div>
 
       {/* Option Chain */}
-      <OptionChain assetName={info.name} oracleIndex={info.index} spotPrice={spotPrice} oracleVol={oracleVol} hasPhysical={hasPhysicalDelivery(info.index)} reserves={assetReserves} />
+      <OptionChain
+        assetName={info.name}
+        oracleIndex={info.index}
+        spotPrice={spotPrice}
+        oracleVol={oracleVol}
+        hasPhysical={hasPhysicalDelivery(info.index)}
+        reserves={assetReserves}
+        sellOrders={assetSellOrders}
+        tokenToReserve={Object.fromEntries(
+          [...tokenToReserve.entries()].map(([k, v]) => [k, { strikePrice: v.strikePrice, optionType: v.optionType }])
+        )}
+      />
     </div>
   );
 }

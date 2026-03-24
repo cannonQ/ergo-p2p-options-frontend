@@ -148,23 +148,23 @@ export function ListForSaleModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-[#0f172a] border border-[#1e293b] rounded-xl w-full max-w-md mx-4 p-6 space-y-5">
+      <div className="bg-[#0f172a] border border-[#1e2330] rounded-xl w-full max-w-md mx-4 p-6 space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-[#e2e8f0]">List for Sale</h2>
+          <h2 className="text-lg font-semibold text-[#e8eaf0]">List for Sale</h2>
           <button
             onClick={onClose}
-            className="text-[#94a3b8] hover:text-[#e2e8f0] text-xl leading-none"
+            className="text-[#8891a5] hover:text-[#e8eaf0] text-xl leading-none"
           >
             &times;
           </button>
         </div>
 
         {/* Option info */}
-        <div className="text-sm text-[#94a3b8] space-y-1">
+        <div className="text-sm text-[#8891a5] space-y-1">
           <div>
             <span className="text-[#64748b]">Option:</span>{" "}
-            <span className="text-[#e2e8f0]">{optionName}</span>
+            <span className="text-[#e8eaf0]">{optionName}</span>
           </div>
           <div>
             <span className="text-[#64748b]">Token ID:</span>{" "}
@@ -174,22 +174,22 @@ export function ListForSaleModal({
           </div>
           <div>
             <span className="text-[#64748b]">Available:</span>{" "}
-            <span className="text-[#e2e8f0]">{maxTokens.toString()} tokens</span>
+            <span className="text-[#e8eaf0]">{maxTokens.toString()} tokens</span>
           </div>
           {spotPrice !== null && (
             <div>
               <span className="text-[#64748b]">Spot Price:</span>{" "}
-              <span className="text-[#eab308] font-mono">${spotPrice.toFixed(4)}</span>
+              <span className="text-[#e09a5f] font-mono">${spotPrice.toFixed(4)}</span>
             </div>
           )}
           {strikePrice !== undefined && (
             <div>
               <span className="text-[#64748b]">Strike:</span>{" "}
-              <span className="text-[#e2e8f0] font-mono">${strikePrice.toFixed(4)}</span>
+              <span className="text-[#e8eaf0] font-mono">${strikePrice.toFixed(4)}</span>
               {spotPrice !== null && (
                 <span className={`ml-2 text-xs ${
                   (optionType === "call" ? spotPrice > strikePrice : spotPrice < strikePrice)
-                    ? "text-[#22c55e]" : "text-[#ef4444]"
+                    ? "text-[#34d399]" : "text-[#f87171]"
                 }`}>
                   {optionType === "call"
                     ? (spotPrice > strikePrice ? "ITM" : "OTM")
@@ -208,14 +208,14 @@ export function ListForSaleModal({
 
         {/* Stablecoin selector */}
         <div>
-          <label className="block text-sm text-[#94a3b8] mb-1.5">Payment Currency</label>
+          <label className="block text-sm text-[#8891a5] mb-1.5">Payment Currency</label>
           <div className="flex gap-2">
             <button
               onClick={() => setStablecoin("USE")}
               className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
                 stablecoin === "USE"
-                  ? "bg-[#3b82f6]/20 border-[#3b82f6] text-[#3b82f6]"
-                  : "bg-[#1e293b] border-[#1e293b] text-[#94a3b8] hover:border-[#334155]"
+                  ? "bg-[#c87941]/20 border-[#c87941] text-[#c87941]"
+                  : "bg-[#1e2330] border-[#1e2330] text-[#8891a5] hover:border-[#334155]"
               }`}
             >
               USE (Dexy USD)
@@ -224,8 +224,8 @@ export function ListForSaleModal({
               onClick={() => setStablecoin("SigUSD")}
               className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
                 stablecoin === "SigUSD"
-                  ? "bg-[#3b82f6]/20 border-[#3b82f6] text-[#3b82f6]"
-                  : "bg-[#1e293b] border-[#1e293b] text-[#94a3b8] hover:border-[#334155]"
+                  ? "bg-[#c87941]/20 border-[#c87941] text-[#c87941]"
+                  : "bg-[#1e2330] border-[#1e2330] text-[#8891a5] hover:border-[#334155]"
               }`}
             >
               SigUSD
@@ -235,13 +235,13 @@ export function ListForSaleModal({
 
         {/* Premium per token */}
         <div>
-          <label className="flex items-center justify-between text-sm text-[#94a3b8] mb-1.5">
+          <label className="flex items-center justify-between text-sm text-[#8891a5] mb-1.5">
             <span>Premium per Token ({unitName})</span>
             {suggestedPremium !== null && suggestedPremium > 0 && (
               <button
                 type="button"
                 onClick={() => setPremiumInput(suggestedPremium.toFixed(6))}
-                className="text-xs text-[#3b82f6] hover:underline"
+                className="text-xs text-[#c87941] hover:underline"
               >
                 B-S: {suggestedPremium.toFixed(4)} {unitName}
               </button>
@@ -259,13 +259,13 @@ export function ListForSaleModal({
             value={premiumInput}
             onChange={(e) => setPremiumInput(e.target.value)}
             placeholder={suggestedPremium ? suggestedPremium.toFixed(6) : `e.g. 0.${decimals === 3 ? "050" : "05"}`}
-            className="w-full px-3 py-2 bg-[#1e293b] border border-[#334155] rounded-lg text-[#e2e8f0] text-sm focus:outline-none focus:border-[#3b82f6]"
+            className="w-full px-3 py-2 bg-[#1e2330] border border-[#334155] rounded-lg text-[#e8eaf0] text-sm focus:outline-none focus:border-[#c87941]"
           />
         </div>
 
         {/* Token amount */}
         <div>
-          <label className="block text-sm text-[#94a3b8] mb-1.5">
+          <label className="block text-sm text-[#8891a5] mb-1.5">
             Tokens to List
           </label>
           <div className="flex gap-2">
@@ -275,11 +275,11 @@ export function ListForSaleModal({
               max={maxTokens.toString()}
               value={tokenAmountInput}
               onChange={(e) => setTokenAmountInput(e.target.value)}
-              className="flex-1 px-3 py-2 bg-[#1e293b] border border-[#334155] rounded-lg text-[#e2e8f0] text-sm focus:outline-none focus:border-[#3b82f6]"
+              className="flex-1 px-3 py-2 bg-[#1e2330] border border-[#334155] rounded-lg text-[#e8eaf0] text-sm focus:outline-none focus:border-[#c87941]"
             />
             <button
               onClick={() => setTokenAmountInput(maxTokens.toString())}
-              className="px-3 py-2 bg-[#1e293b] border border-[#334155] rounded-lg text-[#94a3b8] text-xs hover:text-[#e2e8f0]"
+              className="px-3 py-2 bg-[#1e2330] border border-[#334155] rounded-lg text-[#8891a5] text-xs hover:text-[#e8eaf0]"
             >
               Max
             </button>
@@ -288,15 +288,15 @@ export function ListForSaleModal({
 
         {/* Summary */}
         {isValid && premiumRaw !== null && tokenAmount !== null && (
-          <div className="bg-[#1e293b]/50 border border-[#334155] rounded-lg p-3 text-sm space-y-1">
-            <div className="flex justify-between text-[#94a3b8]">
+          <div className="bg-[#1e2330]/50 border border-[#334155] rounded-lg p-3 text-sm space-y-1">
+            <div className="flex justify-between text-[#8891a5]">
               <span>Total premium (if fully filled)</span>
-              <span className="text-[#eab308] font-mono">
+              <span className="text-[#e09a5f] font-mono">
                 {(Number(premiumRaw * tokenAmount) / Math.pow(10, decimals)).toFixed(decimals)}{" "}
                 {stablecoin}
               </span>
             </div>
-            <div className="flex justify-between text-[#94a3b8]">
+            <div className="flex justify-between text-[#8891a5]">
               <span>dApp fee (1%)</span>
               <span className="text-[#64748b] font-mono">
                 {(Number(premiumRaw * tokenAmount) / Math.pow(10, decimals) * 0.01).toFixed(decimals)}{" "}
@@ -308,12 +308,12 @@ export function ListForSaleModal({
 
         {/* Error / Success */}
         {error && (
-          <div className="bg-[#ef4444]/10 border border-[#ef4444]/30 rounded-lg p-3 text-sm text-[#ef4444]">
+          <div className="bg-[#f87171]/10 border border-[#f87171]/30 rounded-lg p-3 text-sm text-[#f87171]">
             {error}
           </div>
         )}
         {success && (
-          <div className="bg-[#22c55e]/10 border border-[#22c55e]/30 rounded-lg p-3 text-sm text-[#22c55e]">
+          <div className="bg-[#34d399]/10 border border-[#34d399]/30 rounded-lg p-3 text-sm text-[#34d399]">
             {success}
           </div>
         )}
@@ -322,14 +322,14 @@ export function ListForSaleModal({
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 bg-[#1e293b] text-[#94a3b8] rounded-lg text-sm hover:text-[#e2e8f0] transition-colors"
+            className="flex-1 py-2.5 bg-[#1e2330] text-[#8891a5] rounded-lg text-sm hover:text-[#e8eaf0] transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={!isValid || submitting}
-            className="flex-1 py-2.5 bg-[#3b82f6] text-white rounded-lg text-sm font-medium hover:bg-[#2563eb] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex-1 py-2.5 bg-[#c87941] text-white rounded-lg text-sm font-medium hover:bg-[#2563eb] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {submitting ? "Signing..." : "List for Sale"}
           </button>
