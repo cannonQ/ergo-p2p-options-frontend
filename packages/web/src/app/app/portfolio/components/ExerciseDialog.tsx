@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { TxStatus } from "@/app/components/TxStatus";
 
 interface ExerciseDialogProps {
   isOpen: boolean;
@@ -39,7 +40,7 @@ export function ExerciseDialog({
   reserveBoxId: _reserveBoxId,
   onExercise,
 }: ExerciseDialogProps) {
-  const [exerciseQty, setExerciseQty] = useState(Number(quantity));
+  const exerciseQty = Number(quantity);
   const [status, setStatus] = useState("");
   const [txId, setTxId] = useState("");
   const stableDecimals = stablecoin === "USE" ? 3 : 2;
@@ -171,27 +172,6 @@ export function ExerciseDialog({
           )}
         </div>
 
-        {/* Quantity */}
-        <div>
-          <label className="block text-sm text-[#8891a5] mb-1">Contracts to exercise</label>
-          <div className="flex gap-2">
-            <input
-              type="number"
-              value={exerciseQty}
-              onChange={(e) => setExerciseQty(Math.min(Number(quantity), Math.max(1, parseInt(e.target.value) || 1)))}
-              min={1}
-              max={Number(quantity)}
-              className="flex-1 bg-[#0a0c10] border border-[#1e2330] rounded-lg px-3 py-2 text-[#e8eaf0] font-mono focus:border-[#c87941] focus:outline-none"
-            />
-            <button
-              onClick={() => setExerciseQty(Number(quantity))}
-              className="px-3 py-2 bg-[#1e2330] text-[#8891a5] rounded-lg text-sm hover:text-[#e8eaf0]"
-            >
-              Max
-            </button>
-          </div>
-        </div>
-
         {/* Totals */}
         <div className="p-3 bg-[#0a0c10] rounded-lg border border-[#1e2330] space-y-1 text-sm">
           {settlementType === "physical" && optionType === "call" && (
@@ -231,16 +211,7 @@ export function ExerciseDialog({
         </div>
 
         {/* Status */}
-        {status && (
-          <div className={`text-center text-sm ${txId ? "text-[#34d399]" : "text-[#8891a5]"}`}>
-            {status}
-          </div>
-        )}
-        {txId && (
-          <div className="text-center text-xs text-[#8891a5] font-mono break-all">
-            TX: {txId}
-          </div>
-        )}
+        <TxStatus status={status} txId={txId} />
 
         {/* Actions */}
         <div className="flex gap-3">

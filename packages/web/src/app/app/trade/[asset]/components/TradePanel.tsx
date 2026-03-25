@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useWalletStore } from "@/stores/wallet-store";
 import type { ParsedSellOrder } from "@/lib/sell-order-scanner";
+import { TxStatus } from "@/app/components/TxStatus";
 
 interface TradePanelProps {
   assetName: string;
@@ -370,16 +371,7 @@ export function TradePanel({
           )}
 
           {/* Status / TX ID */}
-          {status && (
-            <div className={`text-center text-sm ${txId ? "text-[#34d399]" : "text-[#8891a5]"}`}>
-              {status}
-            </div>
-          )}
-          {txId && (
-            <div className="text-center text-xs text-[#8891a5] font-mono break-all">
-              TX: {txId}
-            </div>
-          )}
+          <TxStatus status={status} txId={txId} />
 
           {/* Spot price footer */}
           <div className="text-center text-xs text-[#8891a5]">

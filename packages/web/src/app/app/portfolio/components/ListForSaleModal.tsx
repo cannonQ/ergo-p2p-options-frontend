@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { bsCall, bsPut, blocksToYears, oracleVolToDecimal } from "@ergo-options/core";
+import { TxStatus } from "@/app/components/TxStatus";
 
 interface ListForSaleModalProps {
   isOpen: boolean;
@@ -19,7 +20,7 @@ interface ListForSaleModalProps {
     stablecoin: "USE" | "SigUSD";
     premiumPerToken: bigint;
     tokenAmount: bigint;
-  }) => Promise<void>;
+  }) => Promise<string>;
 }
 
 export function ListForSaleModal({
@@ -41,6 +42,7 @@ export function ListForSaleModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [txId, setTxId] = useState("");
   const [suggestedPremium, setSuggestedPremium] = useState<number | null>(null);
   const [spotPrice, setSpotPrice] = useState<number | null>(null);
 
@@ -133,12 +135,13 @@ export function ListForSaleModal({
     setError(null);
     setSuccess(null);
     try {
-      await onSubmit({
+      const id = await onSubmit({
         stablecoin,
         premiumPerToken: premiumRaw,
         tokenAmount,
       });
-      setSuccess("Sell order submitted successfully!");
+      setTxId(id);
+      setSuccess("Sell order submitted!");
     } catch (err: any) {
       setError(err?.message || String(err));
     } finally {
@@ -312,10 +315,8 @@ export function ListForSaleModal({
             {error}
           </div>
         )}
-        {success && (
-          <div className="bg-[#34d399]/10 border border-[#34d399]/30 rounded-lg p-3 text-sm text-[#34d399]">
-            {success}
-          </div>
+        {(success || txId) && (
+          <TxStatus status={success || ""} txId={txId} />
         )}
 
         {/* Actions */}

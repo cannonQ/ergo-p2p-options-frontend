@@ -73,7 +73,6 @@ export default function WritePage({ params }: { params: { asset: string } }) {
   const [stablecoin, setStablecoin] = useState<"USE" | "SigUSD">("USE");
   const [expiryDays, setExpiryDays] = useState("7");
   const [premium, setPremium] = useState("");
-  const [autoList, setAutoList] = useState(true);
   const [contractSize, setContractSize] = useState("");
 
   // Write option hook — single signature, bot handles mint + deliver
@@ -537,12 +536,9 @@ export default function WritePage({ params }: { params: { asset: string } }) {
             </div>
           )}
 
-          {/* Auto-list checkbox */}
-          <label className="flex items-center gap-2 text-sm text-[#8891a5] cursor-pointer">
-            <input type="checkbox" checked={autoList} onChange={(e) => setAutoList(e.target.checked)}
-              className="w-4 h-4 rounded border-[#1e2330] bg-[#0a0c10] text-[#c87941] focus:ring-[#c87941]" />
-            Auto-list on market at {premium || suggestedPremium.toFixed(6) || "—"} {stablecoin} after minting
-          </label>
+          <p className="text-xs text-[#8891a5]">
+            After minting, list your option for sale from the Portfolio page.
+          </p>
 
           {/* Submit */}
           <button

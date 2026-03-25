@@ -132,6 +132,7 @@ function formatBlocksToTime(blocks: number): string {
 }
 
 import { nautilusBoxToFleet, nodeBoxToFleet } from "@/lib/box-utils";
+import type { ParsedSellOrder } from "@/lib/sell-order-scanner";
 
 /** Read VLQ-encoded unsigned integer from bytes */
 function readVLQ(bytes: Uint8Array, startOffset: number): { value: number; offset: number } {
@@ -226,7 +227,10 @@ export default function PortfolioPage() {
   const [exerciseModalTokenBalance, setExerciseModalTokenBalance] = useState(0n);
   const [exerciseModalSpotPrice, setExerciseModalSpotPrice] = useState<number | undefined>();
 
-  // Action status for Reclaim/Close buttons
+  // Open sell orders belonging to wallet
+  const [openOrders, setOpenOrders] = useState<(ParsedSellOrder & { optionName?: string })[]>([]);
+
+  // Action status for Reclaim/Close/Cancel buttons
   const [actionStatus, setActionStatus] = useState<Record<string, string>>({});
 
   const loadTokens = useCallback(async () => {
@@ -350,6 +354,21 @@ export default function PortfolioPage() {
               break;
             }
           }
+        }
+        // Scan sell orders belonging to this wallet
+        try {
+          const ordersRes = await fetch("/api/sell-orders");
+          if (ordersRes.ok) {
+            const { orders } = await ordersRes.json() as { orders: ParsedSellOrder[] };
+            // R4 = "08cd" + 33-byte EC point hex. Extract EC point and match wallet.
+            const myOrders = orders.filter((o) => {
+              const ecFromR4 = o.sellerPropBytes.slice(4); // strip "08cd"
+              return allECPoints.has(ecFromR4);
+            });
+            setOpenOrders(myOrders);
+          }
+        } catch (err) {
+          console.error("Failed to scan sell orders:", err);
         }
       } catch (err) {
         console.error("Failed to scan contract boxes:", err);
@@ -504,6 +523,8 @@ export default function PortfolioPage() {
 
     // Refresh after a short delay
     setTimeout(() => loadTokens(), 5000);
+
+    return txId;
   }, [api, sellModalBox, loadTokens]);
 
   // ═══════════════════════════════════════════════════════════════
@@ -680,6 +701,75 @@ export default function PortfolioPage() {
         setActionStatus((prev) => {
           const next = { ...prev };
           delete next[box.boxId];
+          return next;
+        });
+      }, 8000);
+    }
+  }, [api, loadTokens]);
+
+  // ═══════════════════════════════════════════════════════════════
+  // TX FLOW: Cancel Sell Order
+  // ═══════════════════════════════════════════════════════════════
+
+  const handleCancelSellOrder = useCallback(async (order: ParsedSellOrder) => {
+    if (!api) return;
+
+    setActionStatus((prev) => ({ ...prev, [order.boxId]: "Preparing..." }));
+
+    try {
+      const { TransactionBuilder } = await import("@fleet-sdk/core");
+
+      // Fetch the sell order box from the node
+      const nodeBox = await fetchBoxById(order.boxId);
+      const sellBox = nodeBoxToFleet(nodeBox);
+
+      // Get wallet UTXOs for miner fee
+      const rawUtxos = await getWalletUtxos(api);
+      const fleetWalletBoxes = rawUtxos.map(nautilusBoxToFleet);
+      const walletErgoTree = rawUtxos[0].ergoTree;
+
+      const height = await fetchHeight();
+      const txFee = MINER_FEE;
+
+      // The FixedPriceSell contract allows the seller (R4 SigmaProp) to spend freely.
+      // We simply send all contents (ERG + option tokens) back to the wallet.
+      const allInputs = [sellBox, ...fleetWalletBoxes];
+
+      const unsignedTx = new TransactionBuilder(height)
+        .from(allInputs)
+        .sendChangeTo(walletErgoTree)
+        .payFee(txFee)
+        .build();
+
+      setActionStatus((prev) => ({ ...prev, [order.boxId]: "Sign in wallet..." }));
+
+      const eip12Tx = unsignedTx.toEIP12Object();
+      const signedTx = await signTx(api, eip12Tx);
+      const txId = await submitTransaction(signedTx);
+
+      setActionStatus((prev) => ({ ...prev, [order.boxId]: `Cancelled: ${txId.slice(0, 8)}...` }));
+      console.log("Cancel sell order TX submitted:", txId);
+
+      setTimeout(() => {
+        setActionStatus((prev) => {
+          const next = { ...prev };
+          delete next[order.boxId];
+          return next;
+        });
+        loadTokens();
+      }, 10000);
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      if (msg.includes("declined") || msg.includes("Refused")) {
+        setActionStatus((prev) => ({ ...prev, [order.boxId]: "Signing declined" }));
+      } else {
+        setActionStatus((prev) => ({ ...prev, [order.boxId]: `Error: ${msg.slice(0, 40)}` }));
+      }
+      console.error("Cancel sell order failed:", err);
+      setTimeout(() => {
+        setActionStatus((prev) => {
+          const next = { ...prev };
+          delete next[order.boxId];
           return next;
         });
       }, 8000);
@@ -937,6 +1027,8 @@ export default function PortfolioPage() {
 
   const relevantTokens = tokens.filter((t) => t.isRelevant);
   const ergDisplay = ergBalance ? (Number(ergBalance) / 1e9).toFixed(4) : "0";
+  const writtenOptions = contractBoxes.filter((b) => b.state === "RESERVE" || b.state === "EXPIRED");
+  const pendingBoxes = contractBoxes.filter((b) => b.state === "DEFINITION" || b.state === "MINTED_UNDELIVERED");
   const PAGE_SIZE = 5;
 
   return (
@@ -1072,27 +1164,171 @@ export default function PortfolioPage() {
       </PaginatedSection>
 
       {/* Written Options (Issuer) */}
-      <PaginatedSection title="Written Options (Issuer)" total={0} pageSize={PAGE_SIZE}>
-        {() => (
-          <div className="bg-[#12151c] border border-[#1e2330] rounded-lg p-8 text-center text-[#8891a5]">
-            No written options
-          </div>
-        )}
+      <PaginatedSection title="Written Options (Issuer)" total={writtenOptions.length} pageSize={PAGE_SIZE}>
+        {(page) => {
+          const pageItems = writtenOptions.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+          return (
+            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-hidden">
+              {pageItems.length > 0 ? (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[#1e2330]">
+                      <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Name</th>
+                      <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Type</th>
+                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Strike</th>
+                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Expiry</th>
+                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">ERG Locked</th>
+                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Status</th>
+                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageItems.map((box) => {
+                      const isExpired = box.state === "EXPIRED";
+                      const blocksToExpiry = (box.maturityDate ?? 0) - currentHeight;
+                      return (
+                        <tr key={box.boxId} className="border-b border-[#1e2330]/50 hover:bg-[#1e2330]/30">
+                          <td className="py-2 px-4 text-[#e8eaf0]">{box.name}</td>
+                          <td className="py-2 px-4">
+                            <span className={`text-xs px-2 py-0.5 rounded ${
+                              box.optionType === "call" ? "bg-[#34d399]/20 text-[#34d399]" : "bg-[#f87171]/20 text-[#f87171]"
+                            }`}>
+                              {box.optionType === "call" ? "Call" : "Put"}
+                            </span>
+                            <span className="text-xs ml-1 text-[#8891a5]">{box.settlement}</span>
+                          </td>
+                          <td className="py-2 px-4 text-right font-mono text-[#e09a5f]">
+                            {box.strikePrice ? `$${box.strikePrice >= 100 ? box.strikePrice.toFixed(0) : box.strikePrice.toFixed(4)}` : "\u2014"}
+                          </td>
+                          <td className="py-2 px-4 text-right text-xs">
+                            {isExpired ? (
+                              <span className="text-[#f87171]">Expired</span>
+                            ) : blocksToExpiry > 0 ? (
+                              <span className="text-[#e8eaf0]">{formatBlocksToTime(blocksToExpiry)}</span>
+                            ) : (
+                              <span className="text-[#e09a5f]">Exercise window</span>
+                            )}
+                          </td>
+                          <td className="py-2 px-4 text-right font-mono text-[#8891a5]">
+                            {(box.value / 1e9).toFixed(4)}
+                          </td>
+                          <td className="py-2 px-4 text-right">
+                            <span className={`text-xs px-2 py-0.5 rounded ${
+                              isExpired ? "bg-[#f87171]/20 text-[#f87171]" : "bg-[#34d399]/20 text-[#34d399]"
+                            }`}>
+                              {isExpired ? "Expired" : "Active"}
+                            </span>
+                          </td>
+                          <td className="py-2 px-4 text-right">
+                            {actionStatus[box.boxId] ? (
+                              <span className="text-xs text-[#8891a5]">{actionStatus[box.boxId]}</span>
+                            ) : (
+                              <>
+                                {box.state === "RESERVE" && (
+                                  <button
+                                    onClick={() => handleListForSaleClick(box)}
+                                    className="text-xs px-2 py-1 bg-[#c87941]/20 text-[#c87941] rounded hover:bg-[#c87941]/30"
+                                  >
+                                    List for Sale
+                                  </button>
+                                )}
+                                {box.state === "EXPIRED" && (
+                                  <button
+                                    onClick={() => handleClose(box)}
+                                    className="text-xs px-2 py-1 bg-[#f87171]/20 text-[#f87171] rounded hover:bg-[#f87171]/30"
+                                  >
+                                    Close
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="p-8 text-center text-[#8891a5]">
+                  {loading ? "Scanning..." : "No written options"}
+                </div>
+              )}
+            </div>
+          );
+        }}
       </PaginatedSection>
 
       {/* Open Orders */}
-      <PaginatedSection title="Open Orders" total={0} pageSize={PAGE_SIZE}>
-        {() => (
-          <div className="bg-[#12151c] border border-[#1e2330] rounded-lg p-8 text-center text-[#8891a5]">
-            No open orders
-          </div>
-        )}
+      <PaginatedSection title="Open Orders" total={openOrders.length} pageSize={PAGE_SIZE}>
+        {(page) => {
+          const pageItems = openOrders.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+          return (
+            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-hidden">
+              {pageItems.length > 0 ? (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[#1e2330]">
+                      <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Option Token</th>
+                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Premium</th>
+                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Qty</th>
+                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Payment</th>
+                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageItems.map((order) => {
+                      const isUSE = order.paymentTokenId === USE_TOKEN_ID;
+                      const decimals = isUSE ? 3 : 2;
+                      const premiumDisplay = (Number(order.premiumPerToken) / Math.pow(10, decimals)).toFixed(decimals);
+                      return (
+                        <tr key={order.boxId} className="border-b border-[#1e2330]/50 hover:bg-[#1e2330]/30">
+                          <td className="py-2 px-4 font-mono text-xs text-[#e8eaf0]">
+                            {order.optionTokenId.slice(0, 10)}...{order.optionTokenId.slice(-6)}
+                          </td>
+                          <td className="py-2 px-4 text-right font-mono text-[#e09a5f]">
+                            {premiumDisplay} {isUSE ? "USE" : "SigUSD"}
+                          </td>
+                          <td className="py-2 px-4 text-right font-mono text-[#e8eaf0]">
+                            {order.tokenAmount}
+                          </td>
+                          <td className="py-2 px-4 text-right">
+                            <span className={`text-xs px-2 py-0.5 rounded ${
+                              isUSE ? "bg-[#34d399]/20 text-[#34d399]" : "bg-[#60a5fa]/20 text-[#60a5fa]"
+                            }`}>
+                              {isUSE ? "USE" : "SigUSD"}
+                            </span>
+                          </td>
+                          <td className="py-2 px-4 text-right">
+                            {actionStatus[order.boxId] ? (
+                              <span className="text-xs text-[#8891a5]">{actionStatus[order.boxId]}</span>
+                            ) : (
+                              <button
+                                onClick={() => handleCancelSellOrder(order)}
+                                className="text-xs px-2 py-1 bg-[#f87171]/20 text-[#f87171] rounded hover:bg-[#f87171]/30"
+                              >
+                                Cancel
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="p-8 text-center text-[#8891a5]">
+                  {loading ? "Scanning..." : "No open sell orders"}
+                </div>
+              )}
+            </div>
+          );
+        }}
       </PaginatedSection>
 
       {/* Stuck / Reclaimable + Active Reserves */}
-      <PaginatedSection title="My Contract Boxes" total={contractBoxes.length} pageSize={PAGE_SIZE}>
+      <PaginatedSection title="Pending Boxes" total={pendingBoxes.length} pageSize={PAGE_SIZE}>
         {(page) => {
-          const pageBoxes = contractBoxes.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+          const pageBoxes = pendingBoxes.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
           return (
             <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-hidden">
               {pageBoxes.length > 0 ? (

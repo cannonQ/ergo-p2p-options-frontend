@@ -274,7 +274,7 @@ export default function LandingPage() {
             everything you need to start.
           </p>
           <div className="learn-grid">
-            <a href="#" className="learn-card">
+            <Link href="/learn/calls-and-puts" className="learn-card">
               <div className="learn-icon">&#9680;</div>
               <h3>Calls &amp; Puts: The Two Sides</h3>
               <p>
@@ -284,8 +284,8 @@ export default function LandingPage() {
                 the premium paid; {"the writer's"} max loss is the collateral locked.
               </p>
               <span className="learn-link">Read guide &rarr;</span>
-            </a>
-            <a href="#" className="learn-card">
+            </Link>
+            <Link href="/learn/premiums" className="learn-card">
               <div className="learn-icon">&#11041;</div>
               <h3>Premiums: What Options Cost</h3>
               <p>
@@ -296,8 +296,8 @@ export default function LandingPage() {
                 premiums are denominated in stablecoins.
               </p>
               <span className="learn-link">Read guide &rarr;</span>
-            </a>
-            <a href="#" className="learn-card">
+            </Link>
+            <Link href="/learn/writing-options" className="learn-card">
               <div className="learn-icon">&#8862;</div>
               <h3>Writing Options: Earning Yield</h3>
               <p>
@@ -307,16 +307,16 @@ export default function LandingPage() {
                 your target buy price. Both strategies work on Etcha.
               </p>
               <span className="learn-link">Read guide &rarr;</span>
-            </a>
-            <a href="#" className="learn-card">
+            </Link>
+            <Link href="/learn/settlement" className="learn-card">
               <div className="learn-icon">&#9672;</div>
               <h3>Physical vs. Cash Settlement</h3>
               <p>
                 <strong>Physical settlement</strong> means the writer locks the actual underlying asset (rsETH, ERG, DexyGold) as collateral. At exercise, the buyer pays stablecoin and receives the asset directly from the reserve. <strong>Cash settlement</strong> means the writer locks stablecoins and the oracle determines the payout. Both modes, same smart contracts.
               </p>
               <span className="learn-link">Read guide &rarr;</span>
-            </a>
-            <a href="#" className="learn-card">
+            </Link>
+            <Link href="/learn/hedging" className="learn-card">
               <div className="learn-icon">&#8856;</div>
               <h3>Hedging: Protecting Your Bags</h3>
               <p>
@@ -325,8 +325,8 @@ export default function LandingPage() {
                 price. Options let you <strong>define your worst case</strong> in advance for a known cost.
               </p>
               <span className="learn-link">Read guide &rarr;</span>
-            </a>
-            <a href="#" className="learn-card">
+            </Link>
+            <Link href="/learn/why-on-chain" className="learn-card">
               <div className="learn-icon">&#11042;</div>
               <h3>Why On-Chain Options?</h3>
               <p>
@@ -336,7 +336,7 @@ export default function LandingPage() {
                 {" "}— write, buy, or provide liquidity. No permission needed.
               </p>
               <span className="learn-link">Read guide &rarr;</span>
-            </a>
+            </Link>
           </div>
         </div>
       </section>
