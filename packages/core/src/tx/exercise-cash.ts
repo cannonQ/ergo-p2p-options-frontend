@@ -149,7 +149,6 @@ export function buildExerciseCashTx(
     .from(allInputs)
     .to([successor, exerciser])
     .withDataFrom([oracleBox])
-    .burnTokens({ tokenId: optionTokenId, amount: effectiveContracts })
     .sendChangeTo(changeErgoTree)
     .payFee(txFee)
     .build();
