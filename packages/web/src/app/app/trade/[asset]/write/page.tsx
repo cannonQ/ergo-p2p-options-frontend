@@ -31,21 +31,21 @@ const ASSET_MAP: Record<string, { name: string; index: number; unit: string }> =
   doge: { name: "DOGE", index: 3, unit: "rsDOGE" },
   ada: { name: "ADA", index: 4, unit: "rsADA" },
   erg: { name: "ERG", index: 17, unit: "ERG" },
-  // Crypto — Cash Settlement
-  hns: { name: "HNS", index: 5, unit: "USE/SigUSD" },
-  ckb: { name: "CKB", index: 6, unit: "USE/SigUSD" },
-  atom: { name: "ATOM", index: 7, unit: "USE/SigUSD" },
-  firo: { name: "FIRO", index: 19, unit: "USE/SigUSD" },
+  // Crypto — Cash Settlement only
+  hns: { name: "HNS", index: 5, unit: "HNS" },
+  ckb: { name: "CKB", index: 6, unit: "CKB" },
+  atom: { name: "ATOM", index: 7, unit: "ATOM" },
+  firo: { name: "FIRO", index: 19, unit: "FIRO" },
   // Commodities & Metals
   gold: { name: "Gold", index: 18, unit: "DexyGold" },
-  silver: { name: "Silver", index: 11, unit: "USE/SigUSD" },
-  copper: { name: "Copper", index: 12, unit: "USE/SigUSD" },
-  brent: { name: "Brent", index: 13, unit: "USE/SigUSD" },
-  wti: { name: "WTI", index: 14, unit: "USE/SigUSD" },
-  natgas: { name: "NatGas", index: 15, unit: "USE/SigUSD" },
+  silver: { name: "Silver", index: 11, unit: "Silver" },
+  copper: { name: "Copper", index: 12, unit: "Copper" },
+  brent: { name: "Brent", index: 13, unit: "Brent" },
+  wti: { name: "WTI", index: 14, unit: "WTI" },
+  natgas: { name: "NatGas", index: 15, unit: "NatGas" },
   // Indices
-  spx: { name: "S&P 500", index: 9, unit: "USE/SigUSD" },
-  dji: { name: "DJI", index: 10, unit: "USE/SigUSD" },
+  spx: { name: "S&P 500", index: 9, unit: "S&P 500" },
+  dji: { name: "DJI", index: 10, unit: "DJI" },
 };
 
 const BLOCKS_PER_DAY = 720;
@@ -67,7 +67,9 @@ export default function WritePage({ params }: { params: { asset: string } }) {
 
   const [optionType, setOptionType] = useState<"call" | "put">("call");
   const [style, setStyle] = useState<"european" | "american">("european");
-  const [settlement, setSettlement] = useState<"physical" | "cash">("physical");
+  const [settlement, setSettlement] = useState<"physical" | "cash">(
+    info && !hasPhysicalDelivery(info.index) ? "cash" : "physical"
+  );
   const [strike, setStrike] = useState("");
   const [numContracts, setNumContracts] = useState("10");
   const [stablecoin, setStablecoin] = useState<"USE" | "SigUSD">("USE");
@@ -458,7 +460,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
               <h3 className="text-sm font-semibold text-[#e8eaf0] mb-2">Collateral Required</h3>
               <div className="text-sm space-y-1">
                 <div className="flex justify-between">
-                  <span className="text-[#8891a5]">{contracts} contracts × {contractSize} {info.unit}</span>
+                  <span className="text-[#8891a5]">{contracts} contracts × {contractSize} {optionType === "call" && settlement === "physical" ? info.unit : stablecoin}</span>
                   <span className="text-[#e8eaf0] font-mono font-semibold">
                     {collateral.toFixed(collateral >= 1 ? 4 : 6)} {optionType === "call" && settlement === "physical" ? info.unit : stablecoin}
                   </span>
@@ -550,9 +552,15 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                 <span className="text-[#e8eaf0] font-mono">{contracts} option tokens</span>
 
                 <span className="text-[#8891a5]">If all exercised:</span>
-                <span className="text-[#34d399] font-mono">
-                  you receive {totalStrikeUsd.toFixed(stablecoin === "USE" ? 3 : 2)} {stablecoin}
-                </span>
+                {settlement === "physical" ? (
+                  <span className="text-[#34d399] font-mono">
+                    you receive {totalStrikeUsd.toFixed(stablecoin === "USE" ? 3 : 2)} {stablecoin}
+                  </span>
+                ) : (
+                  <span className="text-[#e09a5f] font-mono">
+                    buyer receives payout from your {collateral.toFixed(collateral >= 1 ? 4 : 6)} {stablecoin} collateral
+                  </span>
+                )}
 
                 <span className="text-[#8891a5]">If expired:</span>
                 <span className="text-[#e8eaf0] font-mono">you keep all {optionType === "call" && settlement === "physical" ? info.unit : stablecoin}</span>

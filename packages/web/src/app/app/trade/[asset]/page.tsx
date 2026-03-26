@@ -6,7 +6,7 @@ import { hasPhysicalDelivery } from "@ergo-options/core";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 30;
+export const revalidate = 0;
 
 // Map URL slugs to oracle feed indices and display info
 const ASSET_MAP: Record<string, { name: string; index: number; pair: string }> = {

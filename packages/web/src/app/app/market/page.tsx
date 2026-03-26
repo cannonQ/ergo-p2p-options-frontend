@@ -3,7 +3,7 @@ import { fetchSpotPrices } from "@/lib/oracle-parser";
 import { MarketFilters } from "./components/MarketFilters";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 30;
+export const revalidate = 0;
 
 const NODE_URL = process.env.ERGO_NODE_URL || "http://96.255.150.220:9053";
 

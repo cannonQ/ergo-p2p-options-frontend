@@ -133,7 +133,8 @@ export async function signTx(api: ErgoAPI, unsignedTx: any): Promise<any> {
   try {
     return await api.sign_tx(unsignedTx);
   } catch (err: any) {
-    if (err?.code === 1) throw new WalletError(WalletErrorCode.Refused, "Transaction signing declined.");
+    console.error("[signTx] Nautilus error:", err, "code:", err?.code, "info:", err?.info, "message:", err?.message);
+    if (err?.code === 1) throw new WalletError(WalletErrorCode.Refused, `Signing failed (code 1): ${err?.info || err?.message || "declined or proof error"}`);
     if (err?.code === 2) throw new WalletError(WalletErrorCode.InvalidRequest, err?.message || "Invalid transaction");
     throw new WalletError(WalletErrorCode.APIError, err?.message || "Signing failed");
   }

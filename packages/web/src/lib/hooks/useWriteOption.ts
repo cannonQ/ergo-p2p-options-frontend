@@ -262,11 +262,19 @@ export function useWriteOption(): WriteOptionResult {
       const issuerECPoint = ergoTreeToECPoint(changeErgoTree);
       const currentHeight = await fetchHeight();
 
-      // Underlying token ID for the register
-      const underlyingId =
-        input.oracleIndex === ERG_ORACLE_INDEX
-          ? ""
-          : REGISTRY_TOKEN_IDS[input.oracleIndex] ?? "";
+      // Underlying token ID for R5 register.
+      // Physical: the Rosen Bridge token ID (or empty for ERG).
+      // Cash: the stablecoin token ID (USE or SigUSD) — collateral IS the stablecoin.
+      let underlyingId: string;
+      if (input.settlementType === 1) {
+        // Cash-settled: R5 = stablecoin token ID (must match tokens[1] in output)
+        const { USE_TOKEN_ID, SIGUSD_TOKEN_ID } = await import("@ergo-options/core");
+        underlyingId = input.stablecoinDecimal === 1000n ? USE_TOKEN_ID : SIGUSD_TOKEN_ID;
+      } else if (input.oracleIndex === ERG_ORACLE_INDEX) {
+        underlyingId = "";
+      } else {
+        underlyingId = REGISTRY_TOKEN_IDS[input.oracleIndex] ?? "";
+      }
 
       // Decimals string (matches oracle decimal format)
       const decimals = "0";

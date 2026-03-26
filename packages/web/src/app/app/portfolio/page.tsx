@@ -551,15 +551,13 @@ export default function PortfolioPage() {
       const height = await fetchHeight();
       const txFee = MINER_FEE;
 
-      // Include wallet boxes as inputs to cover miner fee
-      const allInputs = [contractBox, ...fleetWalletBoxes];
+      // Contract refund path requires EXACTLY 2 outputs: refund + miner fee.
+      // Do NOT add wallet boxes or use sendChangeTo — that creates a 3rd output.
+      const allInputs = [contractBox];
 
-      // Refund output: definition box value goes back to user.
-      // Fleet SDK sendChangeTo handles wallet ERG change separately.
-      const refundOutput = new OutputBuilder(
-        BigInt(contractBox.value),
-        walletErgoTree,
-      );
+      // Refund output: definition box value minus fee goes back to user
+      const refundValue = BigInt(contractBox.value) - txFee;
+      const refundOutput = new OutputBuilder(refundValue, walletErgoTree);
 
       // Return all tokens from the definition box to user
       if (contractBox.assets && contractBox.assets.length > 0) {
@@ -573,16 +571,21 @@ export default function PortfolioPage() {
         }
       }
 
-      const unsignedTx = new TransactionBuilder(height)
+      // Ensure height >= max creationHeight of input
+      let safeHeight = height;
+      const ch = Number(contractBox.creationHeight ?? 0);
+      if (ch > safeHeight) safeHeight = ch;
+
+      const unsignedTx = new TransactionBuilder(safeHeight)
         .from(allInputs)
         .to([refundOutput])
-        .sendChangeTo(walletErgoTree)
         .payFee(txFee)
         .build();
 
       setActionStatus((prev) => ({ ...prev, [box.boxId]: "Sign in wallet..." }));
 
       const eip12Tx = unsignedTx.toEIP12Object();
+      console.log("[Reclaim] EIP-12 TX:", JSON.stringify(eip12Tx, (_, v) => typeof v === 'bigint' ? v.toString() : v).slice(0, 500));
       const signedTx = await signTx(api, eip12Tx);
       const txId = await submitTransaction(signedTx);
 
@@ -816,12 +819,11 @@ export default function PortfolioPage() {
       let spotPrice: number | undefined;
       if (box.settlement === "cash" && box.oracleIndex !== undefined) {
         try {
-          const oracleRes = await fetch("/api/oracle");
-          if (oracleRes.ok) {
-            const oracleData = await oracleRes.json();
-            const rawSpot = oracleData.spotPrices?.[box.oracleIndex];
-            if (rawSpot) {
-              spotPrice = Number(BigInt(rawSpot)) / 1_000_000; // ORACLE_DECIMAL
+          const spotRes = await fetch(`/api/spot?index=${box.oracleIndex}`);
+          if (spotRes.ok) {
+            const spotData = await spotRes.json();
+            if (spotData.price) {
+              spotPrice = spotData.price;
             }
           }
         } catch { /* will show as undefined in dialog */ }

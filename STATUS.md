@@ -116,10 +116,10 @@
 - [x] **4. Exercise (physical call) via frontend** — Tokens BURNED on explorer, no quantity picker, TxStatus works *(passed 2026-03-25, V3 burn confirmed on-chain)*
 - [x] **5. Cancel sell order** — Cancel from Open Orders, tokens return to wallet *(passed 2026-03-25)*
 - [ ] **6. Close expired** — Wait for expiry, close from Written Options, collateral returned to writer *(bot auto-close proven, frontend close button untested — need expiry wait)*
-- [ ] **7. Reclaim definition** — Cancel a definition before bot mints, ERG returned
-- [ ] **8. Cash exercise TX** — Write a cash-settled option, exercise it, stablecoin payout correct
+- [x] **7. Reclaim definition** — Cancel a definition before bot mints, ERG returned *(passed 2026-03-25, required 2-output fix for contract refund path)*
+- [x] **8. Cash exercise TX** — Write a cash-settled option (FIRO Call $0.60), exercise it, USE payout correct ($0.079 profit) *(passed 2026-03-26, required R5 stablecoin ID fix + spot price API fix)*
 - [x] **9. Post-burn token display** — After V3 exercise, no ghost positions in Portfolio *(passed 2026-03-25)*
-- [ ] **10. Cancel sell order (FixedPriceSellV2)** — Verify cancel TX works on mainnet for both USE and SigUSD sell orders *(USE cancel tested, SigUSD untested)*
+- [x] **10. Cancel sell order (FixedPriceSellV2)** — USE cancel tested (2026-03-25). SigUSD sell order listed and bought successfully (2026-03-26) *(passed)*
 - [x] **11. Auto-close expired bot** — Bot detects and sweeps expired reserves after 720-block window *(proven 2026-03-25, closed reserve a731be99)*
 - [ ] **12. Vercel deployment** — Deploy with env vars (Supabase anon key, node URLs), verify prod works
 
@@ -130,6 +130,11 @@
 3. **creationHeight mismatch on create TX** — `buildCreateOptionTx` didn't guard against input boxes with higher creationHeight than fetchHeight. Fixed: added `safeHeight = max(currentHeight, max(input creationHeights))`.
 4. **Buy TX didn't include sell order box** — Fleet SDK's `TransactionBuilder.from()` skipped the sell box during box selection (not needed for ERG balance). Buyer paid premium but never received option token. Fixed: `.configureSelector((s) => s.ensureInclusion(sellBox.boxId))` in `buildBuyFromSellOrderTx`.
 5. **Expiry input was days-only** — No way to enter blocks directly. User entered "54" meaning 54 blocks but UI interpreted as 54 days. Fixed: added Days/Blocks toggle with smart defaults.
+6. **Reclaim TX built with 3 outputs** — Contract refund path requires exactly 2 outputs (refund + fee). Was building with 3 (refund + change + fee). Fixed: single contract box input, no wallet boxes, no sendChangeTo.
+7. **Cash-settled R5 was empty** — For cash options, R5 must contain the stablecoin token ID. Was empty for cash-only assets causing bot mint to fail ("Script reduced to false"). Fixed: `useWriteOption` sets R5 to USE/SigUSD token ID for cash settlement.
+8. **Exercise spot price API wrong** — Exercise dialog used `/api/oracle` which returns raw companion data with no parsed spotPrices array. Cash options always showed "out of the money". Fixed: use `/api/spot?index=N` instead.
+9. **Trade page revalidate=30 cached stale data** — Option chain showed no options because page-level cache served stale HTML. Fixed: `revalidate = 0` on trade and market pages.
+10. **Cash-only assets defaulted to Physical settlement** — Write page defaulted to "physical" even when unavailable. Fixed: auto-default to "cash" when `!hasPhysicalDelivery(index)`.
 
 ### UI/UX Issues Noted During Testing (to fix)
 
@@ -143,6 +148,11 @@
 8. **Open Orders: unclear section name** — "Open Orders" doesn't convey these are sell orders. Consider "My Sell Orders" or add subtitle.
 9. **Written Options: "ERG Locked" column misleading** — For token-collateral options (rsETH puts, cash-settled), it's not ERG that's locked. Should show actual collateral type + amount, or rename to "Value Locked".
 10. **Bot: retry-before-confirmation noise** — Bot retries mint/deliver on next block scan before previous TX confirms, causing "Double spending attempt" errors. Should check mempool before resubmitting.
+11. **Pending Boxes shows spent boxes** — After reclaim/close, spent box still appears until hard refresh. Scanner should filter spent boxes or portfolio should handle "box not found" gracefully (remove row).
+12. **Cash-only assets: settlement default** — Fixed: auto-defaults to Cash when physical not available. But contract size label and summary text needed fixes for cash-only display.
+13. **Reclaim TX: contract requires exactly 2 outputs** — Was building with 3 (refund + change + fee). Fixed: single input (contract box only), 2 outputs (refund + fee), no sendChangeTo.
+14. **Market page rows not tradeable** — Clicking a row on Market Overview should open a buy panel/modal for that option, not require navigating to the trade page separately.
+15. **Cash-settled R5 was empty** — For cash options, R5 must contain the stablecoin token ID (not empty). Bot mint failed with "Script reduced to false". Fixed: `useWriteOption` now sets R5 to USE/SigUSD token ID for cash settlement.
 
 ### Post-Alpha
 
