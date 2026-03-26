@@ -1,4 +1,4 @@
-# Ergo P2P Options Frontend — Status (2026-03-24 EOD)
+# Ergo P2P Options Frontend — Status (2026-03-25)
 
 ## Proven on Mainnet
 
@@ -24,9 +24,10 @@
 
 ## Contract Issues — BLOCKERS BEFORE LAUNCH
 
-- [ ] **OptionReserveV3 deployment** — V3 fixes the double-exercise vulnerability (token burn verification). V2 is UNSAFE for production. See `~/p2p-options-contracts/DOUBLE-EXERCISE-VULNERABILITY.md`. V3 contract written, needs compile + test + deploy.
-- [t] **Exercise is all-or-nothing per token ID** — V3 burn check requires ALL option tokens in inputs to be burned. UI now locks exercise quantity to user's full balance (quantity picker removed). Needs testing on mainnet with V3. *(built 2026-03-24)*
-- [ ] **Frontend TX builders update for V3** — Once V3 is deployed with a new ErgoTree, update `config.ts` with the new `OPTION_RESERVE_ERGOTREE`, recompile core, and add `.burnTokens()` to exercise TX builders so Fleet SDK doesn't reject the token imbalance.
+- [x] **OptionReserveV3 tested on mainnet** — V3 fixes the double-exercise vulnerability (token burn verification). Test 13 proven on mainnet 2026-03-25: both frontend defense (`.tokensToBurn()`) and contract defense (`allExercisedTokensBurned`) passed. See `~/p2p-options-contracts/TESTING-TODO.md`. *(completed 2026-03-25)*
+- [x] **Backend exercise TX builders updated** — `.tokensToBurn()` added to all 3 exercise paths in `OptionLifecycle.scala` (physical call, physical put, cash-settled). `Contracts.scala` now compiles V3. *(completed 2026-03-25)*
+- [t] **Exercise is all-or-nothing per token ID** — V3 burn check requires ALL option tokens in inputs to be burned. UI now locks exercise quantity to user's full balance (quantity picker removed). Tested on mainnet with V3 via Test 13. *(built 2026-03-24, tested 2026-03-25)*
+- [t] **Frontend TX builders update for V3** — `config.ts` updated with V3 ErgoTree (V2 kept as `OPTION_RESERVE_V2_ERGOTREE` for backward compat). `.burnTokens()` added to all 3 Fleet SDK exercise TX builders in `exercise-physical.ts` and `exercise-cash.ts`. `CONTRACT_ADDRESSES` includes both V3 and V2. *(built 2026-03-25)*
 
 ## Open Items (Not Yet Built)
 
@@ -45,7 +46,8 @@
 - [x] **Exercise button** — ExerciseDialog wired to TX building with status/txId display *(2026-03-24)*
 - [x] **Physical exercise TX** — buyer sends stablecoin, receives underlying from reserve *(2026-03-24)*
 - [ ] **Cash exercise TX** — wired in UI but untested on mainnet (no cash-settled options created yet)
-- [ ] **Double-exercise vulnerability** — V2 does not burn tokens during exercise. V3 fix written. See BLOCKERS above.
+- [x] **Double-exercise vulnerability FIXED** — V3 contract proven on mainnet (Test 13). Backend builders updated. Frontend `.burnTokens()` added to all 3 exercise paths. *(2026-03-25)*
+- [ ] **Post-burn token display** — After V3 exercise, burned tokens have 0 supply on-chain. Portfolio/activity must derive "Exercised" status from TX history (reserve spending chain), NOT wallet token balance. Needs UI testing with a V3-exercised option.
 
 ### Close/Refund
 - [ ] **Close expired** — button exists + wired, needs creationHeight fix (same pattern applied to exercise). Untested.
@@ -83,6 +85,9 @@
 10. Activity feed shows WRITE/BUY/EXERCISE events ✓
 11. **Double-exercise discovered** — exercised token returned in change, re-exercise possible (V2 vulnerability) ✓ documented
 12. **V3 contract written** — burn verification fix, two-pass audit passed ✓
+13. **V3 double-exercise fix proven on mainnet** — Test 13 passed both frontend + contract defense *(2026-03-25)*
+    - Exercise TX: `84431b43e71da9111c02780b2786646cd9b8fe8cb578a7122956cdaf6d238a5f`
+    - Phase 3b: V3 `allExercisedTokensBurned` rejected non-burn TX → `Script reduced to false` ✓
 
 ## Critical Bugs Found and Fixed (2026-03-24)
 
@@ -100,6 +105,57 @@
 5. **EC point extraction** — Nautilus ergoTree format doesn't always start with 0008cd. Fixed: use node addressToRaw API
 6. **B-S premium for expired options** — blocksToExpiry < 0 caused early return. Fixed: fallback to intrinsic value
 7. **Sparkline data window** — 24 points only covered ~5 hours. Fixed: use full 24h of data (~120 epochs)
+
+## Alpha Release Checklist
+
+### Blockers — must pass before community alpha
+
+- [x] **1. Write at V3 address** — Write from UI, bot auto-mints + delivers, reserve appears in Written Options *(passed 2026-03-25)*
+- [x] **2. List for sale** — List from Portfolio, TxStatus shows (copy + explorer), sell order appears in Open Orders *(passed 2026-03-25)*
+- [x] **3. Buy from sell order** — Second wallet buys, TxStatus shows, option appears in Active Options *(passed 2026-03-25, required ensureInclusion fix)*
+- [x] **4. Exercise (physical call) via frontend** — Tokens BURNED on explorer, no quantity picker, TxStatus works *(passed 2026-03-25, V3 burn confirmed on-chain)*
+- [x] **5. Cancel sell order** — Cancel from Open Orders, tokens return to wallet *(passed 2026-03-25)*
+- [ ] **6. Close expired** — Wait for expiry, close from Written Options, collateral returned to writer *(bot auto-close proven, frontend close button untested — need expiry wait)*
+- [ ] **7. Reclaim definition** — Cancel a definition before bot mints, ERG returned
+- [ ] **8. Cash exercise TX** — Write a cash-settled option, exercise it, stablecoin payout correct
+- [x] **9. Post-burn token display** — After V3 exercise, no ghost positions in Portfolio *(passed 2026-03-25)*
+- [ ] **10. Cancel sell order (FixedPriceSellV2)** — Verify cancel TX works on mainnet for both USE and SigUSD sell orders *(USE cancel tested, SigUSD untested)*
+- [x] **11. Auto-close expired bot** — Bot detects and sweeps expired reserves after 720-block window *(proven 2026-03-25, closed reserve a731be99)*
+- [ ] **12. Vercel deployment** — Deploy with env vars (Supabase anon key, node URLs), verify prod works
+
+### Bugs Found & Fixed During Testing (2026-03-25)
+
+1. **fetchHeight() cached stale value** — Next.js cached server-side `fetch()` to node AND client-side fetch. Height returned 1748559 when actual was 1749950. Fixed: `cache: 'no-store'` on both server route (`/api/height`) and client `fetchHeight()` + timestamp cache-buster. Nuked `.next/cache/fetch-cache/`.
+2. **Write page maturity set to past height** — Caused by stale fetchHeight (bug #1). Option created already expired, bot immediately auto-closed it. Fixed by bug #1 fix.
+3. **creationHeight mismatch on create TX** — `buildCreateOptionTx` didn't guard against input boxes with higher creationHeight than fetchHeight. Fixed: added `safeHeight = max(currentHeight, max(input creationHeights))`.
+4. **Buy TX didn't include sell order box** — Fleet SDK's `TransactionBuilder.from()` skipped the sell box during box selection (not needed for ERG balance). Buyer paid premium but never received option token. Fixed: `.configureSelector((s) => s.ensureInclusion(sellBox.boxId))` in `buildBuyFromSellOrderTx`.
+5. **Expiry input was days-only** — No way to enter blocks directly. User entered "54" meaning 54 blocks but UI interpreted as 54 days. Fixed: added Days/Blocks toggle with smart defaults.
+
+### UI/UX Issues Noted During Testing (to fix)
+
+1. **Write page: TxStatus missing** — Step 1 shows raw TX hex with no copy/explorer link. Need TxStatus component on write page.
+2. **Write page: polling timeout too aggressive** — 5-minute hard timeout shows scary error when bot is working fine. Should poll indefinitely with soft "taking longer than usual" warning. Reference: ErgoRaffle polling UX.
+3. **Trade page: no refresh button** — Unlike Portfolio, trade page has no manual refresh. Need one.
+4. **Trade page: panel closes on outside click** — After buying, clicking outside the trade panel dismisses it. Can't go back to copy TX ID. Should persist until explicitly closed.
+5. **Wallet disconnects on page refresh** — Nautilus reconnect issue. Annoying but may be wallet-side.
+6. **Exercise modal: no success summary** — After exercise, should show "Exercised 1 ERG Call $0.25" with TxStatus, received/paid summary. Currently just shows status text.
+7. **Open Orders: raw token ID** — Shows truncated token ID instead of option name (e.g. "ERG Call $0.25"). Should resolve by matching against reserves.
+8. **Open Orders: unclear section name** — "Open Orders" doesn't convey these are sell orders. Consider "My Sell Orders" or add subtitle.
+9. **Written Options: "ERG Locked" column misleading** — For token-collateral options (rsETH puts, cash-settled), it's not ERG that's locked. Should show actual collateral type + amount, or rename to "Value Locked".
+10. **Bot: retry-before-confirmation noise** — Bot retries mint/deliver on next block scan before previous TX confirms, causing "Double spending attempt" errors. Should check mempool before resubmitting.
+
+### Post-Alpha
+
+- [ ] Batch listing (select multiple options, list all in one TX)
+- [ ] BuyTokenRequestV2 (bid orders — stablecoin-denominated buy requests)
+- [ ] Responsive mobile layout
+- [ ] ErgoPay (mobile QR) support
+- [ ] Exercise history in Portfolio (show past exercises with TX links)
+- [ ] Greeks display (delta, gamma, theta, vega on option chain / trade panel)
+- [ ] Portfolio P&L tracking (cost basis vs current value per position)
+- [ ] Price alerts / notifications
+- [ ] Historical charts (option price over time)
+- [ ] Educational tooltips throughout app (contextual help beyond learn pages)
 
 ## Handoff Prompts
 

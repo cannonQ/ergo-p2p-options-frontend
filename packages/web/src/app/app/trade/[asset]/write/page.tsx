@@ -71,7 +71,8 @@ export default function WritePage({ params }: { params: { asset: string } }) {
   const [strike, setStrike] = useState("");
   const [numContracts, setNumContracts] = useState("10");
   const [stablecoin, setStablecoin] = useState<"USE" | "SigUSD">("USE");
-  const [expiryDays, setExpiryDays] = useState("7");
+  const [expiryInput, setExpiryInput] = useState("7");
+  const [expiryUnit, setExpiryUnit] = useState<"days" | "blocks">("days");
   const [premium, setPremium] = useState("");
   const [contractSize, setContractSize] = useState("");
 
@@ -124,7 +125,9 @@ export default function WritePage({ params }: { params: { asset: string } }) {
   }, [info]);
 
   const stablecoinDecimal = stablecoin === "USE" ? 1000n : 100n;
-  const expiryBlocks = Number(expiryDays || 0) * BLOCKS_PER_DAY;
+  const expiryBlocks = expiryUnit === "days"
+    ? Math.round(Number(expiryInput || 0) * BLOCKS_PER_DAY)
+    : Math.round(Number(expiryInput || 0));
 
   // Contract size in human units (e.g. 0.001 BTC, 500 DOGE)
   const cSize = Number(contractSize) || 0;
@@ -164,7 +167,16 @@ export default function WritePage({ params }: { params: { asset: string } }) {
   const handleWrite = useCallback(async () => {
     if (!info) return;
     const currentHeight = await fetchHeight();
+    if (expiryBlocks <= 0) {
+      alert("Expiry must be greater than 0");
+      return;
+    }
     const expiryHeight = BigInt(currentHeight + expiryBlocks);
+    if (expiryHeight <= BigInt(currentHeight)) {
+      alert(`Maturity height ${expiryHeight} is not in the future (current: ${currentHeight}). Check your expiry input.`);
+      return;
+    }
+    console.log(`[Write] currentHeight=${currentHeight}, expiryBlocks=${expiryBlocks}, maturityHeight=${expiryHeight}`);
 
     // Convert UI strings to on-chain types
     const optTypeNum: OptionTypeNum = optionType === "call" ? 0 : 1;
@@ -379,12 +391,24 @@ export default function WritePage({ params }: { params: { asset: string } }) {
             </div>
             <div>
               <label className="block text-sm text-[#8891a5] mb-2">Expiry</label>
-              <div className="flex gap-2">
-                <input type="number" value={expiryDays} onChange={(e) => setExpiryDays(e.target.value)}
-                  min="1" step="1"
-                  className="w-20 bg-[#0a0c10] border border-[#1e2330] rounded-lg px-3 py-2 text-[#e8eaf0] font-mono focus:border-[#c87941] focus:outline-none" />
-                <span className="self-center text-sm text-[#8891a5]">
-                  days ({expiryBlocks} blocks)
+              <div className="flex gap-2 items-center">
+                <input type="number" value={expiryInput} onChange={(e) => setExpiryInput(e.target.value)}
+                  min="1" step={expiryUnit === "days" ? "1" : "10"}
+                  className="w-24 bg-[#0a0c10] border border-[#1e2330] rounded-lg px-3 py-2 text-[#e8eaf0] font-mono focus:border-[#c87941] focus:outline-none" />
+                <div className="flex bg-[#0a0c10] border border-[#1e2330] rounded-lg overflow-hidden">
+                  <button type="button"
+                    onClick={() => { setExpiryUnit("days"); setExpiryInput("7"); }}
+                    className={`px-3 py-2 text-xs font-medium transition-colors ${expiryUnit === "days" ? "bg-[#c87941] text-white" : "text-[#8891a5] hover:text-[#e8eaf0]"}`}>
+                    Days
+                  </button>
+                  <button type="button"
+                    onClick={() => { setExpiryUnit("blocks"); setExpiryInput("720"); }}
+                    className={`px-3 py-2 text-xs font-medium transition-colors ${expiryUnit === "blocks" ? "bg-[#c87941] text-white" : "text-[#8891a5] hover:text-[#e8eaf0]"}`}>
+                    Blocks
+                  </button>
+                </div>
+                <span className="text-xs text-[#8891a5]">
+                  {expiryUnit === "days" ? `${expiryBlocks} blocks` : `~${(expiryBlocks / BLOCKS_PER_DAY).toFixed(1)} days`}
                 </span>
               </div>
             </div>

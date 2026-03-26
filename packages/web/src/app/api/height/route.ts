@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 const NODE_URL = process.env.ERGO_NODE_URL || 'http://96.255.150.220:9053';
 
 export async function GET() {
   try {
-    const res = await fetch(`${NODE_URL}/info`);
+    const res = await fetch(`${NODE_URL}/info`, { cache: 'no-store' });
     if (!res.ok) throw new Error(`Node error: ${res.status}`);
     const info = await res.json();
     return NextResponse.json({ height: info.fullHeight });

@@ -33,7 +33,13 @@ export async function fetchOracleData(): Promise<OracleResponse> {
 }
 
 export async function fetchHeight(): Promise<number> {
-  const data = await fetchJson<HeightResponse>('/height');
+  // Cache-bust to always get fresh height from the node
+  const res = await fetch(`${API_BASE}/height?_t=${Date.now()}`, { cache: 'no-store' });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`API error ${res.status}: ${text}`);
+  }
+  const data: HeightResponse = await res.json();
   return data.height;
 }
 

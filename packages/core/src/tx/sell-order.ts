@@ -150,12 +150,15 @@ export function buildBuyFromSellOrderTx(
     );
   }
 
-  // Buyer receives option tokens via sendChangeTo
+  // Buyer receives option tokens via sendChangeTo.
+  // The sell box MUST be included as an input (it holds the option tokens).
+  // Use configureSelector to ensure Fleet SDK doesn't skip it during box selection.
   return new TransactionBuilder(currentHeight)
     .from(allInputs)
     .to(outputs)
     .sendChangeTo(changeErgoTree)
     .payFee(txFee)
+    .configureSelector((selector) => selector.ensureInclusion(sellBox.boxId))
     .build();
 }
 

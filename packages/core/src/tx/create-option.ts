@@ -130,8 +130,16 @@ export function buildCreateOptionTx(
     });
   }
 
+  // Ensure currentHeight >= max creationHeight of all inputs
+  // (Fleet SDK uses this for output creationHeight; node rejects if lower than inputs)
+  let safeHeight = currentHeight;
+  for (const box of inputBoxes) {
+    const ch = Number(box.creationHeight ?? 0);
+    if (ch > safeHeight) safeHeight = ch;
+  }
+
   // Build transaction
-  const tx = new TransactionBuilder(currentHeight)
+  const tx = new TransactionBuilder(safeHeight)
     .from(inputBoxes)
     .to([outBuilder])
     .sendChangeTo(params.changeErgoTree)
