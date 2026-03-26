@@ -141,16 +141,24 @@ export default function WritePage({ params }: { params: { asset: string } }) {
   const contracts = Math.max(0, Math.floor(Number(numContracts) || 0));
 
   // Auto-compute collateral from contracts × contract size
+  // For physical non-ERG calls, multiply by registry rate to get actual token count
   const collateral = useMemo(() => {
     if (contracts <= 0 || cSize <= 0) return 0;
     if (optionType === "call" && settlement === "physical") {
       // Physical call: lock underlying tokens
+      const oracleIdx = info?.index ?? 0;
+      const isErg = oracleIdx === ERG_ORACLE_INDEX;
+      if (!isErg) {
+        const rate = Number(REGISTRY_RATES[oracleIdx] ?? 1_000_000n);
+        // cSize is in oracle units (e.g. troy oz for gold), rate converts to token units
+        return contracts * cSize * rate;
+      }
       return contracts * cSize;
     }
     // Put or cash: lock stablecoin (strike × contractSize × contracts)
     const str = Number(strike) || 0;
     return contracts * str * cSize;
-  }, [contracts, cSize, optionType, settlement, strike]);
+  }, [contracts, cSize, optionType, settlement, strike, info]);
 
   // B-S suggested premium (scaled by contract size)
   const suggestedPremium = useMemo(() => {
@@ -462,15 +470,15 @@ export default function WritePage({ params }: { params: { asset: string } }) {
               <h3 className="text-sm font-semibold text-[#e8eaf0] mb-2">Collateral Required</h3>
               <div className="text-sm space-y-1">
                 <div className="flex justify-between">
-                  <span className="text-[#8891a5]">{contracts} contracts × {contractSize} {optionType === "call" && settlement === "physical" ? info.unit : stablecoin}</span>
+                  <span className="text-[#8891a5]">{contracts} contracts × {contractSize} {info.name}</span>
                   <span className="text-[#e8eaf0] font-mono font-semibold">
-                    {collateral.toFixed(collateral >= 1 ? 4 : 6)} {optionType === "call" && settlement === "physical" ? info.unit : stablecoin}
+                    {collateral.toFixed(collateral >= 1 ? 0 : 6)} {optionType === "call" && settlement === "physical" ? info.unit : stablecoin}
                   </span>
                 </div>
                 {spotPrice > 0 && (
                   <div className="flex justify-between">
                     <span className="text-[#8891a5]">USD value</span>
-                    <span className="text-[#e09a5f] font-mono">~${(collateral * (optionType === "call" && settlement === "physical" ? spotPrice : 1)).toFixed(2)}</span>
+                    <span className="text-[#e09a5f] font-mono">~${(contracts * cSize * (optionType === "call" && settlement === "physical" ? spotPrice : 1)).toFixed(2)}</span>
                   </div>
                 )}
               </div>
@@ -544,7 +552,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
               <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
                 <span className="text-[#8891a5]">Lock:</span>
                 <span className="text-[#e8eaf0] font-mono">
-                  {collateral.toFixed(collateral >= 1 ? 4 : 6)} {optionType === "call" && settlement === "physical" ? info.unit : stablecoin}
+                  {collateral.toFixed(collateral >= 1 ? 0 : 6)} {optionType === "call" && settlement === "physical" ? info.unit : stablecoin}
                   {info.index !== ERG_ORACLE_INDEX && (
                     <span className="text-[#8891a5]"> + {ergDeposit.toFixed(4)} ERG (fees)</span>
                   )}
