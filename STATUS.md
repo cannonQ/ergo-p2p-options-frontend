@@ -153,6 +153,8 @@
 13. **Reclaim TX: contract requires exactly 2 outputs** — Was building with 3 (refund + change + fee). Fixed: single input (contract box only), 2 outputs (refund + fee), no sendChangeTo.
 14. **Market page rows not tradeable** — Clicking a row on Market Overview should open a buy panel/modal for that option, not require navigating to the trade page separately.
 15. **Cash-settled R5 was empty** — For cash options, R5 must contain the stablecoin token ID (not empty). Bot mint failed with "Script reduced to false". Fixed: `useWriteOption` now sets R5 to USE/SigUSD token ID for cash settlement.
+16. **Written Options shows "List for Sale" when no tokens left** — After all tradeable tokens are sold/exercised, the reserve still shows "List for Sale" button. Should check wallet balance for option tokens before showing action.
+17. **Dashboard asset cards show "0 options"** — Active contracts not counted correctly on dashboard for V3.
 
 ### Post-Alpha
 
