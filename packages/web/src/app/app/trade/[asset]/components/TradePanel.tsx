@@ -69,9 +69,9 @@ export function TradePanel({
   // Close on Escape
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && !txId) onClose();
     },
-    [onClose]
+    [onClose, txId]
   );
 
   useEffect(() => {
@@ -213,7 +213,7 @@ export function TradePanel({
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 z-40"
-        onClick={onClose}
+        onClick={() => { if (!txId) onClose(); }}
       />
 
       {/* Slide-out panel */}

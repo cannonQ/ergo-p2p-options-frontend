@@ -4,12 +4,25 @@
 import { config } from './config.js';
 import { scanAll, type ClassifiedBox } from './scanner.js';
 import { BoxState } from '@ergo-options/core';
-import { upsertBox, getRetryCount, incrementRetry, markResolved } from './state.js';
+import { upsertBox, getRetryCount, incrementRetry, markResolved, getPendingTxId, setPendingTxId, clearPendingTxId } from './state.js';
 import { executeDelivery } from './actions/deliver.js';
 import { executeClose } from './actions/close.js';
 import { executeMint } from './actions/mint.js';
 
 let lastHeight = 0;
+
+/**
+ * Check if a previously submitted TX is still in the mempool.
+ * Returns true if the TX is pending (skip action), false if gone (confirmed or dropped).
+ */
+async function isTxInMempool(txId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${config.nodeUrl}/transactions/unconfirmed/byTransactionId/${txId}`);
+    return res.ok; // 200 = still pending
+  } catch {
+    return false;
+  }
+}
 
 async function getCurrentHeight(): Promise<number> {
   const res = await fetch(`${config.nodeUrl}/info`);
@@ -20,6 +33,17 @@ async function getCurrentHeight(): Promise<number> {
 
 async function handleBox(box: ClassifiedBox, currentHeight: number) {
   upsertBox(box.boxId, box.contractAddr, box.state, box.creationHeight);
+
+  // Check if a previously submitted TX is still in the mempool — skip action if so
+  const pendingTxId = getPendingTxId(box.boxId);
+  if (pendingTxId) {
+    if (await isTxInMempool(pendingTxId)) {
+      console.log(`[SKIP] Box ${box.boxId.slice(0, 16)}... has pending TX ${pendingTxId.slice(0, 12)}... in mempool`);
+      return;
+    }
+    // TX is no longer in mempool — confirmed or dropped, clear it
+    clearPendingTxId(box.boxId);
+  }
 
   const age = currentHeight - box.creationHeight;
 
@@ -34,6 +58,7 @@ async function handleBox(box: ClassifiedBox, currentHeight: number) {
             incrementRetry(box.boxId, 'MINT');
             if (txId) {
               console.log(`[ACTION] Mint TX submitted: ${txId}`);
+              setPendingTxId(box.boxId, txId);
               markResolved(box.boxId);
             }
           } catch (err) {
@@ -56,6 +81,7 @@ async function handleBox(box: ClassifiedBox, currentHeight: number) {
             incrementRetry(box.boxId, 'DELIVER_RETRY');
             if (txId) {
               console.log(`[ACTION] Delivery TX submitted: ${txId}`);
+              setPendingTxId(box.boxId, txId);
               markResolved(box.boxId);
             }
           } catch (err) {
@@ -80,6 +106,7 @@ async function handleBox(box: ClassifiedBox, currentHeight: number) {
           incrementRetry(box.boxId, 'CLOSE');
           if (txId) {
             console.log(`[ACTION] Close TX submitted: ${txId}`);
+            setPendingTxId(box.boxId, txId);
           }
           markResolved(box.boxId);
         } catch (err) {

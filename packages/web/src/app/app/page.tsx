@@ -2,6 +2,10 @@ import { AssetCard } from "../components/AssetCard";
 import { ActivityFeed } from "../components/ActivityFeed";
 import { fetchSpotPrices } from "@/lib/oracle-parser";
 import { fetchAllAssetPriceData } from "@/lib/price-history";
+import { scanReserves } from "@/lib/reserve-scanner";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const CATEGORIES = [
   {
@@ -49,10 +53,18 @@ const CATEGORIES = [
 ];
 
 export default async function HomePage() {
-  const [spotPrices, priceData] = await Promise.all([
+  const [spotPrices, priceData, allReserves] = await Promise.all([
     fetchSpotPrices(),
     fetchAllAssetPriceData(),
+    scanReserves().catch(() => []),
   ]);
+
+  const optionCounts = new Map<number, number>();
+  for (const r of allReserves) {
+    if (r.state === "RESERVE") {
+      optionCounts.set(r.oracleIndex, (optionCounts.get(r.oracleIndex) ?? 0) + 1);
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -75,6 +87,7 @@ export default async function HomePage() {
                   badge={asset.badge}
                   sparkline={history?.sparkline}
                   change24h={history?.change24h}
+                  optionCount={optionCounts.get(asset.index) ?? 0}
                 />
               );
             })}

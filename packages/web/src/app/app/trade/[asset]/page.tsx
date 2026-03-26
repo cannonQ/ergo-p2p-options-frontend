@@ -4,6 +4,7 @@ import { scanReserves } from "@/lib/reserve-scanner";
 import { scanSellOrders } from "@/lib/sell-order-scanner";
 import { hasPhysicalDelivery } from "@ergo-options/core";
 import Link from "next/link";
+import { RefreshButton } from "./components/RefreshButton";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -85,12 +86,15 @@ export default async function TradePage({
           <h1 className="text-2xl font-bold">{info.pair}</h1>
           <p className="text-[#8891a5] text-sm">Option chain for {info.name}</p>
         </div>
-        <Link
-          href={`/app/trade/${params.asset}/write`}
-          className="px-4 py-2 bg-[#c87941] text-white rounded-lg text-sm font-medium hover:bg-[#2563eb] transition-colors"
-        >
-          Write New Option
-        </Link>
+        <div className="flex items-center gap-2">
+          <RefreshButton />
+          <Link
+            href={`/app/trade/${params.asset}/write`}
+            className="px-4 py-2 bg-[#c87941] text-white rounded-lg text-sm font-medium hover:bg-[#2563eb] transition-colors"
+          >
+            Write New Option
+          </Link>
+        </div>
       </div>
 
       {/* Option Chain */}

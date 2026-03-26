@@ -210,6 +210,24 @@ export function ExerciseDialog({
           </div>
         </div>
 
+        {/* Success Summary */}
+        {txId && (
+          <div className="p-3 bg-[#34d399]/10 border border-[#34d399]/30 rounded-lg space-y-1 text-sm">
+            <p className="font-semibold text-[#34d399]">
+              Exercised {exerciseQty} {assetName} {optionType === "call" ? "Call" : "Put"} ${strikePrice >= 100 ? strikePrice.toFixed(0) : strikePrice.toFixed(4)}
+            </p>
+            {settlementType === "physical" && optionType === "call" && (
+              <p className="text-[#e8eaf0]">Paid: {(strikePrice * exerciseQty).toFixed(stableDecimals)} {stablecoin} &middot; Received: {exerciseQty} {assetUnit}</p>
+            )}
+            {settlementType === "physical" && optionType === "put" && (
+              <p className="text-[#e8eaf0]">Sent: {exerciseQty} {assetUnit} &middot; Received: {(strikePrice * exerciseQty).toFixed(stableDecimals)} {stablecoin}</p>
+            )}
+            {settlementType === "cash" && cashProfit > 0 && (
+              <p className="text-[#e8eaf0]">Received: {(cashProfit * exerciseQty).toFixed(stableDecimals)} {stablecoin} profit</p>
+            )}
+          </div>
+        )}
+
         {/* Status */}
         <TxStatus status={status} txId={txId} />
 

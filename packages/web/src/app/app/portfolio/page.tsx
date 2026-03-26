@@ -131,6 +131,23 @@ function formatBlocksToTime(blocks: number): string {
   return `~${days}d ${hours % 24}h`;
 }
 
+/** Format collateral value: show token amount if present, otherwise ERG */
+function formatCollateral(box: ContractBox): string {
+  if (box.collateralTokenId && box.collateralAmount) {
+    const known = KNOWN_TOKENS[box.collateralTokenId];
+    if (known) {
+      const raw = BigInt(box.collateralAmount);
+      const display = known.decimals > 0
+        ? (Number(raw) / Math.pow(10, known.decimals)).toFixed(known.decimals)
+        : raw.toString();
+      return `${display} ${known.name.replace(" (Dexy USD)", "")}`;
+    }
+    // Unknown token — show raw
+    return `${box.collateralAmount} ???`;
+  }
+  return `${(box.value / 1e9).toFixed(4)} ERG`;
+}
+
 import { nautilusBoxToFleet, nodeBoxToFleet } from "@/lib/box-utils";
 import type { ParsedSellOrder } from "@/lib/sell-order-scanner";
 
@@ -230,6 +247,11 @@ export default function PortfolioPage() {
   // Open sell orders belonging to wallet
   const [openOrders, setOpenOrders] = useState<(ParsedSellOrder & { optionName?: string })[]>([]);
 
+  // Lookup maps built during loadTokens
+  const [tokenIdToName, setTokenIdToName] = useState<Map<string, string>>(new Map());
+  const [reserveBoxIdToTokenId, setReserveBoxIdToTokenId] = useState<Map<string, string>>(new Map());
+  const [walletTokenMap, setWalletTokenMap] = useState<Map<string, bigint>>(new Map());
+
   // Action status for Reclaim/Close/Cancel buttons
   const [actionStatus, setActionStatus] = useState<Record<string, string>>({});
 
@@ -255,6 +277,8 @@ export default function PortfolioPage() {
           }
         }
       }
+
+      setWalletTokenMap(new Map(tokenMap));
 
       const tokenList: WalletToken[] = [];
       for (const [tokenId, rawAmount] of tokenMap) {
@@ -284,8 +308,16 @@ export default function PortfolioPage() {
         if (reservesRes.ok) {
           const { reserves } = await reservesRes.json();
           const holdingPositions: HoldingPosition[] = [];
+          const nameMap = new Map<string, string>();
+          const boxToTokenMap = new Map<string, string>();
 
           for (const reserve of reserves) {
+            // Build lookup maps for all reserves (not just RESERVE state)
+            if (reserve.optionTokenId) {
+              nameMap.set(reserve.optionTokenId, reserve.name);
+              boxToTokenMap.set(reserve.boxId, reserve.optionTokenId);
+            }
+
             if (!reserve.optionTokenId || reserve.state !== "RESERVE") continue;
             const walletQty = tokenMap.get(reserve.optionTokenId);
             if (walletQty && walletQty > 0n) {
@@ -307,6 +339,8 @@ export default function PortfolioPage() {
           }
 
           setHoldings(holdingPositions);
+          setTokenIdToName(nameMap);
+          setReserveBoxIdToTokenId(boxToTokenMap);
         }
       } catch (err) {
         console.error("Failed to scan holdings:", err);
@@ -590,6 +624,7 @@ export default function PortfolioPage() {
       const txId = await submitTransaction(signedTx);
 
       setActionStatus((prev) => ({ ...prev, [box.boxId]: `Submitted: ${txId.slice(0, 8)}...` }));
+      setContractBoxes((prev) => prev.filter((b) => b.boxId !== box.boxId));
       console.log("Reclaim TX submitted:", txId);
 
       setTimeout(() => {
@@ -686,6 +721,7 @@ export default function PortfolioPage() {
       const txId = await submitTransaction(signedTx);
 
       setActionStatus((prev) => ({ ...prev, [box.boxId]: `Submitted: ${txId.slice(0, 8)}...` }));
+      setContractBoxes((prev) => prev.filter((b) => b.boxId !== box.boxId));
       console.log("Close TX submitted:", txId);
 
       setTimeout(() => {
@@ -751,6 +787,7 @@ export default function PortfolioPage() {
       const txId = await submitTransaction(signedTx);
 
       setActionStatus((prev) => ({ ...prev, [order.boxId]: `Cancelled: ${txId.slice(0, 8)}...` }));
+      setOpenOrders((prev) => prev.filter((o) => o.boxId !== order.boxId));
       console.log("Cancel sell order TX submitted:", txId);
 
       setTimeout(() => {
@@ -1179,7 +1216,7 @@ export default function PortfolioPage() {
                       <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Type</th>
                       <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Strike</th>
                       <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Expiry</th>
-                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">ERG Locked</th>
+                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Value Locked</th>
                       <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Status</th>
                       <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Action</th>
                     </tr>
@@ -1188,6 +1225,9 @@ export default function PortfolioPage() {
                     {pageItems.map((box) => {
                       const isExpired = box.state === "EXPIRED";
                       const blocksToExpiry = (box.maturityDate ?? 0) - currentHeight;
+                      const optTokenId = reserveBoxIdToTokenId.get(box.boxId);
+                      const walletBal = optTokenId ? (walletTokenMap.get(optTokenId) ?? 0n) : 0n;
+                      const isFullyExercised = box.state === "RESERVE" && !box.tokenCount && walletBal === 0n;
                       return (
                         <tr key={box.boxId} className="border-b border-[#1e2330]/50 hover:bg-[#1e2330]/30">
                           <td className="py-2 px-4 text-[#e8eaf0]">{box.name}</td>
@@ -1212,13 +1252,15 @@ export default function PortfolioPage() {
                             )}
                           </td>
                           <td className="py-2 px-4 text-right font-mono text-[#8891a5]">
-                            {(box.value / 1e9).toFixed(4)}
+                            {formatCollateral(box)}
                           </td>
                           <td className="py-2 px-4 text-right">
                             <span className={`text-xs px-2 py-0.5 rounded ${
-                              isExpired ? "bg-[#f87171]/20 text-[#f87171]" : "bg-[#34d399]/20 text-[#34d399]"
+                              isExpired ? "bg-[#f87171]/20 text-[#f87171]"
+                                : isFullyExercised ? "bg-[#e09a5f]/20 text-[#e09a5f]"
+                                : "bg-[#34d399]/20 text-[#34d399]"
                             }`}>
-                              {isExpired ? "Expired" : "Active"}
+                              {isExpired ? "Expired" : isFullyExercised ? "Exercised" : "Active"}
                             </span>
                           </td>
                           <td className="py-2 px-4 text-right">
@@ -1226,14 +1268,21 @@ export default function PortfolioPage() {
                               <span className="text-xs text-[#8891a5]">{actionStatus[box.boxId]}</span>
                             ) : (
                               <>
-                                {box.state === "RESERVE" && (
-                                  <button
-                                    onClick={() => handleListForSaleClick(box)}
-                                    className="text-xs px-2 py-1 bg-[#c87941]/20 text-[#c87941] rounded hover:bg-[#c87941]/30"
-                                  >
-                                    List for Sale
-                                  </button>
-                                )}
+                                {box.state === "RESERVE" && (() => {
+                                  if (isFullyExercised) {
+                                    return <span className="text-xs text-[#8891a5]">Closeable after expiry</span>;
+                                  }
+                                  return walletBal > 0n ? (
+                                    <button
+                                      onClick={() => handleListForSaleClick(box)}
+                                      className="text-xs px-2 py-1 bg-[#c87941]/20 text-[#c87941] rounded hover:bg-[#c87941]/30"
+                                    >
+                                      List for Sale
+                                    </button>
+                                  ) : (
+                                    <span className="text-xs text-[#8891a5]">No tokens</span>
+                                  );
+                                })()}
                                 {box.state === "EXPIRED" && (
                                   <button
                                     onClick={() => handleClose(box)}
@@ -1260,8 +1309,8 @@ export default function PortfolioPage() {
         }}
       </PaginatedSection>
 
-      {/* Open Orders */}
-      <PaginatedSection title="Open Orders" total={openOrders.length} pageSize={PAGE_SIZE}>
+      {/* My Sell Orders */}
+      <PaginatedSection title="My Sell Orders" total={openOrders.length} pageSize={PAGE_SIZE}>
         {(page) => {
           const pageItems = openOrders.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
           return (
@@ -1284,8 +1333,10 @@ export default function PortfolioPage() {
                       const premiumDisplay = (Number(order.premiumPerToken) / Math.pow(10, decimals)).toFixed(decimals);
                       return (
                         <tr key={order.boxId} className="border-b border-[#1e2330]/50 hover:bg-[#1e2330]/30">
-                          <td className="py-2 px-4 font-mono text-xs text-[#e8eaf0]">
-                            {order.optionTokenId.slice(0, 10)}...{order.optionTokenId.slice(-6)}
+                          <td className="py-2 px-4 text-xs text-[#e8eaf0]">
+                            {tokenIdToName.get(order.optionTokenId) ?? (
+                              <span className="font-mono">{order.optionTokenId.slice(0, 10)}...{order.optionTokenId.slice(-6)}</span>
+                            )}
                           </td>
                           <td className="py-2 px-4 text-right font-mono text-[#e09a5f]">
                             {premiumDisplay} {isUSE ? "USE" : "SigUSD"}
@@ -1341,7 +1392,7 @@ export default function PortfolioPage() {
                       <th className="text-left py-3 px-4 text-[#8891a5] font-medium">State</th>
                       <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Strike</th>
                       <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Expiry</th>
-                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">ERG Locked</th>
+                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Value Locked</th>
                       <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Action</th>
                     </tr>
                   </thead>
@@ -1400,7 +1451,7 @@ export default function PortfolioPage() {
                           })() : "\u2014"}
                         </td>
                         <td className="py-2 px-4 text-right font-mono text-[#8891a5]">
-                          {(box.value / 1e9).toFixed(4)}
+                          {formatCollateral(box)}
                         </td>
                         <td className="py-2 px-4 text-right">
                           {actionStatus[box.boxId] ? (

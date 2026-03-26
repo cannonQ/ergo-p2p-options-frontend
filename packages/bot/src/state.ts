@@ -20,9 +20,17 @@ export function initDb(): void {
       retry_count     INTEGER DEFAULT 0,
       last_action     TEXT,
       last_action_at  TEXT,
-      resolved        INTEGER DEFAULT 0
+      resolved        INTEGER DEFAULT 0,
+      pending_tx_id   TEXT
     )
   `);
+
+  // Migration: add pending_tx_id column if missing (existing DBs)
+  try {
+    db.exec('ALTER TABLE scanner_state ADD COLUMN pending_tx_id TEXT');
+  } catch {
+    // column already exists — ignore
+  }
 }
 
 function getDb(): Database.Database {
@@ -71,4 +79,20 @@ export function markResolved(boxId: string) {
 export function getUnresolved(): any[] {
   const d = getDb();
   return d.prepare('SELECT * FROM scanner_state WHERE resolved = 0').all();
+}
+
+export function setPendingTxId(boxId: string, txId: string) {
+  const d = getDb();
+  d.prepare('UPDATE scanner_state SET pending_tx_id = ? WHERE box_id = ?').run(txId, boxId);
+}
+
+export function getPendingTxId(boxId: string): string | null {
+  const d = getDb();
+  const row = d.prepare('SELECT pending_tx_id FROM scanner_state WHERE box_id = ?').get(boxId) as any;
+  return row?.pending_tx_id ?? null;
+}
+
+export function clearPendingTxId(boxId: string) {
+  const d = getDb();
+  d.prepare('UPDATE scanner_state SET pending_tx_id = NULL WHERE box_id = ?').run(boxId);
 }

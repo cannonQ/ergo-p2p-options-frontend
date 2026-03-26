@@ -158,6 +158,7 @@
 
 ### Post-Alpha
 
+- [ ] **24H Volume** — StatsBar + option chain volume columns show "—" / 0. Need TX indexing (track buy events on sell contracts) to compute rolling 24h volume per asset and aggregate
 - [ ] Batch listing (select multiple options, list all in one TX)
 - [ ] BuyTokenRequestV2 (bid orders — stablecoin-denominated buy requests)
 - [ ] Responsive mobile layout

@@ -21,6 +21,7 @@ import {
 import { bsCall, bsPut, blocksToYears, oracleVolToDecimal } from "@ergo-options/core";
 import { useWriteOption, type WriteOptionInput } from "@/lib/hooks/useWriteOption";
 import { Tooltip } from "@/app/components/Tooltip";
+import { TxStatus } from "@/app/components/TxStatus";
 import { fetchHeight } from "@/lib/api";
 
 const ASSET_MAP: Record<string, { name: string; index: number; unit: string }> = {
@@ -82,6 +83,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
   const {
     step,
     error: writeError,
+    warning: writeWarning,
     txIds,
     execute: executeWrite,
     reset: resetWrite,
@@ -635,13 +637,19 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                 </div>
                 <p className="text-xs text-[#8891a5]">{s.desc}</p>
                 {s.num === 1 && txIds.create && (
-                  <p className="text-xs text-[#c87941] font-mono mt-0.5 truncate">
-                    TX: {txIds.create}
-                  </p>
+                  <div className="mt-0.5">
+                    <TxStatus status="" txId={txIds.create} />
+                  </div>
                 )}
               </div>
             </div>
           ))}
+
+          {writeWarning && !writeError && (
+            <div className="mt-4 p-3 bg-[#e09a5f]/10 border border-[#e09a5f]/30 rounded-lg text-sm text-[#e09a5f]">
+              <p className="break-words">{writeWarning}</p>
+            </div>
+          )}
 
           {writeError && (
             <div className="mt-4 p-3 bg-[#f87171]/10 border border-[#f87171]/30 rounded-lg text-sm text-[#f87171]">

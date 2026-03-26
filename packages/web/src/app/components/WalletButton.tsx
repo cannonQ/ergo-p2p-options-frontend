@@ -16,7 +16,7 @@ export function WalletButton() {
   const [showMenu, setShowMenu] = useState(false);
   const [wallets, setWallets] = useState<DetectedWallet[]>([]);
 
-  // Detect available wallets on mount
+  // Detect available wallets on mount + auto-reconnect
   useEffect(() => {
     async function detect() {
       const available = await waitForErgoConnector(3000);
@@ -32,8 +32,36 @@ export function WalletButton() {
         }
       }
       setWallets(detected);
+
+      // Auto-reconnect if we had a previous session
+      // Nautilus remembers approved dApps — connect() auto-approves silently
+      if (!connected) {
+        const lastWallet = localStorage.getItem("etcha_last_wallet");
+        if (lastWallet) {
+          const connector = (window.ergoConnector as any)?.[lastWallet];
+          if (connector && typeof connector.connect === "function") {
+            try {
+              const ok = await connector.connect({ createErgoObject: true });
+              if (ok) {
+                const api: ErgoAPI = await connector.getContext();
+                const addrs = await api.get_used_addresses();
+                const addr = addrs[0] ?? (await api.get_change_address());
+                const balance = await api.get_balance("ERG");
+                setConnected(true);
+                setAddress(addr);
+                setApi(api);
+                setErgBalance(balance);
+              }
+            } catch {
+              // Auto-reconnect failed silently — user can connect manually
+              localStorage.removeItem("etcha_last_wallet");
+            }
+          }
+        }
+      }
     }
     detect();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const connectToWallet = useCallback(async (walletId: string) => {
@@ -59,6 +87,7 @@ export function WalletButton() {
       setAddress(addr);
       setApi(api);
       setErgBalance(balance);
+      localStorage.setItem("etcha_last_wallet", walletId);
     } catch (err: any) {
       console.error("Wallet connect error:", err);
       alert(err.message || "Failed to connect wallet");
@@ -77,6 +106,7 @@ export function WalletButton() {
       }
     }
     disconnect();
+    localStorage.removeItem("etcha_last_wallet");
     setShowMenu(false);
   }, [disconnect]);
 
