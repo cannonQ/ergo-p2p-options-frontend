@@ -55,7 +55,7 @@ export function StatsBar() {
 
   return (
     <div className="bg-[#0a0c10] border-b border-[#1e2330]">
-      <div className="max-w-7xl mx-auto px-4 py-3 grid grid-cols-4 gap-4">
+      <div className="max-w-7xl mx-auto px-4 py-3 grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* 24h Volume */}
         <div>
           <div className="text-[#505870] text-[11px] font-mono uppercase tracking-[1.5px] mb-1">

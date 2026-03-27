@@ -1146,7 +1146,7 @@ export default function PortfolioPage() {
         {(page) => {
           const pageHoldings = holdings.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
           return (
-            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-hidden">
+            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[#1e2330]">
@@ -1265,7 +1265,7 @@ export default function PortfolioPage() {
         {(page) => {
           const pageItems = writtenOptions.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
           return (
-            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-hidden">
+            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-x-auto">
               {pageItems.length > 0 ? (
                 <table className="w-full text-sm">
                   <thead>
@@ -1383,7 +1383,7 @@ export default function PortfolioPage() {
         {(page) => {
           const pageItems = openOrders.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
           return (
-            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-hidden">
+            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-x-auto">
               {pageItems.length > 0 ? (
                 <table className="w-full text-sm">
                   <thead>
@@ -1452,7 +1452,7 @@ export default function PortfolioPage() {
         {(page) => {
           const pageBoxes = pendingBoxes.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
           return (
-            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-hidden">
+            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-x-auto">
               {pageBoxes.length > 0 ? (
                 <table className="w-full text-sm">
                   <thead>
@@ -1589,7 +1589,7 @@ export default function PortfolioPage() {
           const pageRows = allRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
           return (
-            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-hidden">
+            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[#1e2330]">

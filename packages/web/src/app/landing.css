@@ -470,6 +470,8 @@
 /* RESPONSIVE — Tablet */
 @media (max-width: 768px) {
   .landing .nav-links { display: none; }
+  .landing .hero { padding-top: 100px; }
+  .landing .hero-tag { margin-bottom: 20px; }
   .landing .hero-stats { flex-wrap: wrap; gap: 24px; }
   .landing .products-grid,
   .landing .steps-grid,
@@ -491,7 +493,7 @@
 @media (max-width: 480px) {
   .landing .container { padding: 0 16px; }
   .landing section { padding: 56px 0; }
-  .landing .hero { padding-top: 64px; min-height: auto; }
+  .landing .hero { padding-top: 80px; min-height: auto; }
   .landing .hero-sub { font-size: 16px; }
   .landing .hero-stats { gap: 16px; }
   .landing .stat-value { font-size: 20px; }
