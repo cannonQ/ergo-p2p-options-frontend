@@ -24,6 +24,13 @@ import { Tooltip } from "@/app/components/Tooltip";
 import { TxStatus } from "@/app/components/TxStatus";
 import { fetchHeight } from "@/lib/api";
 
+/** Safe Number→BigInt: guards against Infinity, NaN, and precision loss beyond 2^53 */
+function safeToBigInt(n: number): bigint {
+  if (!isFinite(n) || isNaN(n)) throw new Error(`Cannot convert ${n} to BigInt`);
+  if (Math.abs(n) > Number.MAX_SAFE_INTEGER) throw new Error(`Value ${n} exceeds safe integer range`);
+  return BigInt(Math.round(n));
+}
+
 const ASSET_MAP: Record<string, { name: string; index: number; unit: string; oracleUnit?: string }> = {
   // Crypto — Physical Delivery (Rosen Bridge)
   eth: { name: "ETH", index: 0, unit: "rsETH" },
@@ -207,12 +214,12 @@ export default function WritePage({ params }: { params: { asset: string } }) {
     // For fractional contracts (e.g. 0.001 Troy Oz), scale strike by contractSize
     // so on-chain strikePerContract = strikePrice * stablecoinDecimal / ORACLE_DECIMAL is correct
     const contractSizeNum_ = Number(contractSize) || 1;
-    const strikeBigint = BigInt(Math.round(Number(strike) * contractSizeNum_ * Number(ORACLE_DECIMAL)));
+    const strikeBigint = safeToBigInt(Number(strike) * contractSizeNum_ * Number(ORACLE_DECIMAL));
 
     // Share size: always in oracle units (×10^6)
     // The on-chain contract uses shareSize in oracle units for exercise delivery
     const contractSizeNum = Number(contractSize) || 1;
-    const shareSize = BigInt(Math.round(contractSizeNum * Number(ORACLE_DECIMAL)));
+    const shareSize = safeToBigInt(contractSizeNum * Number(ORACLE_DECIMAL));
 
     // Collateral cap for cash-settled (how much stablecoin per contract at max loss)
     // For physical, this is unused but must be > 0. Already scaled by contractSize.
@@ -228,14 +235,14 @@ export default function WritePage({ params }: { params: { asset: string } }) {
 
     if (isErgCall) {
       // ERG call: collateral in nanoERG
-      ergCollateral = BigInt(Math.round(colAmount * 1e9));
+      ergCollateral = safeToBigInt(colAmount * 1e9);
     } else if (optTypeNum === 0 && settlNum === 0) {
       // Physical non-ERG call: collateral in underlying token
       const tokenId = REGISTRY_TOKEN_IDS[oracleIdx];
       if (!tokenId) throw new Error("No token ID for this asset");
       collateralToken = {
         tokenId,
-        amount: BigInt(Math.round(colAmount * Number(rate))),
+        amount: safeToBigInt(colAmount * Number(rate)),
       };
     } else {
       // Put or cash-settled: collateral in stablecoin
@@ -243,7 +250,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
       const stableDecimal = stablecoin === "USE" ? 1000n : 100n;
       collateralToken = {
         tokenId: stableId,
-        amount: BigInt(Math.round(colAmount * Number(stableDecimal))),
+        amount: safeToBigInt(colAmount * Number(stableDecimal)),
       };
     }
 

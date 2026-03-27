@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { TxStatus } from "@/app/components/TxStatus";
+import { useFocusTrap } from "@/lib/hooks/useFocusTrap";
 import { REGISTRY_RATES, ORACLE_DECIMAL } from "@ergo-options/core";
 
 interface ExerciseDialogProps {
@@ -45,6 +46,7 @@ export function ExerciseDialog({
   oracleIndex,
   onExercise,
 }: ExerciseDialogProps) {
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen);
   const exerciseQty = Number(quantity);
   const [status, setStatus] = useState("");
   const [txId, setTxId] = useState("");
@@ -128,7 +130,7 @@ export function ExerciseDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden="true" />
-      <div role="dialog" aria-modal="true" aria-labelledby="exercise-title" className="relative bg-[#12151c] border border-[#1e2330] rounded-xl shadow-2xl w-full max-w-md p-6 space-y-5">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="exercise-title" className="relative bg-[#12151c] border border-[#1e2330] rounded-xl shadow-2xl w-full max-w-md p-6 space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h2 id="exercise-title" className="text-lg font-bold">

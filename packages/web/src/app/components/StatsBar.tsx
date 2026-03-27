@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Skeleton } from "./Skeleton";
 
 interface StatsData {
   activeContracts: number;
@@ -74,7 +75,7 @@ export function StatsBar() {
             Open Interest
           </div>
           <div className="text-[#e8eaf0] text-lg font-mono font-bold">
-            {loading ? "\u2014" : formatERG(stats.openInterestErg)}
+            {loading ? <Skeleton className="h-6 w-24 inline-block" /> : formatERG(stats.openInterestErg)}
           </div>
           <div className="text-[#8891a5] text-xs">
             across {stats.activeContracts} contract{stats.activeContracts !== 1 ? "s" : ""}
@@ -87,7 +88,7 @@ export function StatsBar() {
             Active Contracts
           </div>
           <div className="text-[#e8eaf0] text-lg font-mono font-bold">
-            {loading ? "\u2014" : stats.activeContracts}
+            {loading ? <Skeleton className="h-6 w-12 inline-block" /> : stats.activeContracts}
           </div>
           <div className="text-[#8891a5] text-xs">
             {stats.callCount} call{stats.callCount !== 1 ? "s" : ""} / {stats.putCount} put{stats.putCount !== 1 ? "s" : ""}
@@ -100,7 +101,7 @@ export function StatsBar() {
             Block Height
           </div>
           <div className="text-[#e8eaf0] text-lg font-mono font-bold">
-            {loading ? "\u2014" : (stats.currentHeight?.toLocaleString() ?? "\u2014")}
+            {loading ? <Skeleton className="h-6 w-28 inline-block" /> : (stats.currentHeight?.toLocaleString() ?? "\u2014")}
           </div>
           <div className="text-[#8891a5] text-xs">
             ~2 min/block

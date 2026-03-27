@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useWalletStore } from "@/stores/wallet-store";
+import { SkeletonRow } from "@/app/components/Skeleton";
 import {
   USE_TOKEN_ID,
   SIGUSD_TOKEN_ID,
@@ -1246,7 +1247,7 @@ export default function PortfolioPage() {
                   }) : (
                     <tr>
                       <td colSpan={7} className="text-center py-8 text-[#8891a5]">
-                        {loading ? "Scanning..." : "No active option positions"}
+                        {loading ? <><SkeletonRow cols={7} /><SkeletonRow cols={7} /></> : "No active option positions"}
                       </td>
                     </tr>
                   )}
@@ -1367,7 +1368,7 @@ export default function PortfolioPage() {
                 </table>
               ) : (
                 <div className="p-8 text-center text-[#8891a5]">
-                  {loading ? "Scanning..." : "No written options"}
+                  {loading ? <><SkeletonRow cols={8} /><SkeletonRow cols={8} /></> : "No written options"}
                 </div>
               )}
             </div>
@@ -1436,7 +1437,7 @@ export default function PortfolioPage() {
                 </table>
               ) : (
                 <div className="p-8 text-center text-[#8891a5]">
-                  {loading ? "Scanning..." : "No open sell orders"}
+                  {loading ? <><SkeletonRow cols={5} /><SkeletonRow cols={5} /></> : "No open sell orders"}
                 </div>
               )}
             </div>

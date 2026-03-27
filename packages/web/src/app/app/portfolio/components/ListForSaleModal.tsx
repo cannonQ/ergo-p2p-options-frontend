@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { bsCall, bsPut, blocksToYears, oracleVolToDecimal } from "@ergo-options/core";
 import { TxStatus } from "@/app/components/TxStatus";
+import { useFocusTrap } from "@/lib/hooks/useFocusTrap";
 
 interface ListForSaleModalProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ export function ListForSaleModal({
   oracleIndex,
   onSubmit,
 }: ListForSaleModalProps) {
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen);
   const [stablecoin, setStablecoin] = useState<"USE" | "SigUSD">("USE");
   const [premiumInput, setPremiumInput] = useState("");
   const [tokenAmountInput, setTokenAmountInput] = useState(maxTokens.toString());
@@ -151,7 +153,7 @@ export function ListForSaleModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div role="dialog" aria-modal="true" aria-labelledby="list-sale-title" className="bg-[#0f172a] border border-[#1e2330] rounded-xl w-full max-w-md mx-4 p-6 space-y-5">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="list-sale-title" className="bg-[#0f172a] border border-[#1e2330] rounded-xl w-full max-w-md mx-4 p-6 space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h2 id="list-sale-title" className="text-lg font-semibold text-[#e8eaf0]">List for Sale</h2>
