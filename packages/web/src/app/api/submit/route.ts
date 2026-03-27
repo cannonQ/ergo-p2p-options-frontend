@@ -6,6 +6,15 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
+    // Basic TX structure validation
+    if (!body || typeof body !== 'object' || !body.inputs || !body.outputs) {
+      return NextResponse.json({ error: 'Invalid transaction format' }, { status: 400 });
+    }
+    const jsonStr = JSON.stringify(body);
+    if (jsonStr.length > 500_000) {
+      return NextResponse.json({ error: 'Transaction payload too large' }, { status: 400 });
+    }
+
     const res = await fetch(`${NODE_URL}/transactions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -243,10 +243,11 @@ export function TradePanel({
       <div
         className="fixed inset-0 bg-black/50 z-40"
         onClick={() => { if (!txId) onClose(); }}
+        aria-hidden="true"
       />
 
       {/* Slide-out panel */}
-      <div className="fixed top-0 right-0 h-full w-full max-w-md bg-[#12151c] border-l border-[#1e2330] z-50 overflow-y-auto shadow-2xl animate-slide-in">
+      <div role="dialog" aria-modal="true" aria-label={`Trade ${assetName} ${typeLabel}`} className="fixed top-0 right-0 h-full w-full max-w-md bg-[#12151c] border-l border-[#1e2330] z-50 overflow-y-auto shadow-2xl animate-slide-in">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e2330]">
           <div className="flex items-center gap-2">
@@ -263,6 +264,7 @@ export function TradePanel({
           <button
             onClick={onClose}
             className="text-[#8891a5] hover:text-[#e8eaf0] text-xl leading-none px-2"
+            aria-label="Close trade panel"
           >
             x
           </button>
@@ -270,9 +272,10 @@ export function TradePanel({
 
         <div className="px-5 py-5 space-y-5">
           {/* Buy / Sell toggle */}
-          <div className="flex gap-2">
+          <div className="flex gap-2" role="group" aria-label="Trade direction">
             <button
               onClick={() => setSide("buy")}
+              aria-pressed={side === "buy"}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
                 side === "buy"
                   ? "bg-[#c87941] text-white"
@@ -283,6 +286,7 @@ export function TradePanel({
             </button>
             <button
               onClick={() => setSide("sell")}
+              aria-pressed={side === "sell"}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
                 side === "sell"
                   ? "bg-[#c87941] text-white"

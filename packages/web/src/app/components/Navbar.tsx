@@ -68,16 +68,19 @@ export function Navbar() {
             <button
               onClick={() => setTradeOpen(!tradeOpen)}
               className="text-[#8891a5] hover:text-[#e8eaf0] transition-colors flex items-center gap-1 font-mono text-sm"
+              aria-label="Trade menu"
+              aria-haspopup="menu"
+              aria-expanded={tradeOpen}
             >
               Trade
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
 
             {tradeOpen && (
               <div className="absolute top-full left-0 pt-2 w-72 z-50">
-              <div className="bg-[#0a0c10] border border-[#1e2330] rounded-lg shadow-xl py-1">
+              <div className="bg-[#0a0c10] border border-[#1e2330] rounded-lg shadow-xl py-1" role="menu">
                 {ASSET_CATEGORIES.map((cat) => (
                   <div key={cat.label}>
                     <div className="px-3 py-2 text-[10px] font-bold text-[#c87941] uppercase tracking-widest border-b border-[#1e2330]/50 bg-[#12151c]">

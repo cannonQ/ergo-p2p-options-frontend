@@ -142,7 +142,9 @@ function parseR4Name(r4hex: string): string {
       if ((b & 0x80) === 0) break;
       shift += 7;
     }
-    return new TextDecoder().decode(bytes.slice(offset, offset + len));
+    const raw = new TextDecoder().decode(bytes.slice(offset, offset + len));
+    // Sanitize: allow alphanumeric, spaces, basic symbols; truncate to 100 chars
+    return raw.replace(/[^\w\s$.\-/()]/g, "").substring(0, 100) || "Unknown";
   } catch {
     return "Unknown";
   }
@@ -168,8 +170,8 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const walletECPoint = searchParams.get("ecPoint"); // 33-byte EC point as hex (66 chars)
 
-  if (!walletECPoint || walletECPoint.length !== 66) {
-    return NextResponse.json({ error: "ecPoint parameter required (66 hex chars)" }, { status: 400 });
+  if (!walletECPoint || !/^[0-9a-f]{66}$/i.test(walletECPoint)) {
+    return NextResponse.json({ error: "ecPoint must be 66 hex characters" }, { status: 400 });
   }
 
   try {

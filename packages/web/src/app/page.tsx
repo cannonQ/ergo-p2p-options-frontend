@@ -483,7 +483,7 @@ export default function LandingPage() {
           </p>
           <div className="cta-actions">
             <Link href="/app" className="btn-launch">Launch App &rarr;</Link>
-            <a href="#" className="btn-secondary">Read the Docs</a>
+            <a href="/learn/calls-and-puts" className="btn-secondary">Learn Options</a>
           </div>
         </div>
       </section>
@@ -499,11 +499,9 @@ export default function LandingPage() {
               <p className="footer-copy">Decentralized options on Ergo</p>
             </div>
             <ul className="footer-links">
-              <li><a href="#">Docs</a></li>
-              <li><a href="#">GitHub</a></li>
-              <li><a href="#">Discord</a></li>
-              <li><a href="#">Telegram</a></li>
-              <li><a href="#">X / Twitter</a></li>
+              <li><a href="/learn/calls-and-puts">Learn</a></li>
+              <li><a href="https://github.com/cannonQ" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+              <li><a href="https://t.me/eraborea" target="_blank" rel="noopener noreferrer">Telegram</a></li>
             </ul>
             <p className="footer-copy">etcha.io — $ETCH</p>
           </div>

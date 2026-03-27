@@ -127,18 +127,18 @@ export function ExerciseDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative bg-[#12151c] border border-[#1e2330] rounded-xl shadow-2xl w-full max-w-md p-6 space-y-5">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden="true" />
+      <div role="dialog" aria-modal="true" aria-labelledby="exercise-title" className="relative bg-[#12151c] border border-[#1e2330] rounded-xl shadow-2xl w-full max-w-md p-6 space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">
+          <h2 id="exercise-title" className="text-lg font-bold">
             Exercise:{" "}
             <span className={accentText}>
               {assetName} {optionType === "call" ? "Call" : "Put"}
             </span>{" "}
             ${strikePrice.toFixed(strikePrice >= 100 ? 0 : strikePrice >= 1 ? 2 : 4)} Strike
           </h2>
-          <button onClick={onClose} className="text-[#8891a5] hover:text-[#e8eaf0] text-xl">&times;</button>
+          <button onClick={onClose} className="text-[#8891a5] hover:text-[#e8eaf0] text-xl" aria-label="Close exercise dialog">&times;</button>
         </div>
 
         {/* Exercise window badge */}

@@ -151,13 +151,14 @@ export function ListForSaleModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-[#0f172a] border border-[#1e2330] rounded-xl w-full max-w-md mx-4 p-6 space-y-5">
+      <div role="dialog" aria-modal="true" aria-labelledby="list-sale-title" className="bg-[#0f172a] border border-[#1e2330] rounded-xl w-full max-w-md mx-4 p-6 space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-[#e8eaf0]">List for Sale</h2>
+          <h2 id="list-sale-title" className="text-lg font-semibold text-[#e8eaf0]">List for Sale</h2>
           <button
             onClick={onClose}
             className="text-[#8891a5] hover:text-[#e8eaf0] text-xl leading-none"
+            aria-label="Close list for sale dialog"
           >
             &times;
           </button>

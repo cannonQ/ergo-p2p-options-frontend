@@ -49,7 +49,7 @@ export function TxStatus({ status, txId }: { status: string; txId: string }) {
           <button
             onClick={handleCopy}
             className="text-xs text-[#8891a5] hover:text-[#e8eaf0] transition-colors shrink-0"
-            title="Copy transaction ID"
+            aria-label="Copy transaction ID"
           >
             {copied ? "Copied!" : "Copy"}
           </button>
@@ -58,7 +58,7 @@ export function TxStatus({ status, txId }: { status: string; txId: string }) {
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs text-[#c87941] hover:text-[#e09a5f] transition-colors shrink-0"
-            title="View on explorer"
+            aria-label="View transaction on block explorer"
           >
             View ↗
           </a>

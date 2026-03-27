@@ -1,7 +1,9 @@
+import type { Metadata } from "next";
 import { scanReserves } from "@/lib/reserve-scanner";
 import { fetchSpotPrices } from "@/lib/oracle-parser";
 import { MarketFilters } from "./components/MarketFilters";
 
+export const metadata: Metadata = { title: "Market" };
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 

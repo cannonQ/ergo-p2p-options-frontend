@@ -17,11 +17,13 @@ export function Tooltip({ text }: TooltipProps) {
         onMouseLeave={() => setShow(false)}
         onClick={() => setShow(!show)}
         className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#1e2330] text-[#8891a5] text-[10px] font-bold hover:bg-[#334155] hover:text-[#e8eaf0] transition-colors cursor-help"
+        aria-label="More information"
+        aria-expanded={show}
       >
         i
       </button>
       {show && (
-        <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2.5 bg-[#1e2330] border border-[#334155] rounded-lg text-xs text-[#e8eaf0] shadow-xl leading-relaxed">
+        <div role="tooltip" className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2.5 bg-[#1e2330] border border-[#334155] rounded-lg text-xs text-[#e8eaf0] shadow-xl leading-relaxed">
           {text}
           <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-[#1e2330] border-r border-b border-[#334155] rotate-45 -mt-1" />
         </div>

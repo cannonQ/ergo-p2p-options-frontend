@@ -86,6 +86,7 @@ function PaginatedSection({
               onClick={() => setPage(Math.max(0, page - 1))}
               disabled={page === 0}
               className="px-2 py-1 bg-[#1e2330] rounded text-[#8891a5] hover:text-[#e8eaf0] disabled:opacity-30"
+              aria-label="Previous page"
             >
               &larr;
             </button>
@@ -94,6 +95,7 @@ function PaginatedSection({
               onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
               disabled={page >= totalPages - 1}
               className="px-2 py-1 bg-[#1e2330] rounded text-[#8891a5] hover:text-[#e8eaf0] disabled:opacity-30"
+              aria-label="Next page"
             >
               &rarr;
             </button>
@@ -259,15 +261,22 @@ export default function PortfolioPage() {
   // Action status for Reclaim/Close/Cancel buttons
   const [actionStatus, setActionStatus] = useState<Record<string, string>>({});
 
+  // Success banner for actions that remove the row (close, cancel)
+  const [successBanner, setSuccessBanner] = useState<{ message: string; txId: string } | null>(null);
+
+  // Error state for failed data loading
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const loadTokens = useCallback(async () => {
     if (!api) return;
     setLoading(true);
+    setLoadError(null);
     try {
       // Always fetch current height first
       try {
         const h = await fetchHeight();
         if (h > 0) setCurrentHeight(h);
-      } catch { /* ignore */ }
+      } catch { /* ignore — height is non-critical */ }
 
       const utxos = await api.get_utxos();
       if (!utxos) { setLoading(false); return; }
@@ -413,6 +422,7 @@ export default function PortfolioPage() {
       }
     } catch (err) {
       console.error("Failed to load tokens:", err);
+      setLoadError("Failed to load portfolio data. Check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -682,25 +692,25 @@ export default function PortfolioPage() {
       const nodeBox = await fetchBoxById(box.boxId);
       const reserveBox = nodeBoxToFleet(nodeBox);
 
-      // Get wallet UTXOs for miner fee
-      const rawUtxos = await getWalletUtxos(api);
-      const fleetWalletBoxes = rawUtxos.map(nautilusBoxToFleet);
-      const walletErgoTree = rawUtxos[0].ergoTree;
-
       const height = await fetchHeight();
       const txFee = MINER_FEE;
 
-      // Extract issuer address from R9 — the first Coll[Byte] in Coll[Coll[Byte]]
-      // The issuer is the user themselves (this is their box from portfolio)
-      // Issuer ErgoTree = 0008cd + R9[0] EC point
-      // Since this is the user's own box, the issuer ErgoTree = walletErgoTree
-      const issuerErgoTree = walletErgoTree;
+      // Extract issuer address from R9 (first EC point in Coll[Coll[Byte]])
+      const r9hex = nodeBox.additionalRegisters?.R9;
+      if (!r9hex) throw new Error("Reserve box missing R9 register");
+      const r9bytes = hexToBytesOracle(r9hex);
+      const issuerECPoint = extractECPointFromR9(r9bytes);
+      if (!issuerECPoint) throw new Error("Cannot parse issuer EC point from R9");
+      const ecHex = Array.from(issuerECPoint).map(b => b.toString(16).padStart(2, '0')).join('');
+      const issuerErgoTree = "0008cd" + ecHex;
 
-      // All inputs: the reserve box + wallet boxes for fee
-      const allInputs = [reserveBox, ...fleetWalletBoxes];
+      // Only the reserve box as input — fee comes from reserve ERG.
+      // Contract requires OUTPUTS.size == 2 (issuer output + miner fee).
+      // Including wallet boxes would create a 3rd change output, failing the script.
+      const allInputs = [reserveBox];
 
-      // Output[0]: collateral + ERG goes back to issuer (the user)
-      const issuerOutputValue = BigInt(reserveBox.value);
+      // Output[0]: collateral + ERG goes back to issuer (minus fee)
+      const issuerOutputValue = BigInt(reserveBox.value) - txFee;
       const issuerOutput = new OutputBuilder(issuerOutputValue, issuerErgoTree);
 
       // Add collateral tokens (tokens[1]) if present
@@ -718,7 +728,7 @@ export default function PortfolioPage() {
       const builder = new TransactionBuilder(height)
         .from(allInputs)
         .to([issuerOutput])
-        .sendChangeTo(walletErgoTree)
+        .sendChangeTo(issuerErgoTree)
         .payFee(txFee);
 
       // Burn the singleton option token
@@ -737,18 +747,10 @@ export default function PortfolioPage() {
       const signedTx = await signTx(api, eip12Tx);
       const txId = await submitTransaction(signedTx);
 
-      setActionStatus((prev) => ({ ...prev, [box.boxId]: `Submitted: ${txId.slice(0, 8)}...` }));
       setContractBoxes((prev) => prev.filter((b) => b.boxId !== box.boxId));
+      setSuccessBanner({ message: "Option closed — collateral returned to your wallet", txId });
       console.log("Close TX submitted:", txId);
-
-      setTimeout(() => {
-        setActionStatus((prev) => {
-          const next = { ...prev };
-          delete next[box.boxId];
-          return next;
-        });
-        loadTokens();
-      }, 10000);
+      loadTokens();
     } catch (err: any) {
       const msg = err?.message || String(err);
       setActionStatus((prev) => ({ ...prev, [box.boxId]: `Error: ${msg.slice(0, 40)}` }));
@@ -803,18 +805,10 @@ export default function PortfolioPage() {
       const signedTx = await signTx(api, eip12Tx);
       const txId = await submitTransaction(signedTx);
 
-      setActionStatus((prev) => ({ ...prev, [order.boxId]: `Cancelled: ${txId.slice(0, 8)}...` }));
       setOpenOrders((prev) => prev.filter((o) => o.boxId !== order.boxId));
+      setSuccessBanner({ message: "Sell order cancelled — tokens returned to your wallet", txId });
       console.log("Cancel sell order TX submitted:", txId);
-
-      setTimeout(() => {
-        setActionStatus((prev) => {
-          const next = { ...prev };
-          delete next[order.boxId];
-          return next;
-        });
-        loadTokens();
-      }, 10000);
+      loadTokens();
     } catch (err: any) {
       const msg = err?.message || String(err);
       if (msg.includes("declined") || msg.includes("Refused")) {
@@ -1116,6 +1110,34 @@ export default function PortfolioPage() {
         </button>
       </div>
 
+      {/* Success banner for close/cancel actions */}
+      {successBanner && (
+        <div className="flex items-center justify-between bg-[#0d2818] border border-[#1a4d2e] rounded-lg px-4 py-3">
+          <span className="text-sm text-[#4ade80]">{successBanner.message}</span>
+          <a
+            href={`https://ergexplorer.com/transactions#${successBanner.txId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-[#8891a5] hover:text-[#4ade80] transition-colors ml-4 whitespace-nowrap"
+          >
+            {successBanner.txId.slice(0, 12)}...
+          </a>
+        </div>
+      )}
+
+      {/* Error banner */}
+      {loadError && (
+        <div className="flex items-center justify-between bg-[#2a1215] border border-[#4d1a1e] rounded-lg px-4 py-3">
+          <span className="text-sm text-[#f87171]">{loadError}</span>
+          <button
+            onClick={loadTokens}
+            className="text-xs text-[#8891a5] hover:text-[#f87171] transition-colors ml-4 whitespace-nowrap"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Active Options (Holding) */}
       <PaginatedSection title="Active Options (Holding)" total={holdings.length} pageSize={PAGE_SIZE}>
         {(page) => {
@@ -1249,6 +1271,7 @@ export default function PortfolioPage() {
                       <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Type</th>
                       <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Strike</th>
                       <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Expiry</th>
+                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Qty</th>
                       <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Value Locked</th>
                       <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Status</th>
                       <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Action</th>
@@ -1258,6 +1281,7 @@ export default function PortfolioPage() {
                     {pageItems.map((box) => {
                       const isExpired = box.state === "EXPIRED";
                       const blocksToExpiry = (box.maturityDate ?? 0) - currentHeight;
+                      const blocksToClose = (box.maturityDate ?? 0) + exerciseWindow - currentHeight;
                       const optTokenId = reserveBoxIdToTokenId.get(box.boxId);
                       const walletBal = optTokenId ? (walletTokenMap.get(optTokenId) ?? 0n) : 0n;
                       const isFullyExercised = box.state === "RESERVE" && !box.tokenCount && walletBal === 0n;
@@ -1278,23 +1302,32 @@ export default function PortfolioPage() {
                           <td className="py-2 px-4 text-right text-xs">
                             {isExpired ? (
                               <span className="text-[#f87171]">Expired</span>
+                            ) : blocksToExpiry <= 0 && blocksToClose > 0 ? (
+                              <span className="text-[#e09a5f]">Exercise window</span>
                             ) : blocksToExpiry > 0 ? (
                               <span className="text-[#e8eaf0]">{formatBlocksToTime(blocksToExpiry)}</span>
                             ) : (
                               <span className="text-[#e09a5f]">Exercise window</span>
                             )}
                           </td>
+                          <td className="py-2 px-4 text-right font-mono text-[#e8eaf0]">
+                            {box.tokenCount ?? "\u2014"}
+                          </td>
                           <td className="py-2 px-4 text-right font-mono text-[#8891a5]">
                             {formatCollateral(box)}
                           </td>
                           <td className="py-2 px-4 text-right">
-                            <span className={`text-xs px-2 py-0.5 rounded ${
-                              isExpired ? "bg-[#f87171]/20 text-[#f87171]"
-                                : isFullyExercised ? "bg-[#e09a5f]/20 text-[#e09a5f]"
-                                : "bg-[#34d399]/20 text-[#34d399]"
-                            }`}>
-                              {isExpired ? "Expired" : isFullyExercised ? "Exercised" : "Active"}
-                            </span>
+                            {isExpired ? (
+                              <span className="text-xs px-2 py-0.5 rounded bg-[#f87171]/20 text-[#f87171]">Expired</span>
+                            ) : blocksToExpiry <= 0 && blocksToClose > 0 ? (
+                              <span className="text-xs text-[#e09a5f]">
+                                Refund in {formatBlocksToTime(blocksToClose)}
+                              </span>
+                            ) : isFullyExercised ? (
+                              <span className="text-xs px-2 py-0.5 rounded bg-[#e09a5f]/20 text-[#e09a5f]">Exercised</span>
+                            ) : (
+                              <span className="text-xs px-2 py-0.5 rounded bg-[#34d399]/20 text-[#34d399]">Active</span>
+                            )}
                           </td>
                           <td className="py-2 px-4 text-right">
                             {actionStatus[box.boxId] ? (

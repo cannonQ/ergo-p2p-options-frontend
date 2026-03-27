@@ -92,12 +92,20 @@ export function buildCreateOptionTx(
     params.stablecoinDecimal,
   ].map(BigInt);
 
-  // Calculate total ERG for the definition box
-  // ERG trace: create(V) → mint(V-txFee-mintFee) → deliver(-txFee-MIN) → exercise(-txFee)
-  // After exercise: V - 3*txFee - mintFee - 2*MIN >= txFee + MIN → V >= 4*txFee + mintFee + 3*MIN
+  // Calculate total ERG for the definition box.
+  //
+  // Fee schedule — each step deducts from the box's ERG value:
+  //   1. Create TX:  user pays boxValue (this TX)
+  //   2. Mint TX:    bot deducts 1×txFee + dAppUIMintFee
+  //   3. Deliver TX: bot deducts 1×txFee + MIN_BOX_VALUE (delivery output)
+  //   4. Exercise/Close TX: deducts 1×txFee
+  //
+  // After all steps the reserve must still hold >= MIN_BOX_VALUE.
+  // So minimum ERG = 3×txFee + dAppUIMintFee + 2×MIN_BOX_VALUE (ERG call adds collateral on top).
+  // Token-collateral options need 4×txFee + 3×MIN because the box carries no extra ERG.
   let boxValue: bigint;
   if (!params.collateralToken) {
-    // ERG call: collateral is in box value
+    // ERG call: collateral is in box value (nanoERG)
     boxValue =
       (params.ergCollateral ?? 0n) +
       3n * txFee +

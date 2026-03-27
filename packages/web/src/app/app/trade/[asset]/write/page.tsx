@@ -55,8 +55,11 @@ const BLOCKS_PER_DAY = 720;
 const OPTION_CONTRACT_ERGOTREE = OPTION_RESERVE_ERGOTREE;
 
 // dApp UI fee address: 9ewpUXoFqTomiiAxkj7P5x1FLvQ5Ldsn95XZiTpJaVpgUr3VZeS
-// P2PK ErgoTree = 0x0008cd + 33-byte EC point
+// P2PK ErgoTree = 0x0008cd + 33-byte EC point (36 bytes / 72 hex chars)
 const DAPP_UI_FEE_TREE_HEX = '0008cd02383747243fed0a3ae9fcf0f3936d92447b57bb34c53faf5c5c0a105fbf42b4c8';
+if (DAPP_UI_FEE_TREE_HEX.length !== 72 || !DAPP_UI_FEE_TREE_HEX.startsWith('0008cd')) {
+  throw new Error('DAPP_UI_FEE_TREE_HEX is not a valid P2PK ErgoTree');
+}
 const DAPP_UI_FEE_TREE = new Uint8Array(
   DAPP_UI_FEE_TREE_HEX.match(/.{2}/g)!.map(b => parseInt(b, 16))
 );
@@ -173,6 +176,16 @@ export default function WritePage({ params }: { params: { asset: string } }) {
     const currentHeight = await fetchHeight();
     if (expiryBlocks <= 0) {
       alert("Expiry must be greater than 0");
+      return;
+    }
+    const strikeNum = Number(strike) || 0;
+    if (strikeNum <= 0 || !isFinite(strikeNum) || strikeNum > 1e12) {
+      alert("Strike price must be between 0 and $1,000,000,000,000");
+      return;
+    }
+    const cSizeNum = Number(contractSize) || 0;
+    if (cSizeNum <= 0 || !isFinite(cSizeNum) || cSizeNum > 1e10) {
+      alert("Contract size must be greater than 0");
       return;
     }
     const expiryHeight = BigInt(currentHeight + expiryBlocks);
@@ -581,8 +594,8 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           <button
             onClick={handleWrite}
             className="w-full py-3 bg-[#c87941] text-white rounded-lg font-medium hover:bg-[#2563eb] transition-colors disabled:opacity-50"
-            disabled={!strike || contracts <= 0 || cSize <= 0}>
-            Lock Collateral &amp; Mint
+            disabled={!strike || contracts <= 0 || cSize <= 0 || step > 0}>
+            {step > 0 ? "Submitting..." : "Lock Collateral & Mint"}
           </button>
           <p className="text-xs text-[#8891a5] text-center">
             You sign once. Our bot handles the rest in ~1 minute.

@@ -1,9 +1,11 @@
+import type { Metadata } from "next";
 import { AssetCard } from "../components/AssetCard";
 import { ActivityFeed } from "../components/ActivityFeed";
 import { fetchSpotPrices } from "@/lib/oracle-parser";
 import { fetchAllAssetPriceData } from "@/lib/price-history";
 import { scanReserves } from "@/lib/reserve-scanner";
 
+export const metadata: Metadata = { title: "Dashboard" };
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 

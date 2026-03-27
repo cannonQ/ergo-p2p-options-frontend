@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { OptionChain } from "./components/OptionChain";
 import { fetchSpotPriceByIndex, fetchVolByIndex } from "@/lib/oracle-parser";
 import { scanReserves } from "@/lib/reserve-scanner";
@@ -34,6 +35,11 @@ const ASSET_MAP: Record<string, { name: string; index: number; pair: string; uni
   spx:     { name: "S&P 500", index: 9,  pair: "SPX", unit: "S&P 500" },
   dji:     { name: "DJI",     index: 10, pair: "DJI", unit: "DJI" },
 };
+
+export async function generateMetadata({ params }: { params: { asset: string } }): Promise<Metadata> {
+  const info = ASSET_MAP[params.asset];
+  return { title: info ? `Trade ${info.name} Options` : "Trade" };
+}
 
 export default async function TradePage({
   params,

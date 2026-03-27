@@ -10,9 +10,9 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const boxId = searchParams.get("boxId");
 
-  if (!boxId || boxId.length !== 64) {
+  if (!boxId || !/^[0-9a-f]{64}$/i.test(boxId)) {
     return NextResponse.json(
-      { error: "boxId parameter required (64 hex chars)" },
+      { error: "boxId must be 64 hex characters" },
       { status: 400 },
     );
   }

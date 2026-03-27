@@ -6,8 +6,8 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const address = searchParams.get('address');
 
-  if (!address) {
-    return NextResponse.json({ error: 'address parameter required' }, { status: 400 });
+  if (!address || address.length < 30 || address.length > 120) {
+    return NextResponse.json({ error: 'valid address parameter required' }, { status: 400 });
   }
 
   try {
