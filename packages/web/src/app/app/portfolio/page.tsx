@@ -1249,7 +1249,7 @@ export default function PortfolioPage() {
                   }) : (
                     <tr>
                       <td colSpan={7} className="text-center py-8 text-[#8891a5]">
-                        {loading ? <><SkeletonRow cols={7} /><SkeletonRow cols={7} /></> : "No active option positions"}
+                        {loading ? <table className="w-full"><tbody><SkeletonRow cols={7} /><SkeletonRow cols={7} /></tbody></table> : "No active option positions"}
                       </td>
                     </tr>
                   )}
@@ -1370,7 +1370,7 @@ export default function PortfolioPage() {
                 </table>
               ) : (
                 <div className="p-8 text-center text-[#8891a5]">
-                  {loading ? <><SkeletonRow cols={8} /><SkeletonRow cols={8} /></> : "No written options"}
+                  {loading ? <table className="w-full"><tbody><SkeletonRow cols={8} /><SkeletonRow cols={8} /></tbody></table> : "No written options"}
                 </div>
               )}
             </div>
@@ -1439,7 +1439,7 @@ export default function PortfolioPage() {
                 </table>
               ) : (
                 <div className="p-8 text-center text-[#8891a5]">
-                  {loading ? <><SkeletonRow cols={5} /><SkeletonRow cols={5} /></> : "No open sell orders"}
+                  {loading ? <table className="w-full"><tbody><SkeletonRow cols={5} /><SkeletonRow cols={5} /></tbody></table> : "No open sell orders"}
                 </div>
               )}
             </div>
