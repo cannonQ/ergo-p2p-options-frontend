@@ -1,27 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
+import { LandingNav } from "./components/LandingNav";
 import "./landing.css";
 
 export default function LandingPage() {
   return (
     <div className="landing">
       {/* NAV */}
-      <nav>
-        <div className="container">
-          <Link href="/" className="nav-logo">
-            <Image src="/etcha-icon.svg" alt="Etcha" width={36} height={36} className="logo-mark" />
-            <span className="logo-text">Etcha</span>
-          </Link>
-          <ul className="nav-links">
-            <li><a href="#products">Products</a></li>
-            <li><a href="#markets">Markets</a></li>
-            <li><a href="#how">How It Works</a></li>
-            <li><a href="#learn">Learn</a></li>
-            <li><a href="#compare">Compare</a></li>
-          </ul>
-          <Link href="/app" className="btn-launch">Launch App &rarr;</Link>
-        </div>
-      </nav>
+      <LandingNav />
 
       {/* HERO */}
       <section className="hero">

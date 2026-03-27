@@ -169,7 +169,7 @@ export function Navbar() {
           >
             Portfolio
           </Link>
-          <div className="border-t border-[#1e2330] pt-3">
+          <div className="border border-[#c87941]/30 rounded-lg p-3 mt-1 bg-[#c87941]/5">
             <div className="text-[10px] font-bold text-[#c87941] uppercase tracking-widest mb-2">Trade</div>
             <div className="grid grid-cols-3 gap-2">
               {ASSET_CATEGORIES.flatMap((cat) =>

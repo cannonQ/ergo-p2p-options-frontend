@@ -467,9 +467,36 @@
   font-family: 'DM Mono', monospace;
 }
 
+/* LANDING HAMBURGER (hidden on desktop, shown on mobile) */
+.landing .landing-hamburger {
+  display: none;
+  background: none; border: none; cursor: pointer;
+  color: var(--text-secondary);
+  padding: 4px;
+  transition: color 0.3s;
+}
+.landing .landing-hamburger:hover { color: var(--text-primary); }
+
+.landing .landing-mobile-menu {
+  border-top: 1px solid var(--border);
+  background: rgba(10, 12, 16, 0.95);
+  backdrop-filter: blur(20px);
+  padding: 16px 0;
+}
+.landing .landing-mobile-menu a {
+  display: block;
+  padding: 10px 0;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 15px;
+  transition: color 0.3s;
+}
+.landing .landing-mobile-menu a:hover { color: var(--text-primary); }
+
 /* RESPONSIVE — Tablet */
 @media (max-width: 768px) {
   .landing .nav-links { display: none; }
+  .landing .landing-hamburger { display: block; }
   .landing .hero { padding-top: 100px; }
   .landing .hero-tag { margin-bottom: 20px; }
   .landing .hero-stats { flex-wrap: wrap; gap: 24px; }
