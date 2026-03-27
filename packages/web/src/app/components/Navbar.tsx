@@ -48,6 +48,7 @@ const ASSET_CATEGORIES = [
 
 export function Navbar() {
   const [tradeOpen, setTradeOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <nav className="border-b border-[#1e2330] bg-[#0a0c10]/85 backdrop-blur-xl sticky top-0 z-50">
@@ -59,7 +60,8 @@ export function Navbar() {
           </span>
         </Link>
 
-        <div className="flex items-center gap-6">
+        {/* Desktop nav */}
+        <div className="hidden md:flex items-center gap-6">
           {/* Trade dropdown */}
           <div
             className="relative"
@@ -122,7 +124,70 @@ export function Navbar() {
 
           <WalletButton />
         </div>
+
+        {/* Mobile: wallet + hamburger */}
+        <div className="flex md:hidden items-center gap-3">
+          <WalletButton />
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="text-[#8891a5] hover:text-[#e8eaf0] p-1"
+            aria-label="Open navigation menu"
+            aria-expanded={mobileOpen}
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              {mobileOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
+        </div>
       </div>
+
+      {/* Mobile menu */}
+      {mobileOpen && (
+        <div className="md:hidden border-t border-[#1e2330] bg-[#0a0c10] px-4 py-4 space-y-3">
+          <Link
+            href="/app"
+            className="block text-[#8891a5] hover:text-[#e8eaf0] font-mono text-sm py-2"
+            onClick={() => setMobileOpen(false)}
+          >
+            Dashboard
+          </Link>
+          <Link
+            href="/app/market"
+            className="block text-[#8891a5] hover:text-[#e8eaf0] font-mono text-sm py-2"
+            onClick={() => setMobileOpen(false)}
+          >
+            Market
+          </Link>
+          <Link
+            href="/app/portfolio"
+            className="block text-[#8891a5] hover:text-[#e8eaf0] font-mono text-sm py-2"
+            onClick={() => setMobileOpen(false)}
+          >
+            Portfolio
+          </Link>
+          <div className="border-t border-[#1e2330] pt-3">
+            <div className="text-[10px] font-bold text-[#c87941] uppercase tracking-widest mb-2">Trade</div>
+            <div className="grid grid-cols-3 gap-2">
+              {ASSET_CATEGORIES.flatMap((cat) =>
+                cat.assets.map((asset) => (
+                  <Link
+                    key={asset.slug}
+                    href={`/app/trade/${asset.slug}`}
+                    className="text-xs text-[#e8eaf0] hover:text-[#c87941] font-mono py-1"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    {asset.name}
+                  </Link>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }
