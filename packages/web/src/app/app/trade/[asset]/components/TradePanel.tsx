@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useWalletStore } from "@/stores/wallet-store";
 import type { ParsedSellOrder } from "@/lib/sell-order-scanner";
 import { TxStatus } from "@/app/components/TxStatus";
+import { REGISTRY_RATES, ORACLE_DECIMAL } from "@ergo-options/core";
 
 interface TradePanelProps {
   assetName: string;
@@ -14,6 +15,9 @@ interface TradePanelProps {
   premium: number;      // USD per contract (from cheapest sell order)
   available: number;    // total contracts available
   sellOrder?: ParsedSellOrder; // cheapest sell order to buy from
+  contractSize?: number; // oracle units per contract (e.g. 0.001 for Gold)
+  oracleIndex?: number;
+  assetUnit?: string;   // token name (e.g. "DexyGold", "rsETH")
   onClose: () => void;
 }
 
@@ -36,6 +40,9 @@ export function TradePanel({
   premium,
   available,
   sellOrder,
+  contractSize,
+  oracleIndex,
+  assetUnit,
   onClose,
 }: TradePanelProps) {
   const { connected, api } = useWalletStore();
@@ -55,16 +62,38 @@ export function TradePanel({
   const accentColor = isCall ? "#34d399" : "#f87171";
   const typeLabel = isCall ? "Call" : "Put";
 
-  // Exercise math
-  const exerciseReceive = isCall
-    ? `${qty} ${assetName}`
-    : `${(qty * strike).toFixed(stableDecimals)} ${coin}`;
-  const exercisePay = isCall
-    ? `${(qty * strike).toFixed(stableDecimals)} ${coin}`
-    : `${qty} ${assetName}`;
+  // Exercise math — scale by contractSize and show actual token delivery
+  const cSize = contractSize ?? 1;
+  const strikePerToken = strike * cSize;
+
+  // Compute actual token delivery per contract using registry rate
+  const rate = oracleIndex !== undefined ? Number(REGISTRY_RATES[oracleIndex] ?? 0n) : 0;
+  const tokensPerContract = rate > 0 ? Math.floor(cSize * rate) : 0;
+  const unit = assetUnit ?? assetName;
+
+  // Display: show human-readable amount with token name
+  // For crypto (rate is power of 10): divide raw by rate → "0.001 rsETH"
+  // For non-decimal (DexyGold rate=31103): show raw tokens → "31 DexyGold"
+  const totalTokens = qty * tokensPerContract;
+  const rateIsPowerOf10 = rate > 0 && Math.log10(rate) === Math.floor(Math.log10(rate));
+  let underlyingDisplay: string;
+  if (rate <= 0) {
+    underlyingDisplay = `${(qty * cSize).toFixed(cSize < 1 ? 4 : 2)} ${unit}`;
+  } else if (rateIsPowerOf10) {
+    // Crypto: 1000000 rsETH tokens / 10^9 = 0.001 rsETH
+    const humanAmount = totalTokens / rate;
+    const d = humanAmount >= 100 ? 0 : humanAmount >= 1 ? 2 : humanAmount >= 0.01 ? 4 : 6;
+    underlyingDisplay = `${humanAmount.toFixed(d)} ${unit}`;
+  } else {
+    // Non-decimal rate (DexyGold): show raw token count
+    underlyingDisplay = `${totalTokens} ${unit}`;
+  }
+  const exerciseReceive = isCall ? underlyingDisplay : `${(qty * strikePerToken).toFixed(stableDecimals)} ${coin}`;
+  const exercisePay = isCall ? `${(qty * strikePerToken).toFixed(stableDecimals)} ${coin}` : underlyingDisplay;
+  const exerciseReceiveUsd = isCall ? qty * cSize * spotPrice : qty * strikePerToken;
   const breakeven = isCall
-    ? strike + premium * spotPrice
-    : strike - premium * spotPrice;
+    ? strike + premium / cSize
+    : strike - premium / cSize;
 
   // Close on Escape
   const handleKeyDown = useCallback(
@@ -306,7 +335,10 @@ export function TradePanel({
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-[#8891a5]">You receive</span>
-              <span className="text-[#34d399] font-mono">{exerciseReceive}</span>
+              <span className="text-[#34d399] font-mono">
+                {exerciseReceive}
+                {isCall && exerciseReceiveUsd > 0 && <span className="text-[#8891a5] ml-1">(~${exerciseReceiveUsd.toFixed(2)})</span>}
+              </span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-[#8891a5]">You pay</span>
@@ -315,7 +347,7 @@ export function TradePanel({
             <div className="flex justify-between text-sm">
               <span className="text-[#8891a5]">Breakeven</span>
               <span className="text-[#e8eaf0] font-mono">
-                ${breakeven.toFixed(4)}/{assetName}
+                ${breakeven >= 100 ? breakeven.toFixed(0) : breakeven.toFixed(4)}/{assetName}
               </span>
             </div>
           </div>

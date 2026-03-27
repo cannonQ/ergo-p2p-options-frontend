@@ -30,7 +30,7 @@ const KNOWN_TOKENS: Record<string, { name: string; decimals: number }> = {
 
 // Add Rosen Bridge tokens from registry
 const ROSEN_NAMES: Record<number, string> = {
-  0: "rsETH", 1: "rsBTC", 2: "rsBNB", 3: "rsDOGE", 4: "rsADA", 18: "DexyGold",
+  0: "rsETH", 1: "rsBTC", 2: "rsBNB", 3: "rsDOGE", 4: "rsADA", 17: "ERG", 18: "DexyGold",
 };
 const ROSEN_DECIMALS: Record<number, number> = {
   0: 9, 1: 8, 2: 9, 3: 6, 4: 6, 18: 0,
@@ -237,12 +237,16 @@ export default function PortfolioPage() {
   const [sellModalOpen, setSellModalOpen] = useState(false);
   const [sellModalBox, setSellModalBox] = useState<ContractBox | null>(null);
   const [sellModalTokenBalance, setSellModalTokenBalance] = useState(0n);
+  const [sellModalContractSize, setSellModalContractSize] = useState<number | undefined>();
 
   // Exercise modal state
   const [exerciseModalOpen, setExerciseModalOpen] = useState(false);
   const [exerciseModalBox, setExerciseModalBox] = useState<ContractBox | null>(null);
   const [exerciseModalTokenBalance, setExerciseModalTokenBalance] = useState(0n);
   const [exerciseModalSpotPrice, setExerciseModalSpotPrice] = useState<number | undefined>();
+  const [exerciseModalContractSize, setExerciseModalContractSize] = useState<number | undefined>();
+  const [exerciseModalOracleIndex, setExerciseModalOracleIndex] = useState<number | undefined>();
+  const [exerciseModalStablecoin, setExerciseModalStablecoin] = useState<"USE" | "SigUSD">("USE");
 
   // Open sell orders belonging to wallet
   const [openOrders, setOpenOrders] = useState<(ParsedSellOrder & { optionName?: string })[]>([]);
@@ -469,8 +473,21 @@ export default function PortfolioPage() {
         return;
       }
 
+      // Read R8 to get shareSize → contractSize
+      let contractSize: number | undefined;
+      const r8hex = nodeBox.additionalRegisters?.R8;
+      if (r8hex) {
+        const r8bytes = hexToBytesOracle(r8hex);
+        const r8vals = parseCollLong(r8bytes);
+        if (r8vals && r8vals.length >= 3) {
+          const shareSize = Number(r8vals[2]);
+          contractSize = shareSize / 1_000_000; // ORACLE_DECIMAL
+        }
+      }
+
       setSellModalBox(box);
       setSellModalTokenBalance(walletTokenBalance);
+      setSellModalContractSize(contractSize);
       setSellModalOpen(true);
     } catch (err: any) {
       alert(`Error: ${err.message}`);
@@ -866,9 +883,25 @@ export default function PortfolioPage() {
         } catch { /* will show as undefined in dialog */ }
       }
 
+      // Read R8 for contractSize and stablecoinDecimal
+      let exContractSize: number | undefined;
+      let exStablecoin: "USE" | "SigUSD" = "USE";
+      const r8hex = nodeBox.additionalRegisters?.R8;
+      if (r8hex) {
+        const r8bytes = hexToBytesOracle(r8hex);
+        const r8vals = parseCollLong(r8bytes);
+        if (r8vals && r8vals.length >= 11) {
+          exContractSize = Number(r8vals[2]) / 1_000_000;
+          exStablecoin = Number(r8vals[10]) === 100 ? "SigUSD" : "USE";
+        }
+      }
+
       setExerciseModalBox(box);
       setExerciseModalTokenBalance(walletTokenBalance);
       setExerciseModalSpotPrice(spotPrice);
+      setExerciseModalContractSize(exContractSize);
+      setExerciseModalOracleIndex(box.oracleIndex);
+      setExerciseModalStablecoin(exStablecoin);
       setExerciseModalOpen(true);
     } catch (err: any) {
       alert(`Error: ${err.message}`);
@@ -1571,6 +1604,7 @@ export default function PortfolioPage() {
           strikePrice={sellModalBox.strikePrice}
           maturityDate={sellModalBox.maturityDate}
           oracleIndex={sellModalBox.oracleIndex}
+          contractSize={sellModalContractSize}
           onSubmit={handleListForSaleSubmit}
         />
       )}
@@ -1589,13 +1623,15 @@ export default function PortfolioPage() {
           settlementType={(exerciseModalBox.settlement as "physical" | "cash") ?? "cash"}
           strikePrice={exerciseModalBox.strikePrice ?? 0}
           assetName={exerciseModalBox.name?.split(" ")[0] ?? ""}
-          assetUnit={exerciseModalBox.name?.split(" ")[0] ?? ""}
+          assetUnit={exerciseModalOracleIndex !== undefined ? (ROSEN_NAMES[exerciseModalOracleIndex] ?? exerciseModalBox.name?.split(" ")[0] ?? "") : (exerciseModalBox.name?.split(" ")[0] ?? "")}
           expiryBlocks={(exerciseModalBox.maturityDate ?? 0) - currentHeight}
           style={(exerciseModalBox.style as "european" | "american") ?? "european"}
           spotPrice={exerciseModalSpotPrice}
           collateralCap={undefined}
-          stablecoin="USE"
+          stablecoin={exerciseModalStablecoin}
           reserveBoxId={exerciseModalBox.boxId}
+          contractSize={exerciseModalContractSize}
+          oracleIndex={exerciseModalOracleIndex}
           onExercise={handleExerciseSubmit}
         />
       )}

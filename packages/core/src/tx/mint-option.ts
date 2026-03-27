@@ -68,8 +68,12 @@ export function computeTokenCount(
 
   if (optionType === 0 && settlementType === 0 && oracleIndex !== ERG_ORACLE_INDEX) {
     // Physical call (non-ERG): collateral in tokens[0]
+    // V4 contract uses: collateral / (shareSize * tokensPerUnit / ORACLE_DECIMAL) + 1
     const collateral = BigInt(definitionBox.assets[0]?.amount ?? 0n);
-    return collateral / shareSize + 1n;
+    const rate = registryRates?.[oracleIndex] ?? 1_000_000n;
+    const tokensPerContract = shareSize * rate / ORACLE_DECIMAL;
+    if (tokensPerContract <= 0n) return 1n;
+    return collateral / tokensPerContract + 1n;
   }
 
   if (optionType === 0 && settlementType === 0 && oracleIndex === ERG_ORACLE_INDEX) {

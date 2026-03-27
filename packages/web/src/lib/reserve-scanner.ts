@@ -22,6 +22,8 @@ export interface ParsedReserve {
   valueNanoErg: string;
   /** The option token ID (= definition box ID from R7, same as tokens[0] for minted boxes) */
   optionTokenId?: string;
+  /** Contract size in oracle units (shareSize / ORACLE_DECIMAL) */
+  contractSize?: number;
 }
 
 /**
@@ -131,6 +133,8 @@ function parseReserveBox(box: any, currentHeight: number, exerciseWindow: number
 
   const optionType = Number(params[0]) === 0 ? "call" as const : "put" as const;
   const style = Number(params[1]) === 0 ? "european" as const : "american" as const;
+  const shareSize = Number(params[2]);
+  const contractSize = shareSize / Number(ORACLE_DECIMAL);
   const maturityHeight = Number(params[3]);
   const strikePrice = Number(params[4]) / Number(ORACLE_DECIMAL);
   const oracleIndex = Number(params[7]);
@@ -170,5 +174,6 @@ function parseReserveBox(box: any, currentHeight: number, exerciseWindow: number
     collateralAmount: box.assets?.[1]?.amount?.toString(),
     valueNanoErg: box.value?.toString() ?? "0",
     optionTokenId: creationBoxId ?? (tokenId || undefined),
+    contractSize,
   };
 }

@@ -173,25 +173,29 @@ export async function GET(request: Request) {
   }
 
   try {
-    const ergoTree = CONTRACT_ADDRESSES[0]?.ergoTree ?? OPTION_RESERVE_ERGOTREE;
     const currentHeight = await fetchHeight();
 
-    // Scan contract for all unspent boxes
-    const res = await fetch(
-      `${NODE_URL}/blockchain/box/unspent/byErgoTree?offset=0&limit=200`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(ergoTree),
-      },
-    );
-
-    if (!res.ok) {
-      return NextResponse.json({ boxes: [] });
+    // Scan all contract addresses for unspent boxes
+    const allBoxes: any[] = [];
+    for (const contract of CONTRACT_ADDRESSES) {
+      try {
+        const res = await fetch(
+          `${NODE_URL}/blockchain/box/unspent/byErgoTree?offset=0&limit=200`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(contract.ergoTree),
+          },
+        );
+        if (res.ok) {
+          const rawData = await res.json();
+          const items: any[] = rawData.items ?? rawData;
+          allBoxes.push(...items);
+        }
+      } catch {
+        // Skip failed contract scans
+      }
     }
-
-    const rawData = await res.json();
-    const allBoxes: any[] = rawData.items ?? rawData;
 
     const myBoxes: MyBox[] = [];
 

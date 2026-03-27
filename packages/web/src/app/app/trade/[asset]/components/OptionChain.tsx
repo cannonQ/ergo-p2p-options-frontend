@@ -8,14 +8,15 @@ import type { ParsedSellOrder } from "@/lib/sell-order-scanner";
 
 interface OptionChainProps {
   assetName: string;
+  assetUnit?: string;
   oracleIndex: number;
   spotPrice?: number;
   oracleVol?: number; // bps from companion R5
   hasPhysical?: boolean;
   reserves?: ParsedReserve[];
   sellOrders?: ParsedSellOrder[];
-  /** Map of optionTokenId → { strikePrice, optionType } for matching sell orders to strikes */
-  tokenToReserve?: Record<string, { strikePrice: number; optionType: "call" | "put" }>;
+  /** Map of optionTokenId → { strikePrice, optionType, contractSize } for matching sell orders to strikes */
+  tokenToReserve?: Record<string, { strikePrice: number; optionType: "call" | "put"; contractSize?: number }>;
 }
 
 interface ChainRow {
@@ -42,6 +43,7 @@ interface SelectedOption {
   premium: number;
   available: number;
   sellOrder?: ParsedSellOrder;
+  contractSize?: number;
 }
 
 /**
@@ -127,6 +129,7 @@ function premiumToUsd(premiumPerToken: string, paymentTokenId: string): number {
 
 export function OptionChain({
   assetName,
+  assetUnit,
   oracleIndex: _oracleIndex,
   spotPrice,
   oracleVol,
@@ -154,7 +157,7 @@ export function OptionChain({
   // Build sell order aggregation by strike+type
   // For each strike+type: cheapest premium + total available + list of orders (sorted by price)
   const sellByStrikeType = useMemo(() => {
-    const map = new Map<string, { cheapestPremium: number; totalAvail: number; orders: ParsedSellOrder[] }>();
+    const map = new Map<string, { cheapestPremium: number; totalAvail: number; orders: ParsedSellOrder[]; contractSize?: number }>();
 
     for (const so of sellOrders) {
       const reserveInfo = tokenToReserve[so.optionTokenId];
@@ -176,6 +179,7 @@ export function OptionChain({
           cheapestPremium: premiumUsd,
           totalAvail: tokenCount,
           orders: [so],
+          contractSize: reserveInfo.contractSize,
         });
       }
     }
@@ -248,6 +252,9 @@ export function OptionChain({
     const cheapestOrder = orders.length > 0 ? orders[0] : undefined;
     const premium = type === "call" ? (row.callPremium ?? 0) : (row.putPremium ?? 0);
     const available = type === "call" ? row.callAvail : row.putAvail;
+    // Get contractSize from the sell order group for this strike+type
+    const groupKey = `${type}:${row.strike}`;
+    const group = sellByStrikeType.get(groupKey);
 
     setSelectedOption({
       strike: row.strike,
@@ -256,6 +263,7 @@ export function OptionChain({
       premium,
       available,
       sellOrder: cheapestOrder,
+      contractSize: group?.contractSize,
     });
   };
 
@@ -478,6 +486,9 @@ export function OptionChain({
           premium={selectedOption.premium}
           available={selectedOption.available}
           sellOrder={selectedOption.sellOrder}
+          contractSize={selectedOption.contractSize}
+          oracleIndex={_oracleIndex}
+          assetUnit={assetUnit}
           onClose={() => setSelectedOption(null)}
         />
       )}

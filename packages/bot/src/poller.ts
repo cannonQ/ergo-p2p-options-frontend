@@ -1,6 +1,15 @@
 /**
  * Poller — checks for new blocks and triggers scans.
  */
+// Timestamp all console output
+const _origLog = console.log;
+const _origErr = console.error;
+const _origWarn = console.warn;
+const _ts = () => new Date().toLocaleTimeString('en-US', { hour12: false });
+console.log = (...args: any[]) => _origLog(_ts(), ...args);
+console.error = (...args: any[]) => _origErr(_ts(), ...args);
+console.warn = (...args: any[]) => _origWarn(_ts(), ...args);
+
 import { config } from './config.js';
 import { scanAll, type ClassifiedBox } from './scanner.js';
 import { BoxState } from '@ergo-options/core';
@@ -71,11 +80,12 @@ async function handleBox(box: ClassifiedBox, currentHeight: number) {
       }
       break;
 
-    case BoxState.MINTED_UNDELIVERED:
-      if (age > config.stuckDeliveryBlocks) {
-        const retries = getRetryCount(box.boxId);
+    case BoxState.MINTED_UNDELIVERED: {
+      const retries = getRetryCount(box.boxId);
+      // First delivery attempt: act immediately. Retries: wait for stuckDeliveryBlocks.
+      if (retries === 0 || age > config.stuckDeliveryBlocks) {
         if (retries < config.maxDeliveryRetries) {
-          console.log(`[ACTION] Retrying delivery for ${box.boxId.slice(0, 16)}... (attempt ${retries + 1})`);
+          console.log(`[ACTION] ${retries === 0 ? 'Delivering' : 'Retrying delivery for'} ${box.boxId.slice(0, 16)}... (attempt ${retries + 1})`);
           try {
             const txId = await executeDelivery(box, currentHeight);
             incrementRetry(box.boxId, 'DELIVER_RETRY');
@@ -93,6 +103,7 @@ async function handleBox(box: ClassifiedBox, currentHeight: number) {
         }
       }
       break;
+    }
 
     case BoxState.RESERVE:
       // Normal state — no action needed

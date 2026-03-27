@@ -24,7 +24,7 @@ import { Tooltip } from "@/app/components/Tooltip";
 import { TxStatus } from "@/app/components/TxStatus";
 import { fetchHeight } from "@/lib/api";
 
-const ASSET_MAP: Record<string, { name: string; index: number; unit: string }> = {
+const ASSET_MAP: Record<string, { name: string; index: number; unit: string; oracleUnit?: string }> = {
   // Crypto — Physical Delivery (Rosen Bridge)
   eth: { name: "ETH", index: 0, unit: "rsETH" },
   btc: { name: "BTC", index: 1, unit: "rsBTC" },
@@ -38,7 +38,7 @@ const ASSET_MAP: Record<string, { name: string; index: number; unit: string }> =
   atom: { name: "ATOM", index: 7, unit: "ATOM" },
   firo: { name: "FIRO", index: 19, unit: "FIRO" },
   // Commodities & Metals
-  gold: { name: "Gold", index: 18, unit: "DexyGold" },
+  gold: { name: "Gold", index: 18, unit: "DexyGold", oracleUnit: "Troy Oz" },
   silver: { name: "Silver", index: 11, unit: "Silver" },
   copper: { name: "Copper", index: 12, unit: "Copper" },
   brent: { name: "Brent", index: 13, unit: "Brent" },
@@ -141,24 +141,16 @@ export default function WritePage({ params }: { params: { asset: string } }) {
   const contracts = Math.max(0, Math.floor(Number(numContracts) || 0));
 
   // Auto-compute collateral from contracts × contract size
-  // For physical non-ERG calls, multiply by registry rate to get actual token count
   const collateral = useMemo(() => {
     if (contracts <= 0 || cSize <= 0) return 0;
     if (optionType === "call" && settlement === "physical") {
       // Physical call: lock underlying tokens
-      const oracleIdx = info?.index ?? 0;
-      const isErg = oracleIdx === ERG_ORACLE_INDEX;
-      if (!isErg) {
-        const rate = Number(REGISTRY_RATES[oracleIdx] ?? 1_000_000n);
-        // cSize is in oracle units (e.g. troy oz for gold), rate converts to token units
-        return contracts * cSize * rate;
-      }
       return contracts * cSize;
     }
     // Put or cash: lock stablecoin (strike × contractSize × contracts)
     const str = Number(strike) || 0;
     return contracts * str * cSize;
-  }, [contracts, cSize, optionType, settlement, strike, info]);
+  }, [contracts, cSize, optionType, settlement, strike]);
 
   // B-S suggested premium (scaled by contract size)
   const suggestedPremium = useMemo(() => {
@@ -198,16 +190,19 @@ export default function WritePage({ params }: { params: { asset: string } }) {
     const oracleIdx = info.index;
     const rate = REGISTRY_RATES[oracleIdx] ?? 1_000_000n;
 
-    // Strike price in oracle units (USD * ORACLE_DECIMAL)
-    const strikeBigint = BigInt(Math.round(Number(strike) * Number(ORACLE_DECIMAL)));
+    // Strike price per contract in oracle units
+    // For fractional contracts (e.g. 0.001 Troy Oz), scale strike by contractSize
+    // so on-chain strikePerContract = strikePrice * stablecoinDecimal / ORACLE_DECIMAL is correct
+    const contractSizeNum_ = Number(contractSize) || 1;
+    const strikeBigint = BigInt(Math.round(Number(strike) * contractSizeNum_ * Number(ORACLE_DECIMAL)));
 
-    // Share size: contract size in oracle units (×10^6)
-    // e.g. 0.001 BTC at price $68000 → shareSize = 0.001 * 1_000_000 = 1000
+    // Share size: always in oracle units (×10^6)
+    // The on-chain contract uses shareSize in oracle units for exercise delivery
     const contractSizeNum = Number(contractSize) || 1;
     const shareSize = BigInt(Math.round(contractSizeNum * Number(ORACLE_DECIMAL)));
 
     // Collateral cap for cash-settled (how much stablecoin per contract at max loss)
-    // For physical, this is unused but must be > 0
+    // For physical, this is unused but must be > 0. Already scaled by contractSize.
     const collateralCap = strikeBigint > 0n ? strikeBigint : 1n;
 
     // Collateral token setup
@@ -429,7 +424,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           {/* Contract Size */}
           <div>
             <label className="block text-sm text-[#8891a5] mb-2">
-              Contract Size ({optionType === "call" && settlement === "physical" ? info.unit : "USD equivalent"})
+              Contract Size ({optionType === "call" && settlement === "physical" ? (info.oracleUnit ?? info.unit) : "USD equivalent"})
             </label>
             <div className="flex items-center gap-3">
               <input type="number" value={contractSize} onChange={(e) => setContractSize(e.target.value)}
@@ -443,12 +438,12 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                 })()}
                 className="w-40 bg-[#0a0c10] border border-[#1e2330] rounded-lg px-4 py-2 text-[#e8eaf0] font-mono focus:border-[#c87941] focus:outline-none" />
               <span className="text-sm text-[#8891a5]">
-                {optionType === "call" && settlement === "physical" ? info.unit : "USD"} per contract
+                {optionType === "call" && settlement === "physical" ? (info.oracleUnit ?? info.unit) : "USD"} per contract
               </span>
             </div>
             {cSize > 0 && spotPrice > 0 && (
               <p className="mt-1 text-sm text-[#8891a5]">
-                1 contract = <span className="text-[#e8eaf0] font-semibold">{contractSize} {info.unit}</span>
+                1 contract = <span className="text-[#e8eaf0] font-semibold">{contractSize} {info.oracleUnit ?? info.unit}</span>
                 {" "}(~<span className="text-[#e09a5f]">${contractUsdValue.toFixed(2)}</span>)
               </p>
             )}
@@ -470,15 +465,15 @@ export default function WritePage({ params }: { params: { asset: string } }) {
               <h3 className="text-sm font-semibold text-[#e8eaf0] mb-2">Collateral Required</h3>
               <div className="text-sm space-y-1">
                 <div className="flex justify-between">
-                  <span className="text-[#8891a5]">{contracts} contracts × {contractSize} {info.name}</span>
+                  <span className="text-[#8891a5]">{contracts} contracts × {contractSize} {optionType === "call" && settlement === "physical" ? (info.oracleUnit ?? info.unit) : stablecoin}</span>
                   <span className="text-[#e8eaf0] font-mono font-semibold">
-                    {collateral.toFixed(collateral >= 1 ? 0 : 6)} {optionType === "call" && settlement === "physical" ? info.unit : stablecoin}
+                    {collateral.toFixed(collateral >= 1 ? 4 : 6)} {optionType === "call" && settlement === "physical" ? (info.oracleUnit ?? info.unit) : stablecoin}
                   </span>
                 </div>
                 {spotPrice > 0 && (
                   <div className="flex justify-between">
                     <span className="text-[#8891a5]">USD value</span>
-                    <span className="text-[#e09a5f] font-mono">~${(contracts * cSize * (optionType === "call" && settlement === "physical" ? spotPrice : 1)).toFixed(2)}</span>
+                    <span className="text-[#e09a5f] font-mono">~${(collateral * (optionType === "call" && settlement === "physical" ? spotPrice : 1)).toFixed(2)}</span>
                   </div>
                 )}
               </div>
@@ -552,7 +547,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
               <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
                 <span className="text-[#8891a5]">Lock:</span>
                 <span className="text-[#e8eaf0] font-mono">
-                  {collateral.toFixed(collateral >= 1 ? 0 : 6)} {optionType === "call" && settlement === "physical" ? info.unit : stablecoin}
+                  {collateral.toFixed(collateral >= 1 ? 4 : 6)} {optionType === "call" && settlement === "physical" ? (info.oracleUnit ?? info.unit) : stablecoin}
                   {info.index !== ERG_ORACLE_INDEX && (
                     <span className="text-[#8891a5]"> + {ergDeposit.toFixed(4)} ERG (fees)</span>
                   )}

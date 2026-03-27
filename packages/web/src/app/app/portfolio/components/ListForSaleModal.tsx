@@ -201,6 +201,14 @@ export function ListForSaleModal({
               )}
             </div>
           )}
+          {contractSize !== undefined && contractSize !== 1 && spotPrice !== null && (
+            <div>
+              <span className="text-[#64748b]">Each token:</span>{" "}
+              <span className="text-[#e8eaf0] font-mono">{contractSize}</span>
+              <span className="text-[#8891a5]"> of underlying</span>
+              <span className="text-[#8891a5] ml-1">(~${(contractSize * spotPrice).toFixed(2)})</span>
+            </div>
+          )}
           {suggestedPremium !== null && (
             <div>
               <span className="text-[#64748b]">B-S Suggested:</span>{" "}
