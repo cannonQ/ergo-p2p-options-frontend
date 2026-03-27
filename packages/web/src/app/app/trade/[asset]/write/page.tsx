@@ -23,6 +23,7 @@ import { useWriteOption, type WriteOptionInput } from "@/lib/hooks/useWriteOptio
 import { Tooltip } from "@/app/components/Tooltip";
 import { TxStatus } from "@/app/components/TxStatus";
 import { fetchHeight } from "@/lib/api";
+import { useToast } from "@/app/components/Toast";
 
 /** Safe Number→BigInt: guards against Infinity, NaN, and precision loss beyond 2^53 */
 function safeToBigInt(n: number): bigint {
@@ -75,6 +76,7 @@ const DAPP_UI_MINT_FEE = 10_000_000n;
 
 export default function WritePage({ params }: { params: { asset: string } }) {
   const info = ASSET_MAP[params.asset];
+  const { toast } = useToast();
 
   const [optionType, setOptionType] = useState<"call" | "put">("call");
   const [style, setStyle] = useState<"european" | "american">("european");
@@ -182,22 +184,22 @@ export default function WritePage({ params }: { params: { asset: string } }) {
     if (!info) return;
     const currentHeight = await fetchHeight();
     if (expiryBlocks <= 0) {
-      alert("Expiry must be greater than 0");
+      toast("Expiry must be greater than 0");
       return;
     }
     const strikeNum = Number(strike) || 0;
     if (strikeNum <= 0 || !isFinite(strikeNum) || strikeNum > 1e12) {
-      alert("Strike price must be between 0 and $1,000,000,000,000");
+      toast("Strike price must be between 0 and $1,000,000,000,000");
       return;
     }
     const cSizeNum = Number(contractSize) || 0;
     if (cSizeNum <= 0 || !isFinite(cSizeNum) || cSizeNum > 1e10) {
-      alert("Contract size must be greater than 0");
+      toast("Contract size must be greater than 0");
       return;
     }
     const expiryHeight = BigInt(currentHeight + expiryBlocks);
     if (expiryHeight <= BigInt(currentHeight)) {
-      alert(`Maturity height ${expiryHeight} is not in the future (current: ${currentHeight}). Check your expiry input.`);
+      toast(`Maturity height ${expiryHeight} is not in the future (current: ${currentHeight}). Check your expiry input.`);
       return;
     }
     console.log(`[Write] currentHeight=${currentHeight}, expiryBlocks=${expiryBlocks}, maturityHeight=${expiryHeight}`);

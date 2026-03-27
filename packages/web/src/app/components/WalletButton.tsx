@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useWalletStore } from "@/stores/wallet-store";
 import { waitForErgoConnector, type ErgoAPI } from "@/lib/wallet";
+import { useToast } from "./Toast";
 
 interface DetectedWallet {
   name: string;
@@ -12,6 +13,7 @@ interface DetectedWallet {
 
 export function WalletButton() {
   const { connected, address, setConnected, setAddress, setApi, setErgBalance, disconnect } = useWalletStore();
+  const { toast } = useToast();
   const [connecting, setConnecting] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [wallets, setWallets] = useState<DetectedWallet[]>([]);
@@ -90,7 +92,7 @@ export function WalletButton() {
       localStorage.setItem("etcha_last_wallet", walletId);
     } catch (err: any) {
       console.error("Wallet connect error:", err);
-      alert(err.message || "Failed to connect wallet");
+      toast(err.message || "Failed to connect wallet");
     } finally {
       setConnecting(false);
     }
@@ -221,10 +223,10 @@ export function WalletButton() {
             } else if (detected.length > 1) {
               setShowMenu(true);
             } else {
-              alert("No Ergo wallet found. Please install Nautilus.");
+              toast("No Ergo wallet found. Please install Nautilus.", "info");
             }
           } else {
-            alert("No Ergo wallet found. Please install the Nautilus browser extension.");
+            toast("No Ergo wallet found. Please install the Nautilus browser extension.", "info");
           }
         }}
         className="px-4 py-1.5 bg-[#c87941] text-white rounded-lg text-sm font-medium hover:bg-[#2563eb] transition-colors"

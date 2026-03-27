@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useWalletStore } from "@/stores/wallet-store";
 import { SkeletonRow } from "@/app/components/Skeleton";
+import { useToast } from "@/app/components/Toast";
 import {
   USE_TOKEN_ID,
   SIGUSD_TOKEN_ID,
@@ -229,6 +230,7 @@ interface HoldingPosition {
 
 export default function PortfolioPage() {
   const { connected, address: _address, api, ergBalance } = useWalletStore();
+  const { toast } = useToast();
   const [tokens, setTokens] = useState<WalletToken[]>([]);
   const [holdings, setHoldings] = useState<HoldingPosition[]>([]);
   const [contractBoxes, setContractBoxes] = useState<ContractBox[]>([]);
@@ -480,7 +482,7 @@ export default function PortfolioPage() {
       }
 
       if (walletTokenBalance <= 0n) {
-        alert("You don't have any option tokens for this contract in your wallet. They may not have been delivered yet.");
+        toast("You don't have any option tokens for this contract in your wallet. They may not have been delivered yet.");
         return;
       }
 
@@ -501,7 +503,7 @@ export default function PortfolioPage() {
       setSellModalContractSize(contractSize);
       setSellModalOpen(true);
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      toast(`Error: ${err.message}`);
     }
   }, [api]);
 
@@ -860,7 +862,7 @@ export default function PortfolioPage() {
       }
 
       if (walletTokenBalance <= 0n) {
-        alert("You don't have any option tokens for this contract.");
+        toast("You don't have any option tokens for this contract.");
         return;
       }
 
@@ -899,7 +901,7 @@ export default function PortfolioPage() {
       setExerciseModalStablecoin(exStablecoin);
       setExerciseModalOpen(true);
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      toast(`Error: ${err.message}`);
     }
   }, [api]);
 
