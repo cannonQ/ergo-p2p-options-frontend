@@ -1314,7 +1314,7 @@ export default function PortfolioPage() {
                             )}
                           </td>
                           <td className="py-2 px-4 text-right font-mono text-[#e8eaf0]">
-                            {box.tokenCount ?? "\u2014"}
+                            {walletBal > 0n ? walletBal.toString() : box.tokenCount ?? "\u2014"}
                           </td>
                           <td className="py-2 px-4 text-right font-mono text-[#8891a5]">
                             {formatCollateral(box)}
