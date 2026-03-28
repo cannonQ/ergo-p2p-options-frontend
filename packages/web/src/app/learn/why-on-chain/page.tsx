@@ -66,7 +66,7 @@ export default function WhyOnChainPage() {
             {/* Clearinghouse */}
             <rect x="270" y="45" width="110" height="40" rx="4" fill="#161b22" stroke="rgba(248,81,73,0.15)" strokeWidth="0.5" />
             <text x="325" y="62" textAnchor="middle" fill="#e6edf3" fontFamily="Courier New" fontSize="9">Clearinghouse</text>
-            <text x="325" y="76" textAnchor="middle" fill="#f85149" fontFamily="Courier New" fontSize="8">OCC · delay</text>
+            <text x="325" y="76" textAnchor="middle" fill="#f85149" fontFamily="Courier New" fontSize="8">verification · delay</text>
             <line x1="380" y1="65" x2="410" y2="65" stroke="#f85149" strokeWidth="0.8" markerEnd="url(#arrD)" />
 
             {/* Exchange */}
@@ -86,7 +86,7 @@ export default function WhyOnChainPage() {
             <text x="730" y="70" textAnchor="middle" fill="#e6edf3" fontFamily="Courier New" fontSize="9">Counterparty</text>
 
             {/* Layer count */}
-            <text x="400" y="110" textAnchor="middle" fill="#f85149" fontFamily="Courier New" fontSize="11">6 layers  ·  4+ fees  ·  T+1 settlement  ·  KYC required  ·  market hours only</text>
+            <text x="400" y="110" textAnchor="middle" fill="#f85149" fontFamily="Courier New" fontSize="11">6 layers  ·  4+ fees  ·  next-day settlement  ·  KYC required  ·  market hours only</text>
 
             {/* Divider */}
             <line x1="40" y1="140" x2="760" y2="140" stroke="rgba(255,255,255,0.08)" strokeWidth="0.5" />
@@ -152,9 +152,9 @@ export default function WhyOnChainPage() {
         <div className="section-label">Resilience</div>
         <h2>The Protocol Survives Without the Team</h2>
         <p className="section-text">
-          Anyone can submit the expiry transaction and earn a keeper fee.
-          Settlement is enforced by the contract — no admin keys, no team
-          dependency. The protocol works even if the Etcha team disappears
+          Anyone can submit the expiry transaction and earn a small reward for
+          processing it. Settlement is enforced by the contract — no admin keys,
+          no team dependency. The protocol works even if the Etcha team disappears
           tomorrow.
         </p>
 
@@ -166,7 +166,7 @@ export default function WhyOnChainPage() {
             <text x="150" y="72" textAnchor="middle" fill="#7d8590" fontFamily="Courier New" fontSize="10">Submit expiry TX</text>
 
             <rect x="310" y="30" width="180" height="60" rx="5" fill="rgba(63,185,80,0.05)" stroke="rgba(63,185,80,0.2)" strokeWidth="0.5" />
-            <text x="400" y="55" textAnchor="middle" fill="#3fb950" fontFamily="Courier New" fontSize="11">Earn a keeper fee</text>
+            <text x="400" y="55" textAnchor="middle" fill="#3fb950" fontFamily="Courier New" fontSize="11">Earn a small reward</text>
             <text x="400" y="72" textAnchor="middle" fill="#7d8590" fontFamily="Courier New" fontSize="10">Incentive to participate</text>
 
             <rect x="560" y="30" width="180" height="60" rx="5" fill="rgba(56,139,253,0.05)" stroke="rgba(56,139,253,0.2)" strokeWidth="0.5" />
@@ -182,11 +182,13 @@ export default function WhyOnChainPage() {
       {/* SECTION 4: UTXO ADVANTAGE */}
       <section>
         <div className="section-label">Architecture</div>
-        <h2>UTXO — Each Option Is Its Own Box</h2>
+        <h2>Each Option Is Its Own Box</h2>
         <p className="section-text">
-          On Ergo, each option contract is an isolated UTXO box — not a shared
-          pool. There&apos;s no systemic risk from other contracts, no liquidation
-          cascades, and physical delivery is native to the model.
+          On Ergo, value lives in individual &quot;boxes&quot; (called UTXOs)
+          rather than in shared accounts. Each option contract is its own
+          isolated box — not a shared pool. One bad trade can&apos;t trigger a
+          chain reaction that wipes out other users, and physical delivery is
+          native to the model.
         </p>
 
         <Graphic>
@@ -250,7 +252,7 @@ export default function WhyOnChainPage() {
               </tr>
               <tr>
                 <td className="row-label">Physical delivery</td>
-                <td className="check">✓ (via DTC)</td>
+                <td className="check">✓ (traditional)</td>
                 <td className="cross">✗</td>
                 <td className="check">✓ (via Rosen)</td>
               </tr>

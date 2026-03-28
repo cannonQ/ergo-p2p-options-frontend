@@ -6,7 +6,7 @@ import Graphic from "../components/Graphic";
 import LessonHeader from "../components/LessonHeader";
 
 export const metadata: Metadata = {
-  title: "Hedging — Protecting Your Bags | Etcha Learn",
+  title: "Hedging — Protecting Your Holdings | Etcha Learn",
   description:
     "Options aren't just for speculation. Learn how protective puts, collars, and real-world asset hedging work on Etcha.",
 };
@@ -15,7 +15,7 @@ export default function HedgingPage() {
   return (
     <>
       <LessonHeader current={5} />
-      <h1>Hedging — Protecting Your Bags</h1>
+      <h1>Hedging — Protecting Your Holdings</h1>
       <p className="subtitle">
         Options aren&apos;t just for speculation. Their original purpose is
         insurance — paying a known premium today to define your worst case
@@ -403,9 +403,10 @@ export default function HedgingPage() {
         <div className="section-label">Strategy 2 — Advanced</div>
         <h2>Collar — Floor and Ceiling</h2>
         <p className="section-text">
-          Own the asset + buy a put (floor) + sell a call (ceiling). Your P&amp;L
-          is &quot;banded&quot; — limited downside AND limited upside. The call
-          premium can offset the put cost, making the net cost near zero.
+          Own the asset + buy a put (floor) + sell a call (ceiling). Your profit
+          and loss is limited in both directions — you cap your downside AND your
+          upside. The premium you earn from selling the call can cover the cost of
+          buying the put, making the net cost near zero.
         </p>
 
         <Graphic>
@@ -806,7 +807,7 @@ export default function HedgingPage() {
               fontFamily="Courier New"
               fontSize="10"
             >
-              Hedge your equity
+              Hedge your stock
             </text>
             <text
               x="655"
@@ -816,7 +817,7 @@ export default function HedgingPage() {
               fontFamily="Courier New"
               fontSize="10"
             >
-              portfolio on-chain.
+              holdings on-chain.
             </text>
             <text
               x="655"

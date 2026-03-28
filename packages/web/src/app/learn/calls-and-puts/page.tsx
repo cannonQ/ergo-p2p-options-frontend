@@ -791,7 +791,7 @@ export default function CallsAndPutsPage() {
         <p className="section-text">
           A put gives the buyer the right to sell at the strike price. If the
           underlying drops below the strike, the buyer profits. It{"'"}s the
-          inverse of a call — a bet that things go down.
+          opposite of a call — you profit when the price goes down.
         </p>
 
         <Graphic>
@@ -1138,9 +1138,9 @@ export default function CallsAndPutsPage() {
                 <td>Stablecoins (SigUSD / USE)</td>
               </tr>
               <tr>
-                <td className="row-label">Sentiment</td>
-                <td style={{ color: "#3fb950" }}>{"Bullish \u2191"}</td>
-                <td style={{ color: "#f85149" }}>{"Bearish \u2193"}</td>
+                <td className="row-label">Sentiment (your view)</td>
+                <td style={{ color: "#3fb950" }}>{"Bullish \u2191 (price goes up)"}</td>
+                <td style={{ color: "#f85149" }}>{"Bearish \u2193 (price goes down)"}</td>
               </tr>
             </tbody>
           </table>
@@ -1170,7 +1170,7 @@ export default function CallsAndPutsPage() {
               At expiry, ERG hits <strong>$0.50</strong>. Your option is in the
               money.
               <div className="math">
-                {"Profit = ($0.50 \u2212 $0.35) \u00D7 contract_size \u2212 15 SigUSD"}
+                {"Profit = ($0.50 \u2212 $0.35) \u00D7 number of contracts \u2212 15 SigUSD premium"}
               </div>
               <div className="math" style={{ marginTop: 2 }}>
                 {"Per-unit gain: $0.15 \u2014 minus 15 SigUSD premium = net profit"}
@@ -1204,7 +1204,7 @@ export default function CallsAndPutsPage() {
         <p>
           Buyers pay a defined premium for a right. Writers collect that premium
           and take on an obligation. The buyer{"'"}s maximum loss is always the
-          premium — nothing more. The writer{"'"}s maximum loss is bounded by
+          premium — nothing more. The writer{"'"}s maximum loss is limited to
           their locked collateral. Every option trade is a two-sided agreement
           between peers.
         </p>

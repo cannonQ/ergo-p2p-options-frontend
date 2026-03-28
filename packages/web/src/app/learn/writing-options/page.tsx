@@ -6,7 +6,7 @@ import Graphic from "../components/Graphic";
 import LessonHeader from "../components/LessonHeader";
 
 export const metadata: Metadata = {
-  title: "Writing Options — Earning Yield | Etcha Learn",
+  title: "Writing Options — Earning Premium | Etcha Learn",
   description:
     "Writers are the supply side of options. They lock collateral, mint an option token, and list it for sale. Learn about covered calls, cash-secured puts, and the P2P writer lifecycle on Etcha.",
 };
@@ -15,7 +15,7 @@ export default function WritingOptionsPage() {
   return (
     <>
       <LessonHeader current={3} />
-      <h1>Writing Options — Earning Yield</h1>
+      <h1>Writing Options — Earning Premium</h1>
       <p className="subtitle">
         Writers are the supply side of options. They lock collateral, mint an
         option token, and list it for sale. If a buyer appears, they collect a
@@ -984,7 +984,7 @@ export default function WritingOptionsPage() {
           <br />
           <br />
           <strong>Rolling is two transactions</strong> — Cancel the listed sell
-          order AND write a new option. It&#39;s not atomic and requires finding
+          order AND write a new option. You can&#39;t do it in one step, and it requires finding
           a new buyer.
           <br />
           <br />
@@ -997,9 +997,9 @@ export default function WritingOptionsPage() {
       {/* SECTION 6: UTXO STATE MACHINE */}
       <section>
         <div className="section-label">Under the Hood</div>
-        <h2>The UTXO Lifecycle on Etcha</h2>
+        <h2>The Option Lifecycle on Etcha</h2>
         <p className="section-text">
-          Every option on Etcha follows a deterministic state machine. Each step
+          Every option on Etcha follows a fixed sequence of steps. Each step
           is a transaction on the Ergo blockchain — no admin keys, no database.
         </p>
 
