@@ -23,7 +23,7 @@ export default function LandingPage() {
             <p className="hero-sub">
               Decentralized options on Ergo. Write calls and puts on crypto, commodities,
               and indices — peer-to-peer or through permissionless liquidity pools. Physical
-              settlement in Rosen Bridge assets. Cash settlement in stablecoins. No
+              delivery of real tokens. Cash settlement in stablecoins. No
               intermediaries. No databases. Just contracts.
             </p>
             <div className="hero-actions">
@@ -95,7 +95,7 @@ export default function LandingPage() {
                 handle pricing and settlement. No central operator.
               </p>
               <div className="product-features">
-                <div className="pf-item"><span className="pf-icon">&rarr;</span>LPs deposit stablecoins into pool</div>
+                <div className="pf-item"><span className="pf-icon">&rarr;</span>LPs deposit capital into a pool that automatically writes and prices options</div>
                 <div className="pf-item"><span className="pf-icon">&rarr;</span>Pool writes options, earns premiums</div>
                 <div className="pf-item"><span className="pf-icon">&rarr;</span>Buyers purchase directly from pool</div>
                 <div className="pf-item"><span className="pf-icon">&rarr;</span>Off-chain bots handle settlement — anyone can run them</div>
@@ -116,10 +116,9 @@ export default function LandingPage() {
       <section className="settle-section">
         <div className="container">
           <div className="section-tag">Settlement</div>
-          <h2>Stablecoin-denominated. Always.</h2>
+          <h2>Premiums and strikes in stablecoins.</h2>
           <p className="section-desc">
-            Every option on Etcha settles in USD-pegged stablecoins native to Ergo. No ERG
-            volatility risk at settlement. Writers lock collateral, buyers receive stablecoin payouts.
+            {"Strike prices denominated in stablecoins \u2014 SigUSD or USE, writer's choice. Physical options deliver the real asset. Cash options pay stablecoin profit. No ERG volatility risk on your strike price."}
           </p>
           <div className="settle-grid">
             <div className="settle-card">
@@ -147,7 +146,7 @@ export default function LandingPage() {
           <div className="section-tag">Markets</div>
           <h2>Every asset class. One protocol.</h2>
           <p className="section-desc">
-            {"Crypto options with physical settlement \u2014 writers lock Rosen Bridge tokens (rsETH, rsBTC, rsADA) or native ERG as collateral. Cash-settled commodities, metals, and indices use oracle price feeds with stablecoin payouts."}
+{"Physical options lock the real asset \u2014 Rosen Bridge tokens, native ERG, or DexyGold for physical delivery. Stablecoins for cash settlement. The oracle determines settlement."}
           </p>
           <div className="market-categories">
             <div className="market-category">
@@ -173,10 +172,16 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="market-category">
-              <h3>Commodities &amp; Metals — Cash Settlement</h3>
-              <p className="cat-desc">Gold, silver, crude, natgas — oracle-fed, stablecoin-settled.</p>
+              <h3>Commodities — Physical Delivery</h3>
+              <p className="cat-desc">Writer locks the underlying token. Buyer receives it from the reserve at exercise.</p>
               <div className="market-grid">
-                <div className="market-chip"><span className="ticker">GOLD</span><span className="type-badge type-cash">DexyGold</span></div>
+                <div className="market-chip"><span className="ticker">GOLD</span><span className="type-badge type-physical">DexyGold</span></div>
+              </div>
+            </div>
+            <div className="market-category">
+              <h3>Commodities &amp; Metals — Cash Settlement</h3>
+              <p className="cat-desc">Silver, crude, natgas — oracle-fed, stablecoin-settled.</p>
+              <div className="market-grid">
                 <div className="market-chip"><span className="ticker">SILVER</span><span className="type-badge type-cash">Cash</span></div>
                 <div className="market-chip"><span className="ticker">COPPER</span><span className="type-badge type-cash">Cash</span></div>
                 <div className="market-chip"><span className="ticker">BRENT</span><span className="type-badge type-cash">Cash</span></div>
@@ -222,8 +227,7 @@ export default function LandingPage() {
               <div className="step-num">02 — TRADE</div>
               <h3>Buy the print</h3>
               <p>
-                Option tokens are standard Ergo tokens. Buy them peer-to-peer or on DEX. The premium
-                is the market price. Everything transferable, everything composable.
+                {"Buy them peer-to-peer on Etcha. Hold, transfer, or exercise \u2014 they're standard Ergo tokens in your wallet, composable with any Ergo dApp."}
               </p>
               <div className="step-diagram">
                 <span className="hl">Buyer</span> pays premium &rarr;<br />
@@ -347,7 +351,7 @@ export default function LandingPage() {
             </div>
             <div className="arch-card">
               <h3>Permissionless Bots</h3>
-              <p>Off-chain bots handle settlement triggers and pool operations. The code is open-source. Anyone can run a bot. If the team disappears tomorrow, the protocol still works.</p>
+              <p>{"Open-source bots handle the operational plumbing \u2014 minting tokens, delivering to writers, closing expired contracts. Anyone can run one. If the team disappears tomorrow, the protocol still works."}</p>
             </div>
             <div className="arch-card">
               <h3>Rosen Bridge Assets</h3>
@@ -355,7 +359,7 @@ export default function LandingPage() {
             </div>
             <div className="arch-card">
               <h3>UTXO Composability</h3>
-              <p>Options are standard Ergo tokens. They compose with Spectrum DEX, lending protocols, and other dApps. Build multi-leg strategies across the ecosystem.</p>
+              <p>{"Standard Ergo tokens \u2014 composable with any dApp in the ecosystem as liquidity grows. Built on Ergo's UTXO model for maximum interoperability."}</p>
             </div>
             <div className="arch-card">
               <h3>No Accounts. No KYC.</h3>
@@ -447,7 +451,7 @@ export default function LandingPage() {
                 <td>P2P</td>
                 <td><span className="cross">—</span></td>
                 <td><span className="cross">—</span></td>
-                <td><span className="cross">—</span></td>
+                <td><span className="cross">—</span> ERG only</td>
                 <td><span className="check">&#10003;</span></td>
               </tr>
             </tbody>
