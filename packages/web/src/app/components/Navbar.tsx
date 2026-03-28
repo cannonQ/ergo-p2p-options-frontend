@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { WalletButton } from "./WalletButton";
 
 const ASSET_CATEGORIES = [
@@ -46,9 +46,54 @@ const ASSET_CATEGORIES = [
   },
 ];
 
+// Flat list of all trade assets for keyboard navigation
+const ALL_ASSETS = ASSET_CATEGORIES.flatMap((cat) => cat.assets);
+
 export function Navbar() {
   const [tradeOpen, setTradeOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [focusIdx, setFocusIdx] = useState(-1);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Reset focus index when menu opens/closes
+  useEffect(() => {
+    if (!tradeOpen) setFocusIdx(-1);
+  }, [tradeOpen]);
+
+  // Scroll focused item into view
+  useEffect(() => {
+    if (focusIdx >= 0 && menuRef.current) {
+      const items = menuRef.current.querySelectorAll<HTMLAnchorElement>("[role='menuitem']");
+      items[focusIdx]?.focus();
+    }
+  }, [focusIdx]);
+
+  const handleMenuKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!tradeOpen) return;
+    const total = ALL_ASSETS.length;
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setFocusIdx((prev) => (prev + 1) % total);
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setFocusIdx((prev) => (prev - 1 + total) % total);
+        break;
+      case "Escape":
+        e.preventDefault();
+        setTradeOpen(false);
+        break;
+      case "Home":
+        e.preventDefault();
+        setFocusIdx(0);
+        break;
+      case "End":
+        e.preventDefault();
+        setFocusIdx(total - 1);
+        break;
+    }
+  }, [tradeOpen]);
 
   return (
     <nav className="border-b border-[#1e2330] bg-[#0a0c10]/85 backdrop-blur-xl sticky top-0 z-50">
@@ -69,6 +114,13 @@ export function Navbar() {
           >
             <button
               onClick={() => setTradeOpen(!tradeOpen)}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowDown" && !tradeOpen) {
+                  e.preventDefault();
+                  setTradeOpen(true);
+                  setFocusIdx(0);
+                }
+              }}
               className="text-[#8891a5] hover:text-[#e8eaf0] transition-colors flex items-center gap-1 font-mono text-sm"
               aria-label="Trade menu"
               aria-haspopup="menu"
@@ -82,29 +134,39 @@ export function Navbar() {
 
             {tradeOpen && (
               <div className="absolute top-full left-0 pt-2 w-72 z-50">
-              <div className="bg-[#0a0c10] border border-[#1e2330] rounded-lg shadow-xl py-1" role="menu">
-                {ASSET_CATEGORIES.map((cat) => (
-                  <div key={cat.label}>
-                    <div className="px-3 py-2 text-[10px] font-bold text-[#c87941] uppercase tracking-widest border-b border-[#1e2330]/50 bg-[#12151c]">
-                      {cat.label}
+              <div ref={menuRef} onKeyDown={handleMenuKeyDown} className="bg-[#0a0c10] border border-[#1e2330] rounded-lg shadow-xl py-1" role="menu">
+                {(() => {
+                  let idx = 0;
+                  return ASSET_CATEGORIES.map((cat) => (
+                    <div key={cat.label}>
+                      <div className="px-3 py-2 text-[10px] font-bold text-[#c87941] uppercase tracking-widest border-b border-[#1e2330]/50 bg-[#12151c]" role="presentation">
+                        {cat.label}
+                      </div>
+                      {cat.assets.map((asset) => {
+                        const thisIdx = idx++;
+                        return (
+                          <Link
+                            key={asset.slug}
+                            href={`/app/trade/${asset.slug}`}
+                            role="menuitem"
+                            tabIndex={focusIdx === thisIdx ? 0 : -1}
+                            className={`flex items-center justify-between px-4 py-2 text-sm text-[#e8eaf0] transition-colors ${
+                              focusIdx === thisIdx ? "bg-[#1e2330]" : "hover:bg-[#1e2330]"
+                            }`}
+                            onClick={() => setTradeOpen(false)}
+                          >
+                            <span>{asset.name}</span>
+                            {"badge" in asset && asset.badge && (
+                              <span className="text-[9px] px-1.5 py-0.5 bg-[#34d399]/10 text-[#34d399] rounded">
+                                {asset.badge}
+                              </span>
+                            )}
+                          </Link>
+                        );
+                      })}
                     </div>
-                    {cat.assets.map((asset) => (
-                      <Link
-                        key={asset.slug}
-                        href={`/app/trade/${asset.slug}`}
-                        className="flex items-center justify-between px-4 py-2 text-sm text-[#e8eaf0] hover:bg-[#1e2330] transition-colors"
-                        onClick={() => setTradeOpen(false)}
-                      >
-                        <span>{asset.name}</span>
-                        {"badge" in asset && asset.badge && (
-                          <span className="text-[9px] px-1.5 py-0.5 bg-[#34d399]/10 text-[#34d399] rounded">
-                            {asset.badge}
-                          </span>
-                        )}
-                      </Link>
-                    ))}
-                  </div>
-                ))}
+                  ));
+                })()}
               </div>
               </div>
             )}
