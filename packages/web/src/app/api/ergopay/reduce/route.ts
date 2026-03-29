@@ -12,6 +12,8 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
+    console.log("[ErgoPay Reduce] Sending to service:", JSON.stringify(body, null, 2).slice(0, 2000));
+
     const res = await fetch(`${ERGOPAY_SERVICE}/api/v1/reducedTx`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -20,8 +22,9 @@ export async function POST(request: Request) {
 
     if (!res.ok) {
       const text = await res.text();
+      console.error("[ErgoPay Reduce] Service returned", res.status, text);
       return NextResponse.json(
-        { error: `ErgoPay service error: ${text}` },
+        { error: `ErgoPay service error (${res.status}): ${text}` },
         { status: res.status },
       );
     }
