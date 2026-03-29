@@ -241,7 +241,7 @@ export function WalletButton() {
   }
 
   // Not connected — show connect button or wallet picker
-  if (connecting) {
+  if (connecting && !ergoPayQr) {
     return (
       <button disabled className="px-4 py-1.5 bg-[#c87941] text-white rounded-lg text-sm font-medium opacity-50">
         Connecting...
