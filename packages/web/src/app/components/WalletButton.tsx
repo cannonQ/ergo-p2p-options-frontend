@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useWalletStore } from "@/stores/wallet-store";
 import { waitForErgoConnector, type ErgoAPI } from "@/lib/wallet";
 import { useToast } from "./Toast";
@@ -303,41 +304,42 @@ export function WalletButton() {
 
     </div>
 
-    {/* ErgoPay QR connect modal — rendered outside the relative container */}
-    {ergoPayQr && (
-      <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.7)" }} onClick={() => {
+    {/* ErgoPay QR connect modal — portaled to document.body */}
+    {ergoPayQr && typeof document !== "undefined" && createPortal(
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.75)" }} onClick={() => {
           if (ergoPayPollRef.current) clearInterval(ergoPayPollRef.current);
           setErgoPayQr(null);
           setConnecting(false);
         }} />
-        <div style={{ position: "relative", zIndex: 1 }} className="bg-[#12151c] border border-[#1e2330] rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-[#e8eaf0]">Connect Mobile Wallet</h2>
+        <div style={{ position: "relative", zIndex: 1, background: "#12151c", border: "1px solid #1e2330", borderRadius: "12px", maxWidth: "400px", width: "calc(100% - 32px)", padding: "24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+            <h2 style={{ fontSize: "18px", fontWeight: "bold", color: "#e8eaf0", margin: 0 }}>Connect Mobile Wallet</h2>
             <button
               onClick={() => {
                 if (ergoPayPollRef.current) clearInterval(ergoPayPollRef.current);
                 setErgoPayQr(null);
                 setConnecting(false);
               }}
-              className="text-[#8891a5] hover:text-[#e8eaf0] text-xl"
+              style={{ background: "none", border: "none", color: "#8891a5", fontSize: "24px", cursor: "pointer", padding: "0 4px" }}
               aria-label="Close"
             >&times;</button>
           </div>
-          <p className="text-sm text-[#8891a5]">
+          <p style={{ fontSize: "14px", color: "#8891a5", marginBottom: "20px" }}>
             Scan this QR code with your Ergo mobile wallet (Terminus or Minotaur) to connect.
           </p>
-          <div className="flex justify-center">
-            <div className="bg-white rounded-xl p-4">
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
+            <div style={{ background: "white", borderRadius: "12px", padding: "16px" }}>
               <QRCodeSVG value={ergoPayQr.url} size={220} level="M" />
             </div>
           </div>
-          <div className="flex items-center justify-center gap-2 text-[#8891a5] text-sm">
-            <div className="w-4 h-4 border-2 border-[#c87941] border-t-transparent rounded-full animate-spin" />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#8891a5", fontSize: "14px" }}>
+            <div style={{ width: "16px", height: "16px", border: "2px solid #c87941", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
             <span>Waiting for wallet...</span>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body,
     )}
     </>
   );
