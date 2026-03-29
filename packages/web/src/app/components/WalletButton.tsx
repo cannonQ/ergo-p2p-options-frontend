@@ -51,15 +51,16 @@ export function WalletButton() {
             setConnected(true);
             setAddress(savedAddr);
             setWalletType("ergopay");
-            // Fetch balance
-            try {
-              const balRes = await fetch(`/api/boxes?address=${savedAddr}`);
-              if (balRes.ok) {
-                const { boxes } = await balRes.json();
-                const totalNano = (boxes || []).reduce((sum: number, b: any) => sum + Number(b.value || 0), 0);
-                setErgBalance((totalNano / 1e9).toFixed(2));
-              }
-            } catch { /* non-critical */ }
+            // Fetch balance via node proxy
+            fetch(`/api/boxes?address=${savedAddr}`)
+              .then(r => r.ok ? r.json() : null)
+              .then(data => {
+                if (data?.boxes) {
+                  const totalNano = data.boxes.reduce((sum: number, b: any) => sum + Number(b.value || 0), 0);
+                  setErgBalance((totalNano / 1e9).toFixed(2));
+                }
+              })
+              .catch(() => {});
           }
         }
 
