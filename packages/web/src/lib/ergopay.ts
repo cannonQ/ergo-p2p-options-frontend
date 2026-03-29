@@ -69,7 +69,8 @@ export async function requestErgoPayTx(params: {
   address: string;
   message: string;
 }): Promise<ErgoPayTxRequest> {
-  const requestId = crypto.randomUUID().replace(/-/g, "").slice(0, 32).toUpperCase();
+  // Generate request ID without crypto.randomUUID (not available on non-HTTPS)
+  const requestId = Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("").toUpperCase();
 
   // Register the request on our backend for callback tracking
   const registerRes = await fetch("/api/ergopay/register", {
