@@ -106,7 +106,9 @@ export default function WritePage({ params }: { params: { asset: string } }) {
 
   // ErgoPay hook for mobile wallet signing
   const ergoPay = useWriteOptionErgoPay();
-  const [isMobile] = useState(() => isMobileDevice());
+  const detectedMobile = isMobileDevice();
+  const [useErgoPay, setUseErgoPay] = useState(false);
+  const isMobile = detectedMobile || useErgoPay;
   const [mobileAddress, setMobileAddress] = useState("");
 
   // Unified step/error across both hooks
@@ -618,6 +620,17 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           <p className="text-xs text-[#8891a5]">
             After minting, list your option for sale from the Portfolio page.
           </p>
+
+          {/* Signing method toggle */}
+          {!detectedMobile && (
+            <button
+              type="button"
+              onClick={() => setUseErgoPay(!useErgoPay)}
+              className="text-xs text-[#8891a5] hover:text-[#c87941] transition-colors"
+            >
+              {useErgoPay ? "Switch to browser wallet (Nautilus)" : "No browser wallet? Use mobile wallet instead"}
+            </button>
+          )}
 
           {/* Mobile wallet address input */}
           {isMobile && (
