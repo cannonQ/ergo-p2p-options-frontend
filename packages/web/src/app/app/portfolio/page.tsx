@@ -935,7 +935,7 @@ export default function PortfolioPage() {
   // ═══════════════════════════════════════════════════════════════
 
   const handleExerciseClick = useCallback(async (box: ContractBox) => {
-    if (!api) return;
+    if (!api && walletType !== "ergopay") return;
 
     try {
       // Get option token ID from reserve box R7
@@ -1051,8 +1051,13 @@ export default function PortfolioPage() {
     // 5. Get wallet UTXOs, separate option token boxes from payment boxes
     const r7hex = regs.R7;
     const optionTokenId = r7hex.startsWith("0e20") ? r7hex.slice(4) : "";
-    const rawUtxos = await getWalletUtxos(api);
-    const allBoxes = rawUtxos.map(nautilusBoxToFleet);
+    let allBoxes: any[];
+    if (walletType === "ergopay" && walletAddr) {
+      allBoxes = await fetchWalletBoxes(walletAddr);
+    } else {
+      const rawUtxos = await getWalletUtxos(api);
+      allBoxes = rawUtxos.map(nautilusBoxToFleet);
+    }
 
     const optionTokenBoxes = allBoxes.filter((b: any) =>
       b.assets.some((a: any) => a.tokenId === optionTokenId)
@@ -1069,7 +1074,7 @@ export default function PortfolioPage() {
       throw new Error("No option tokens found in wallet — you may have already exercised this position. Refresh the page.");
     }
 
-    const walletErgoTree = rawUtxos[0]?.ergoTree;
+    const walletErgoTree = allBoxes[0]?.ergoTree;
     if (!walletErgoTree) throw new Error("No wallet UTXOs found");
 
     let height = await fetchHeight();
@@ -1166,6 +1171,25 @@ export default function PortfolioPage() {
     console.log("[Exercise] TX built successfully, converting to EIP-12...");
     const eip12Tx = unsignedTx.toEIP12Object();
     console.log("[Exercise] EIP-12 TX:", JSON.stringify(eip12Tx, (_, v) => typeof v === 'bigint' ? v.toString() : v).slice(0, 500));
+
+    if (walletType === "ergopay" && walletAddr) {
+      console.log("[Exercise] Preparing ErgoPay signing...");
+      const { ergoPayUrl, requestId } = await prepareErgoPayTx(
+        eip12Tx, walletAddr, `Etcha: Exercise ${box.name}`,
+      );
+      return new Promise<string>((resolve) => {
+        setErgoPayModal({
+          url: ergoPayUrl, requestId,
+          message: `Exercise: ${box.name}`,
+          onSigned: (txId) => {
+            setErgoPayModal(null);
+            console.log("[Exercise] ErgoPay TX signed:", txId);
+            setTimeout(() => loadTokens(), 5000);
+            resolve(txId);
+          },
+        });
+      });
+    }
 
     console.log("[Exercise] Requesting Nautilus signature...");
     const signedTx = await signTx(api, eip12Tx);
