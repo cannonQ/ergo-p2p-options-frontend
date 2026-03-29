@@ -54,10 +54,25 @@ export function adaptTxForErgoPay(
     boxId: di.boxId,
   }));
 
-  // Extract outputs — service expects `address` field (accepts ErgoTree hex too)
-  const outputs = (eip12Tx.outputs || []).map((output: any) => ({
+  // Extract ONLY custom outputs — the service adds change + fee automatically.
+  // Filter out: change output (same ErgoTree as first input) and miner fee output.
+  // Miner fee ErgoTree starts with "1005040004000e36100204a00b08cd".
+  // Change output has the same ErgoTree as the wallet (= first input's ErgoTree).
+  const walletErgoTree = eip12Tx.inputs?.[0]?.ergoTree || "";
+
+  const allOutputs = eip12Tx.outputs || [];
+  const customOutputs = allOutputs.filter((output: any) => {
+    const tree = output.ergoTree || "";
+    // Skip miner fee output
+    if (tree.startsWith("1005040004000e36100204a00b08cd")) return false;
+    // Skip change output (matches wallet ErgoTree)
+    if (walletErgoTree && tree === walletErgoTree) return false;
+    return true;
+  });
+
+  const outputs = customOutputs.map((output: any) => ({
     value: String(output.value),
-    address: output.address || output.ergoTree,
+    address: output.ergoTree || output.address,
     assets: (output.assets || []).map((a: any) => ({
       tokenId: a.tokenId,
       amount: String(a.amount),
