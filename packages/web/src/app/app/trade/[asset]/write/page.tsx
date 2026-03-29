@@ -337,7 +337,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
         <h1 className="text-xl font-bold mt-2">Write an Option on {info.name}</h1>
       </div>
 
-      {step === 0 ? (
+      {(isErgoPay ? ergoPay.step <= 1 : step === 0) ? (
         <div className="bg-[#12151c] border border-[#1e2330] rounded-lg p-6 space-y-5">
           {/* Row 1: Type + Style */}
           <div className="grid grid-cols-2 gap-6">
@@ -631,6 +631,13 @@ export default function WritePage({ params }: { params: { asset: string } }) {
               ? "A QR code will appear for you to scan with your Ergo wallet app."
               : "You sign once. Our bot handles the rest in ~1 minute."}
           </p>
+
+          {/* ErgoPay error display */}
+          {isErgoPay && ergoPay.error && (
+            <div className="bg-[#2a1215] border border-[#4d1a1e] rounded-lg px-4 py-3 text-sm text-[#f87171]">
+              {ergoPay.error}
+            </div>
+          )}
 
           {/* ErgoPay modal for mobile signing */}
           {ergoPay.ergoPayUrl && ergoPay.ergoPayRequestId && (

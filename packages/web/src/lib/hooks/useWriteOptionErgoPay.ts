@@ -243,6 +243,7 @@ export function useWriteOptionErgoPay(): WriteOptionErgoPayResult {
       // Now waiting for wallet to scan + sign (ErgoPayModal handles polling)
 
     } catch (err: any) {
+      console.error("[ErgoPay Write] Error:", err);
       setError(err?.message || String(err));
       executingRef.current = false;
     }
