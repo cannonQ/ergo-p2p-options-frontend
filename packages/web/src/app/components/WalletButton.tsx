@@ -57,7 +57,7 @@ export function WalletButton() {
               .then(data => {
                 if (data?.boxes) {
                   const totalNano = data.boxes.reduce((sum: number, b: any) => sum + Number(b.value || 0), 0);
-                  setErgBalance((totalNano / 1e9).toFixed(2));
+                  setErgBalance(String(totalNano));
                 }
               })
               .catch(() => {});
@@ -160,7 +160,7 @@ export function WalletButton() {
               if (balRes.ok) {
                 const { boxes } = await balRes.json();
                 const totalNano = (boxes || []).reduce((sum: number, b: any) => sum + Number(b.value || 0), 0);
-                setErgBalance((totalNano / 1e9).toFixed(2));
+                setErgBalance(String(totalNano));
               }
             } catch { /* non-critical */ }
           } else if (status.status === "expired") {
