@@ -15,7 +15,7 @@ interface DetectedWallet {
 }
 
 export function WalletButton() {
-  const { connected, address, setConnected, setAddress, setApi, setErgBalance, disconnect } = useWalletStore();
+  const { connected, address, setConnected, setAddress, setApi, setErgBalance, setWalletType, disconnect } = useWalletStore();
   const { toast } = useToast();
   const [connecting, setConnecting] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -94,6 +94,7 @@ export function WalletButton() {
       setAddress(addr);
       setApi(api);
       setErgBalance(balance);
+      setWalletType("nautilus");
       localStorage.setItem("etcha_last_wallet", walletId);
     } catch (err: any) {
       console.error("Wallet connect error:", err);
@@ -101,7 +102,7 @@ export function WalletButton() {
     } finally {
       setConnecting(false);
     }
-  }, [setConnected, setAddress, setApi, setErgBalance, toast]);
+  }, [setConnected, setAddress, setApi, setErgBalance, setWalletType, toast]);
 
   const connectViaErgoPay = useCallback(async () => {
     try {
@@ -124,12 +125,22 @@ export function WalletButton() {
             if (ergoPayPollRef.current) clearInterval(ergoPayPollRef.current);
             ergoPayPollRef.current = null;
             setErgoPayQr(null);
+            const walletAddr = status.txId; // the address
             setConnected(true);
-            setAddress(status.txId); // the address
-            setErgBalance("0"); // unknown via ErgoPay
+            setAddress(walletAddr);
+            setWalletType("ergopay");
             localStorage.setItem("etcha_last_wallet", "ergopay");
-            localStorage.setItem("etcha_ergopay_address", status.txId);
+            localStorage.setItem("etcha_ergopay_address", walletAddr);
             setConnecting(false);
+            // Fetch balance from Explorer
+            try {
+              const balRes = await fetch(`https://api.ergoplatform.com/api/v1/addresses/${walletAddr}/balance/total`);
+              if (balRes.ok) {
+                const balData = await balRes.json();
+                const nanoErg = balData.confirmed?.nanoErgs ?? 0;
+                setErgBalance((nanoErg / 1e9).toFixed(2));
+              }
+            } catch { /* non-critical */ }
           } else if (status.status === "expired") {
             if (ergoPayPollRef.current) clearInterval(ergoPayPollRef.current);
             ergoPayPollRef.current = null;

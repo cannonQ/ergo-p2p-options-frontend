@@ -26,7 +26,7 @@ import { TxStatus } from "@/app/components/TxStatus";
 import { ErgoPayModal } from "@/app/components/ErgoPayModal";
 import { fetchHeight } from "@/lib/api";
 import { useToast } from "@/app/components/Toast";
-import { isMobileDevice } from "@/lib/ergopay";
+import { useWalletStore } from "@/stores/wallet-store";
 
 /** Safe Number→BigInt: guards against Infinity, NaN, and precision loss beyond 2^53 */
 function safeToBigInt(n: number): bigint {
@@ -106,16 +106,14 @@ export default function WritePage({ params }: { params: { asset: string } }) {
 
   // ErgoPay hook for mobile wallet signing
   const ergoPay = useWriteOptionErgoPay();
-  const detectedMobile = isMobileDevice();
-  const [useErgoPay, setUseErgoPay] = useState(false);
-  const isMobile = detectedMobile || useErgoPay;
-  const [mobileAddress, setMobileAddress] = useState("");
+  const { walletType, address: walletAddress } = useWalletStore();
+  const isErgoPay = walletType === "ergopay";
 
   // Unified step/error across both hooks
-  const activeStep = isMobile ? ergoPay.step : step;
-  const activeError = isMobile ? ergoPay.error : writeError;
-  const activeWarning = isMobile ? ergoPay.warning : writeWarning;
-  const activeTxIds = isMobile ? ergoPay.txIds : txIds;
+  const activeStep = isErgoPay ? ergoPay.step : step;
+  const activeError = isErgoPay ? ergoPay.error : writeError;
+  const activeWarning = isErgoPay ? ergoPay.warning : writeWarning;
+  const activeTxIds = isErgoPay ? ergoPay.txIds : txIds;
 
   // Fetch oracle data client-side (spot price + volatility)
   const [spotPrice, setSpotPrice] = useState(0);
@@ -296,14 +294,14 @@ export default function WritePage({ params }: { params: { asset: string } }) {
       dAppUIFeeTree: DAPP_UI_FEE_TREE,
     };
 
-    if (isMobile && mobileAddress) {
-      await ergoPay.execute(input, mobileAddress);
+    if (isErgoPay && walletAddress) {
+      await ergoPay.execute(input, walletAddress);
     } else {
       await executeWrite(input);
     }
   }, [
-    isMobile,
-    mobileAddress,
+    isErgoPay,
+    walletAddress,
     optionType,
     style,
     settlement,
@@ -621,41 +619,15 @@ export default function WritePage({ params }: { params: { asset: string } }) {
             After minting, list your option for sale from the Portfolio page.
           </p>
 
-          {/* Signing method toggle */}
-          {!detectedMobile && (
-            <button
-              type="button"
-              onClick={() => setUseErgoPay(!useErgoPay)}
-              className="text-xs text-[#8891a5] hover:text-[#c87941] transition-colors"
-            >
-              {useErgoPay ? "Switch to browser wallet (Nautilus)" : "No browser wallet? Use mobile wallet instead"}
-            </button>
-          )}
-
-          {/* Mobile wallet address input */}
-          {isMobile && (
-            <div className="space-y-2">
-              <label className="text-sm text-[#8891a5]">Your Ergo Address</label>
-              <input
-                type="text"
-                value={mobileAddress}
-                onChange={(e) => setMobileAddress(e.target.value.trim())}
-                placeholder="Paste your Ergo address from your wallet app"
-                className="w-full px-3 py-2 bg-[#0a0c10] border border-[#1e2330] rounded-lg text-[#e8eaf0] font-mono text-xs focus:border-[#c87941] outline-none"
-                aria-label="Ergo wallet address"
-              />
-            </div>
-          )}
-
           {/* Submit */}
           <button
             onClick={handleWrite}
             className="w-full py-3 bg-[#c87941] text-white rounded-lg font-medium hover:bg-[#2563eb] transition-colors disabled:opacity-50"
-            disabled={!strike || contracts <= 0 || cSize <= 0 || activeStep > 0 || (isMobile && !mobileAddress)}>
-            {activeStep > 0 ? "Submitting..." : isMobile ? "Sign with Mobile Wallet" : "Lock Collateral & Mint"}
+            disabled={!strike || contracts <= 0 || cSize <= 0 || activeStep > 0}>
+            {activeStep > 0 ? "Submitting..." : isErgoPay ? "Sign with Mobile Wallet" : "Lock Collateral & Mint"}
           </button>
           <p className="text-xs text-[#8891a5] text-center">
-            {isMobile
+            {isErgoPay
               ? "A QR code will appear for you to scan with your Ergo wallet app."
               : "You sign once. Our bot handles the rest in ~1 minute."}
           </p>
@@ -682,7 +654,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           {[
             {
               label: "Create Definition Box",
-              desc: activeStep === 1 ? (isMobile ? "Sign with mobile wallet" : "Sign with Nautilus") : "Collateral locked at contract address",
+              desc: activeStep === 1 ? (isErgoPay ? "Sign with mobile wallet" : "Sign with Nautilus") : "Collateral locked at contract address",
               num: 1,
               isUserAction: true,
             },
