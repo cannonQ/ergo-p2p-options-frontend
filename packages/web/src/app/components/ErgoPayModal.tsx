@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { pollErgoPayTxStatus, isMobileDevice, type ErgoPayTxStatus } from "@/lib/ergopay";
 
@@ -65,11 +66,11 @@ export function ErgoPayModal({
     };
   }, [open, requestId, onSigned, onExpired]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden="true" />
+  return createPortal(
+    <div style={{ position: "fixed", inset: 0, zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)" }} onClick={onClose} aria-hidden="true" />
       <div
         role="dialog"
         aria-modal="true"
@@ -172,6 +173,7 @@ export function ErgoPayModal({
           {state === "waiting" ? "Cancel" : "Close"}
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

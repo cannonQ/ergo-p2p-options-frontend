@@ -18,11 +18,13 @@ export function isMobileDevice(): boolean {
 
 // ── In-memory request store (server-side, per-instance) ─────────
 
-// For MVP we use Next.js API route memory. In production, use Redis or DB.
-const requestStore = new Map<
-  string,
-  { status: string; txId?: string; createdAt: number }
->();
+// Use global to survive Next.js dev mode module reloads.
+// In production, use Redis or DB.
+const globalStore = globalThis as any;
+if (!globalStore.__ergoPayRequests) {
+  globalStore.__ergoPayRequests = new Map<string, { status: string; txId?: string; createdAt: number }>();
+}
+const requestStore: Map<string, { status: string; txId?: string; createdAt: number }> = globalStore.__ergoPayRequests;
 
 export function storeRequest(requestId: string) {
   requestStore.set(requestId, { status: "pending", createdAt: Date.now() });
