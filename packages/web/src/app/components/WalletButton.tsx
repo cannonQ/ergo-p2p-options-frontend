@@ -132,13 +132,13 @@ export function WalletButton() {
             localStorage.setItem("etcha_last_wallet", "ergopay");
             localStorage.setItem("etcha_ergopay_address", walletAddr);
             setConnecting(false);
-            // Fetch balance from Explorer
+            // Fetch balance via our API proxy (Explorer has CORS restrictions)
             try {
-              const balRes = await fetch(`https://api.ergoplatform.com/api/v1/addresses/${walletAddr}/balance/total`);
+              const balRes = await fetch(`/api/boxes?address=${walletAddr}`);
               if (balRes.ok) {
-                const balData = await balRes.json();
-                const nanoErg = balData.confirmed?.nanoErgs ?? 0;
-                setErgBalance((nanoErg / 1e9).toFixed(2));
+                const { boxes } = await balRes.json();
+                const totalNano = (boxes || []).reduce((sum: number, b: any) => sum + Number(b.value || 0), 0);
+                setErgBalance((totalNano / 1e9).toFixed(2));
               }
             } catch { /* non-critical */ }
           } else if (status.status === "expired") {

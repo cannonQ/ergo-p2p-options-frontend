@@ -83,8 +83,8 @@ export async function requestErgoPayTx(params: {
   const host = window.location.origin;
   const replyTo = `${host}/api/ergopay/callback/${requestId}`;
 
-  // POST to ergopay.duckdns.org reduction service
-  const res = await fetch(`${ERGOPAY_SERVICE}/api/v1/reducedTx`, {
+  // POST via our proxy (avoids CORS with ergopay.duckdns.org)
+  const res = await fetch("/api/ergopay/reduce", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

@@ -56,14 +56,12 @@ export interface WriteOptionErgoPayResult {
   reset: () => void;
 }
 
-/** Fetch UTXOs from Explorer API (replaces Nautilus getWalletUtxos) */
+/** Fetch UTXOs via our API proxy (Explorer has CORS restrictions) */
 async function fetchExplorerUtxos(address: string): Promise<any[]> {
-  const res = await fetch(
-    `${EXPLORER_API}/boxes/unspent/byAddress/${address}?limit=50&sortBy=value&sortDirection=desc`,
-  );
-  if (!res.ok) throw new Error("Failed to fetch wallet UTXOs from Explorer");
+  const res = await fetch(`/api/boxes?address=${address}`);
+  if (!res.ok) throw new Error("Failed to fetch wallet UTXOs");
   const data = await res.json();
-  return (data.items || []).map((b: any) => ({
+  return (data.boxes || []).map((b: any) => ({
     boxId: b.boxId,
     transactionId: b.transactionId,
     index: b.index,
