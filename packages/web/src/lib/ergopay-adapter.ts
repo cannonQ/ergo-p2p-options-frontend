@@ -54,11 +54,10 @@ export function adaptTxForErgoPay(
     boxId: di.boxId,
   }));
 
-  // Extract outputs — keep full structure but normalize values to strings
+  // Extract outputs — service expects `address` field (accepts ErgoTree hex too)
   const outputs = (eip12Tx.outputs || []).map((output: any) => ({
     value: String(output.value),
-    ...(output.ergoTree ? { ergoTree: output.ergoTree } : {}),
-    ...(output.address ? { address: output.address } : {}),
+    address: output.address || output.ergoTree,
     assets: (output.assets || []).map((a: any) => ({
       tokenId: a.tokenId,
       amount: String(a.amount),
