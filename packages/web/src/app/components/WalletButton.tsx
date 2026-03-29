@@ -251,7 +251,7 @@ export function WalletButton() {
 
   // Connect button + wallet picker (always includes ErgoPay option)
   return (
-    <div className="relative">
+    <><div className="relative">
       <button
         onClick={async () => {
           if (showMenu) { setShowMenu(false); return; }
@@ -301,42 +301,44 @@ export function WalletButton() {
         </div>
       )}
 
-      {/* ErgoPay QR connect modal */}
-      {ergoPayQr && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/60" onClick={() => {
-            if (ergoPayPollRef.current) clearInterval(ergoPayPollRef.current);
-            setErgoPayQr(null);
-            setConnecting(false);
-          }} />
-          <div className="relative bg-[#12151c] border border-[#1e2330] rounded-xl shadow-2xl w-full max-w-sm p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-[#e8eaf0]">Connect Mobile Wallet</h2>
-              <button
-                onClick={() => {
-                  if (ergoPayPollRef.current) clearInterval(ergoPayPollRef.current);
-                  setErgoPayQr(null);
-                  setConnecting(false);
-                }}
-                className="text-[#8891a5] hover:text-[#e8eaf0] text-xl"
-                aria-label="Close"
-              >&times;</button>
-            </div>
-            <p className="text-sm text-[#8891a5]">
-              Scan this QR code with your Ergo mobile wallet (Terminus or Minotaur) to connect.
-            </p>
-            <div className="flex justify-center">
-              <div className="bg-white rounded-xl p-4">
-                <QRCodeSVG value={ergoPayQr.url} size={200} level="M" />
-              </div>
-            </div>
-            <div className="flex items-center justify-center gap-2 text-[#8891a5] text-sm">
-              <div className="w-4 h-4 border-2 border-[#c87941] border-t-transparent rounded-full animate-spin" />
-              <span>Waiting for wallet...</span>
+    </div>
+
+    {/* ErgoPay QR connect modal — rendered outside the relative container */}
+    {ergoPayQr && (
+      <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.7)" }} onClick={() => {
+          if (ergoPayPollRef.current) clearInterval(ergoPayPollRef.current);
+          setErgoPayQr(null);
+          setConnecting(false);
+        }} />
+        <div style={{ position: "relative", zIndex: 1 }} className="bg-[#12151c] border border-[#1e2330] rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-[#e8eaf0]">Connect Mobile Wallet</h2>
+            <button
+              onClick={() => {
+                if (ergoPayPollRef.current) clearInterval(ergoPayPollRef.current);
+                setErgoPayQr(null);
+                setConnecting(false);
+              }}
+              className="text-[#8891a5] hover:text-[#e8eaf0] text-xl"
+              aria-label="Close"
+            >&times;</button>
+          </div>
+          <p className="text-sm text-[#8891a5]">
+            Scan this QR code with your Ergo mobile wallet (Terminus or Minotaur) to connect.
+          </p>
+          <div className="flex justify-center">
+            <div className="bg-white rounded-xl p-4">
+              <QRCodeSVG value={ergoPayQr.url} size={220} level="M" />
             </div>
           </div>
+          <div className="flex items-center justify-center gap-2 text-[#8891a5] text-sm">
+            <div className="w-4 h-4 border-2 border-[#c87941] border-t-transparent rounded-full animate-spin" />
+            <span>Waiting for wallet...</span>
+          </div>
         </div>
-      )}
-    </div>
+      </div>
+    )}
+    </>
   );
 }
