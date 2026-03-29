@@ -41,10 +41,30 @@ export function WalletButton() {
       setWallets(detected);
 
       // Auto-reconnect if we had a previous session
-      // Nautilus remembers approved dApps — connect() auto-approves silently
       if (!connected) {
         const lastWallet = localStorage.getItem("etcha_last_wallet");
-        if (lastWallet) {
+
+        // ErgoPay auto-reconnect: restore address from localStorage
+        if (lastWallet === "ergopay") {
+          const savedAddr = localStorage.getItem("etcha_ergopay_address");
+          if (savedAddr) {
+            setConnected(true);
+            setAddress(savedAddr);
+            setWalletType("ergopay");
+            // Fetch balance
+            try {
+              const balRes = await fetch(`/api/boxes?address=${savedAddr}`);
+              if (balRes.ok) {
+                const { boxes } = await balRes.json();
+                const totalNano = (boxes || []).reduce((sum: number, b: any) => sum + Number(b.value || 0), 0);
+                setErgBalance((totalNano / 1e9).toFixed(2));
+              }
+            } catch { /* non-critical */ }
+          }
+        }
+
+        // Nautilus auto-reconnect: connect() auto-approves silently
+        if (lastWallet && lastWallet !== "ergopay") {
           const connector = (window.ergoConnector as any)?.[lastWallet];
           if (connector && typeof connector.connect === "function") {
             try {
@@ -58,6 +78,7 @@ export function WalletButton() {
                 setAddress(addr);
                 setApi(api);
                 setErgBalance(balance);
+                setWalletType("nautilus");
               }
             } catch {
               // Auto-reconnect failed silently — user can connect manually

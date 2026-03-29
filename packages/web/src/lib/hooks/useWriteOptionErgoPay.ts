@@ -244,7 +244,12 @@ export function useWriteOptionErgoPay(): WriteOptionErgoPayResult {
 
     } catch (err: any) {
       console.error("[ErgoPay Write] Error:", err);
-      setError(err?.message || String(err));
+      let msg = err?.message || String(err);
+      // Make InsufficientInputs errors human-readable
+      if (msg.includes("InsufficientInputs") || msg.includes("Insufficient inputs")) {
+        msg = "Insufficient wallet balance. Check you have enough ERG and tokens for this option.";
+      }
+      setError(msg);
       executingRef.current = false;
     }
   }, []);

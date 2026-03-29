@@ -229,7 +229,7 @@ interface HoldingPosition {
 }
 
 export default function PortfolioPage() {
-  const { connected, address: _address, api, ergBalance } = useWalletStore();
+  const { connected, address: walletAddr, api, ergBalance, walletType } = useWalletStore();
   const { toast } = useToast();
   const [tokens, setTokens] = useState<WalletToken[]>([]);
   const [holdings, setHoldings] = useState<HoldingPosition[]>([]);
@@ -271,7 +271,8 @@ export default function PortfolioPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadTokens = useCallback(async () => {
-    if (!api) return;
+    if (!api && walletType !== "ergopay") return;
+    if (walletType === "ergopay" && !walletAddr) return;
     setLoading(true);
     setLoadError(null);
     try {
@@ -281,8 +282,17 @@ export default function PortfolioPage() {
         if (h > 0) setCurrentHeight(h);
       } catch { /* ignore — height is non-critical */ }
 
-      const utxos = await api.get_utxos();
-      if (!utxos) { setLoading(false); return; }
+      // Fetch UTXOs — either from Nautilus API or node for ErgoPay
+      let utxos: any[];
+      if (walletType === "ergopay" && walletAddr) {
+        const boxRes = await fetch(`/api/boxes?address=${walletAddr}`);
+        if (!boxRes.ok) throw new Error("Failed to fetch wallet boxes");
+        const { boxes } = await boxRes.json();
+        utxos = boxes || [];
+      } else {
+        utxos = await api.get_utxos();
+      }
+      if (!utxos || utxos.length === 0) { setLoading(false); return; }
 
       const tokenMap = new Map<string, bigint>();
       for (const utxo of utxos) {
@@ -365,11 +375,15 @@ export default function PortfolioPage() {
       // Also scan contract address for boxes belonging to this wallet
       try {
         // Try all wallet addresses + all UTXOs to find EC points
-        const addrs = await api.get_used_addresses();
+        let addrs: string[] = [];
+        if (walletType === "ergopay" && walletAddr) {
+          addrs = [walletAddr];
+        } else if (api) {
+          addrs = await api.get_used_addresses();
+        }
         const allECPoints = new Set<string>();
 
         // Get EC point for each wallet address via node API
-        // Ergo P2PK addresses decode to a raw 33-byte public key
         for (const addr of (addrs || []).slice(0, 5)) {
           try {
             const rawRes = await fetch(`/api/address-to-raw?address=${addr}`);
@@ -429,15 +443,15 @@ export default function PortfolioPage() {
     } finally {
       setLoading(false);
     }
-  }, [api]);
+  }, [api, walletType, walletAddr]);
 
   useEffect(() => {
-    if (connected && api) {
+    if (connected && (api || walletType === "ergopay")) {
       loadTokens();
       const interval = setInterval(loadTokens, 120_000);
       return () => clearInterval(interval);
     }
-  }, [connected, api, loadTokens]);
+  }, [connected, api, walletType, loadTokens]);
 
   // ═══════════════════════════════════════════════════════════════
   // TX FLOW: List for Sale
