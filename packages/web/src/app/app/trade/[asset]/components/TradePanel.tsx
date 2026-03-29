@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useWalletStore } from "@/stores/wallet-store";
 import type { ParsedSellOrder } from "@/lib/sell-order-scanner";
 import { TxStatus } from "@/app/components/TxStatus";
+import { ErgoPayModal } from "@/app/components/ErgoPayModal";
+import { prepareErgoPayTx, fetchWalletBoxes } from "@/lib/ergopay-sign";
 import { REGISTRY_RATES, ORACLE_DECIMAL } from "@ergo-options/core";
 
 interface TradePanelProps {
@@ -51,6 +53,7 @@ export function TradePanel({
   const [slippage, setSlippage] = useState<string>("1.0");
   const [status, setStatus] = useState<string>("");
   const [txId, setTxId] = useState<string>("");
+  const [ergoPayData, setErgoPayData] = useState<{ url: string; requestId: string } | null>(null);
 
   // Derive stablecoin info from sell order
   const coin = sellOrder ? stablecoinName(sellOrder.paymentTokenId) : "USE";
@@ -117,7 +120,8 @@ export function TradePanel({
       setStatus("No sell order available");
       return;
     }
-    if (!connected || !api) {
+    const { walletType, address: walletAddress } = useWalletStore.getState();
+    if (!connected || (!api && walletType !== "ergopay")) {
       setStatus("Connect wallet first");
       return;
     }
@@ -135,14 +139,20 @@ export function TradePanel({
       const nodeBox = await boxRes.json();
 
       // 2. Get buyer's wallet UTXOs
-      const { getWalletUtxos } = await import("@/lib/wallet");
       const { nautilusBoxToFleet, nodeBoxToFleet } = await import("@/lib/box-utils");
-      const rawUtxos = await getWalletUtxos(api);
-      const buyerBoxes = rawUtxos.map(nautilusBoxToFleet);
+      let buyerBoxes: any[];
+      let walletErgoTree: string;
+      if (walletType === "ergopay" && walletAddress) {
+        buyerBoxes = await fetchWalletBoxes(walletAddress);
+        walletErgoTree = buyerBoxes[0]?.ergoTree || "";
+      } else {
+        const { getWalletUtxos } = await import("@/lib/wallet");
+        const rawUtxos = await getWalletUtxos(api);
+        buyerBoxes = rawUtxos.map(nautilusBoxToFleet);
+        walletErgoTree = rawUtxos[0]?.ergoTree;
+      }
       const sellBoxFleet = nodeBoxToFleet(nodeBox);
 
-      // 3. Get wallet change address ErgoTree
-      const walletErgoTree = rawUtxos[0]?.ergoTree;
       if (!walletErgoTree) throw new Error("No wallet UTXOs found");
 
       // 4. Get current height (must be >= max creationHeight of all inputs)
@@ -210,20 +220,29 @@ export function TradePanel({
         height,
       );
 
-      // 8. Sign via Nautilus
-      setStatus("Sign in wallet...");
+      // 8. Sign
       const eip12Tx = unsignedTx.toEIP12Object();
-      const { signTx } = await import("@/lib/wallet");
-      const signedTx = await signTx(api, eip12Tx);
 
-      // 9. Submit
-      setStatus("Submitting...");
-      const { submitTransaction } = await import("@/lib/api");
-      const submittedTxId = await submitTransaction(signedTx);
+      if (walletType === "ergopay" && walletAddress) {
+        setStatus("Scan QR to sign...");
+        const { ergoPayUrl, requestId } = await prepareErgoPayTx(
+          eip12Tx, walletAddress, `Etcha: Buy ${assetName} option`,
+        );
+        setErgoPayData({ url: ergoPayUrl, requestId });
+      } else {
+        setStatus("Sign in wallet...");
+        const { signTx } = await import("@/lib/wallet");
+        const signedTx = await signTx(api, eip12Tx);
 
-      setTxId(submittedTxId);
-      setStatus("Success!");
-      console.log("Buy TX submitted:", submittedTxId);
+        // 9. Submit
+        setStatus("Submitting...");
+        const { submitTransaction } = await import("@/lib/api");
+        const submittedTxId = await submitTransaction(signedTx);
+
+        setTxId(submittedTxId);
+        setStatus("Success!");
+        console.log("Buy TX submitted:", submittedTxId);
+      }
     } catch (err: any) {
       const msg = err?.message || String(err);
       console.error("Buy TX failed:", err);
@@ -408,6 +427,23 @@ export function TradePanel({
 
           {/* Status / TX ID */}
           <TxStatus status={status} txId={txId} />
+
+          {/* ErgoPay signing modal */}
+          {ergoPayData && (
+            <ErgoPayModal
+              open={!!ergoPayData}
+              onClose={() => { setErgoPayData(null); setStatus(""); }}
+              ergoPayUrl={ergoPayData.url}
+              requestId={ergoPayData.requestId}
+              message={`Buy ${assetName} option`}
+              onSigned={(signedTxId) => {
+                setErgoPayData(null);
+                setTxId(signedTxId);
+                setStatus("Success!");
+              }}
+              onExpired={() => { setErgoPayData(null); setStatus("Signing expired"); }}
+            />
+          )}
 
           {/* Spot price footer */}
           <div className="text-center text-xs text-[#8891a5]">

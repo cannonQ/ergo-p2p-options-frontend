@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import { useWalletStore } from "@/stores/wallet-store";
 import { SkeletonRow } from "@/app/components/Skeleton";
 import { useToast } from "@/app/components/Toast";
+import { ErgoPayModal } from "@/app/components/ErgoPayModal";
+import { prepareErgoPayTx, fetchWalletBoxes } from "@/lib/ergopay-sign";
 import {
   USE_TOKEN_ID,
   SIGUSD_TOKEN_ID,
@@ -267,6 +269,14 @@ export default function PortfolioPage() {
   // Success banner for actions that remove the row (close, cancel)
   const [successBanner, setSuccessBanner] = useState<{ message: string; txId: string } | null>(null);
 
+  // ErgoPay signing modal state (shared across all TX flows)
+  const [ergoPayModal, setErgoPayModal] = useState<{
+    url: string;
+    requestId: string;
+    message: string;
+    onSigned: (txId: string) => void;
+  } | null>(null);
+
   // Error state for failed data loading
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -526,7 +536,8 @@ export default function PortfolioPage() {
     premiumPerToken: bigint;
     tokenAmount: bigint;
   }) => {
-    if (!api || !sellModalBox) throw new Error("Wallet not connected");
+    if (!sellModalBox) throw new Error("No option selected");
+    if (!api && walletType !== "ergopay") throw new Error("Wallet not connected");
 
     // Dynamically import Fleet SDK (only needed for TX building)
     const { OutputBuilder, TransactionBuilder } = await import("@fleet-sdk/core");
@@ -545,9 +556,17 @@ export default function PortfolioPage() {
     }
     const optionTokenId = r7hex.slice(4);
 
-    // Get wallet ErgoTree for change address and seller SigmaProp
-    const rawUtxos = await getWalletUtxos(api);
-    const fleetBoxes = rawUtxos.map(nautilusBoxToFleet);
+    // Get wallet UTXOs
+    let fleetBoxes: any[];
+    let walletErgoTree: string;
+    if (walletType === "ergopay" && walletAddr) {
+      fleetBoxes = await fetchWalletBoxes(walletAddr);
+      walletErgoTree = fleetBoxes[0]?.ergoTree || "";
+    } else {
+      const rawUtxos = await getWalletUtxos(api);
+      fleetBoxes = rawUtxos.map(nautilusBoxToFleet);
+      walletErgoTree = rawUtxos[0].ergoTree;
+    }
 
     // Find boxes containing the option token
     const tokenBoxes = fleetBoxes.filter((b: any) =>
@@ -557,8 +576,6 @@ export default function PortfolioPage() {
       throw new Error("No wallet boxes contain the option token");
     }
 
-    // Use all wallet boxes as potential inputs (Fleet SDK selects what's needed)
-    const walletErgoTree = rawUtxos[0].ergoTree;
     const height = await fetchHeight();
 
     const txFee = MINER_FEE;
@@ -594,23 +611,37 @@ export default function PortfolioPage() {
       .build();
 
     const eip12Tx = unsignedTx.toEIP12Object();
+
+    if (walletType === "ergopay" && walletAddr) {
+      const { ergoPayUrl, requestId } = await prepareErgoPayTx(eip12Tx, walletAddr, "Etcha: List option for sale");
+      return new Promise<string>((resolve, reject) => {
+        setErgoPayModal({
+          url: ergoPayUrl, requestId,
+          message: "List option for sale",
+          onSigned: (txId) => {
+            setErgoPayModal(null);
+            setTimeout(() => loadTokens(), 5000);
+            resolve(txId);
+          },
+        });
+      });
+    }
+
     const signedTx = await signTx(api, eip12Tx);
     const txId = await submitTransaction(signedTx);
 
     console.log("Sell order TX submitted:", txId);
-
-    // Refresh after a short delay
     setTimeout(() => loadTokens(), 5000);
 
     return txId;
-  }, [api, sellModalBox, loadTokens]);
+  }, [api, walletType, walletAddr, sellModalBox, loadTokens]);
 
   // ═══════════════════════════════════════════════════════════════
   // TX FLOW: Reclaim (Refund definition box)
   // ═══════════════════════════════════════════════════════════════
 
   const handleReclaim = useCallback(async (box: ContractBox) => {
-    if (!api) return;
+    if (!api && walletType !== "ergopay") return;
 
     setActionStatus((prev) => ({ ...prev, [box.boxId]: "Preparing..." }));
 
@@ -621,10 +652,15 @@ export default function PortfolioPage() {
       const nodeBox = await fetchBoxById(box.boxId);
       const contractBox = nodeBoxToFleet(nodeBox);
 
-      // Get wallet UTXOs for additional ERG input (to cover miner fee)
-      const rawUtxos = await getWalletUtxos(api);
-      const fleetWalletBoxes = rawUtxos.map(nautilusBoxToFleet);
-      const walletErgoTree = rawUtxos[0].ergoTree;
+      // Get wallet ErgoTree for the refund output
+      let walletErgoTree: string;
+      if (walletType === "ergopay" && walletAddr) {
+        const walletBoxes = await fetchWalletBoxes(walletAddr);
+        walletErgoTree = walletBoxes[0]?.ergoTree || "";
+      } else {
+        const rawUtxos = await getWalletUtxos(api);
+        walletErgoTree = rawUtxos[0].ergoTree;
+      }
 
       const height = await fetchHeight();
       const txFee = MINER_FEE;
@@ -660,25 +696,40 @@ export default function PortfolioPage() {
         .payFee(txFee)
         .build();
 
-      setActionStatus((prev) => ({ ...prev, [box.boxId]: "Sign in wallet..." }));
-
       const eip12Tx = unsignedTx.toEIP12Object();
-      console.log("[Reclaim] EIP-12 TX:", JSON.stringify(eip12Tx, (_, v) => typeof v === 'bigint' ? v.toString() : v).slice(0, 500));
-      const signedTx = await signTx(api, eip12Tx);
-      const txId = await submitTransaction(signedTx);
 
-      setActionStatus((prev) => ({ ...prev, [box.boxId]: `Submitted: ${txId.slice(0, 8)}...` }));
-      setContractBoxes((prev) => prev.filter((b) => b.boxId !== box.boxId));
-      console.log("Reclaim TX submitted:", txId);
-
-      setTimeout(() => {
-        setActionStatus((prev) => {
-          const next = { ...prev };
-          delete next[box.boxId];
-          return next;
+      if (walletType === "ergopay" && walletAddr) {
+        setActionStatus((prev) => ({ ...prev, [box.boxId]: "Scan QR to sign..." }));
+        const { ergoPayUrl, requestId } = await prepareErgoPayTx(eip12Tx, walletAddr, `Etcha: Reclaim collateral`);
+        setErgoPayModal({
+          url: ergoPayUrl, requestId,
+          message: "Reclaim collateral from unminted option",
+          onSigned: (txId) => {
+            setErgoPayModal(null);
+            setContractBoxes((prev) => prev.filter((b) => b.boxId !== box.boxId));
+            setSuccessBanner({ message: "Collateral reclaimed", txId });
+            loadTokens();
+          },
         });
-        loadTokens();
-      }, 10000);
+      } else {
+        setActionStatus((prev) => ({ ...prev, [box.boxId]: "Sign in wallet..." }));
+        console.log("[Reclaim] EIP-12 TX:", JSON.stringify(eip12Tx, (_, v) => typeof v === 'bigint' ? v.toString() : v).slice(0, 500));
+        const signedTx = await signTx(api, eip12Tx);
+        const txId = await submitTransaction(signedTx);
+
+        setActionStatus((prev) => ({ ...prev, [box.boxId]: `Submitted: ${txId.slice(0, 8)}...` }));
+        setContractBoxes((prev) => prev.filter((b) => b.boxId !== box.boxId));
+        console.log("Reclaim TX submitted:", txId);
+
+        setTimeout(() => {
+          setActionStatus((prev) => {
+            const next = { ...prev };
+            delete next[box.boxId];
+            return next;
+          });
+          loadTokens();
+        }, 10000);
+      }
     } catch (err: any) {
       const msg = err?.message || String(err);
       setActionStatus((prev) => ({ ...prev, [box.boxId]: `Error: ${msg.slice(0, 40)}` }));
@@ -698,7 +749,7 @@ export default function PortfolioPage() {
   // ═══════════════════════════════════════════════════════════════
 
   const handleClose = useCallback(async (box: ContractBox) => {
-    if (!api) return;
+    if (!api && walletType !== "ergopay") return;
 
     setActionStatus((prev) => ({ ...prev, [box.boxId]: "Preparing..." }));
 
@@ -757,17 +808,32 @@ export default function PortfolioPage() {
       }
 
       const unsignedTx = builder.build();
-
-      setActionStatus((prev) => ({ ...prev, [box.boxId]: "Sign in wallet..." }));
-
       const eip12Tx = unsignedTx.toEIP12Object();
-      const signedTx = await signTx(api, eip12Tx);
-      const txId = await submitTransaction(signedTx);
 
-      setContractBoxes((prev) => prev.filter((b) => b.boxId !== box.boxId));
-      setSuccessBanner({ message: "Option closed — collateral returned to your wallet", txId });
-      console.log("Close TX submitted:", txId);
-      loadTokens();
+      if (walletType === "ergopay" && walletAddr) {
+        setActionStatus((prev) => ({ ...prev, [box.boxId]: "Scan QR to sign..." }));
+        const { ergoPayUrl, requestId } = await prepareErgoPayTx(eip12Tx, walletAddr, `Etcha: Close expired ${box.name}`);
+        setErgoPayModal({
+          url: ergoPayUrl,
+          requestId,
+          message: `Close expired option: ${box.name}`,
+          onSigned: (txId) => {
+            setErgoPayModal(null);
+            setContractBoxes((prev) => prev.filter((b) => b.boxId !== box.boxId));
+            setSuccessBanner({ message: "Option closed — collateral returned to your wallet", txId });
+            loadTokens();
+          },
+        });
+      } else {
+        setActionStatus((prev) => ({ ...prev, [box.boxId]: "Sign in wallet..." }));
+        const signedTx = await signTx(api, eip12Tx);
+        const txId = await submitTransaction(signedTx);
+
+        setContractBoxes((prev) => prev.filter((b) => b.boxId !== box.boxId));
+        setSuccessBanner({ message: "Option closed — collateral returned to your wallet", txId });
+        console.log("Close TX submitted:", txId);
+        loadTokens();
+      }
     } catch (err: any) {
       const msg = err?.message || String(err);
       setActionStatus((prev) => ({ ...prev, [box.boxId]: `Error: ${msg.slice(0, 40)}` }));
@@ -787,7 +853,7 @@ export default function PortfolioPage() {
   // ═══════════════════════════════════════════════════════════════
 
   const handleCancelSellOrder = useCallback(async (order: ParsedSellOrder) => {
-    if (!api) return;
+    if (!api && walletType !== "ergopay") return;
 
     setActionStatus((prev) => ({ ...prev, [order.boxId]: "Preparing..." }));
 
@@ -799,15 +865,20 @@ export default function PortfolioPage() {
       const sellBox = nodeBoxToFleet(nodeBox);
 
       // Get wallet UTXOs for miner fee
-      const rawUtxos = await getWalletUtxos(api);
-      const fleetWalletBoxes = rawUtxos.map(nautilusBoxToFleet);
-      const walletErgoTree = rawUtxos[0].ergoTree;
+      let fleetWalletBoxes: any[];
+      let walletErgoTree: string;
+      if (walletType === "ergopay" && walletAddr) {
+        fleetWalletBoxes = await fetchWalletBoxes(walletAddr);
+        walletErgoTree = fleetWalletBoxes[0]?.ergoTree || "";
+      } else {
+        const rawUtxos = await getWalletUtxos(api);
+        fleetWalletBoxes = rawUtxos.map(nautilusBoxToFleet);
+        walletErgoTree = rawUtxos[0].ergoTree;
+      }
 
       const height = await fetchHeight();
       const txFee = MINER_FEE;
 
-      // The FixedPriceSell contract allows the seller (R4 SigmaProp) to spend freely.
-      // We simply send all contents (ERG + option tokens) back to the wallet.
       const allInputs = [sellBox, ...fleetWalletBoxes];
 
       const unsignedTx = new TransactionBuilder(height)
@@ -816,16 +887,31 @@ export default function PortfolioPage() {
         .payFee(txFee)
         .build();
 
-      setActionStatus((prev) => ({ ...prev, [order.boxId]: "Sign in wallet..." }));
-
       const eip12Tx = unsignedTx.toEIP12Object();
-      const signedTx = await signTx(api, eip12Tx);
-      const txId = await submitTransaction(signedTx);
 
-      setOpenOrders((prev) => prev.filter((o) => o.boxId !== order.boxId));
-      setSuccessBanner({ message: "Sell order cancelled — tokens returned to your wallet", txId });
-      console.log("Cancel sell order TX submitted:", txId);
-      loadTokens();
+      if (walletType === "ergopay" && walletAddr) {
+        setActionStatus((prev) => ({ ...prev, [order.boxId]: "Scan QR to sign..." }));
+        const { ergoPayUrl, requestId } = await prepareErgoPayTx(eip12Tx, walletAddr, "Etcha: Cancel sell order");
+        setErgoPayModal({
+          url: ergoPayUrl, requestId,
+          message: "Cancel sell order",
+          onSigned: (txId) => {
+            setErgoPayModal(null);
+            setOpenOrders((prev) => prev.filter((o) => o.boxId !== order.boxId));
+            setSuccessBanner({ message: "Sell order cancelled — tokens returned to your wallet", txId });
+            loadTokens();
+          },
+        });
+      } else {
+        setActionStatus((prev) => ({ ...prev, [order.boxId]: "Sign in wallet..." }));
+        const signedTx = await signTx(api, eip12Tx);
+        const txId = await submitTransaction(signedTx);
+
+        setOpenOrders((prev) => prev.filter((o) => o.boxId !== order.boxId));
+        setSuccessBanner({ message: "Sell order cancelled — tokens returned to your wallet", txId });
+        console.log("Cancel sell order TX submitted:", txId);
+        loadTokens();
+      }
     } catch (err: any) {
       const msg = err?.message || String(err);
       if (msg.includes("declined") || msg.includes("Refused")) {
@@ -1153,6 +1239,19 @@ export default function PortfolioPage() {
             Retry
           </button>
         </div>
+      )}
+
+      {/* ErgoPay signing modal (shared across all portfolio TX flows) */}
+      {ergoPayModal && (
+        <ErgoPayModal
+          open={!!ergoPayModal}
+          onClose={() => setErgoPayModal(null)}
+          ergoPayUrl={ergoPayModal.url}
+          requestId={ergoPayModal.requestId}
+          message={ergoPayModal.message}
+          onSigned={ergoPayModal.onSigned}
+          onExpired={() => setErgoPayModal(null)}
+        />
       )}
 
       {/* Active Options (Holding) */}
