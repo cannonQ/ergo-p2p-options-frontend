@@ -386,14 +386,14 @@ export default function HedgingPage() {
               fontFamily="Courier New"
               fontSize="10"
             >
-              Premium: 200 SigUSD · Floor: $0.25
+              Premium: 20 SigUSD · Floor: $0.25
             </text>
           </svg>
         </Graphic>
 
         <p className="section-text">
-          You hold 10,000 ERG at $0.30. You buy a $0.25 put for 200 SigUSD.
-          Your worst case: $500 unrealized loss + 200 premium = $700 maximum.
+          You hold 10,000 ERG at $0.30. You buy a $0.25 put for 20 SigUSD.
+          Your worst case: $500 unrealized loss + 20 premium = $520 maximum.
           Without the put? Unlimited downside if ERG collapses.
         </p>
       </section>

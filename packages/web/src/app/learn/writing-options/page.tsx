@@ -509,7 +509,7 @@ export default function WritingOptionsPage() {
               fontSize="11"
               fontWeight="700"
             >
-              Covered Call: 1000 ERG, $0.35 Strike, 50 SigUSD Premium
+              Covered Call: 1000 ERG, $0.35 Strike, 5 SigUSD Premium
             </text>
 
             {/* Step 0: Buyer must exist */}
@@ -656,7 +656,7 @@ export default function WritingOptionsPage() {
               fontFamily="Courier New"
               fontSize="10"
             >
-              +50 SigUSD ✓
+              +5 SigUSD ✓
             </text>
 
             <text
@@ -674,12 +674,12 @@ export default function WritingOptionsPage() {
         <div className="panels-2col">
           <div className="panel panel-green">
             <div className="p-label">Price stays below $0.35</div>
-            Keep 1,000 ERG + keep 50 SigUSD premium. Option expires worthless.
+            Keep 1,000 ERG + keep 5 SigUSD premium. Option expires worthless.
             Best case for the writer.
           </div>
           <div className="panel panel-amber">
             <div className="p-label">Price rises above $0.35</div>
-            Sell ERG at $0.35 + keep 50 SigUSD. You miss the upside past $0.35.
+            Sell ERG at $0.35 + keep 5 SigUSD. You miss the upside past $0.35.
             Capped, not a loss — amber.
           </div>
         </div>
@@ -716,7 +716,7 @@ export default function WritingOptionsPage() {
               fontSize="11"
               fontWeight="700"
             >
-              Cash-Secured Put: 300 SigUSD, $0.25 Strike, 30 SigUSD Premium
+              Cash-Secured Put: 300 SigUSD, $0.25 Strike, 3 SigUSD Premium
             </text>
 
             <rect
@@ -860,7 +860,7 @@ export default function WritingOptionsPage() {
               fontFamily="Courier New"
               fontSize="10"
             >
-              +30 SigUSD ✓
+              +3 SigUSD ✓
             </text>
 
             <text
@@ -878,12 +878,12 @@ export default function WritingOptionsPage() {
         <div className="panels-2col">
           <div className="panel panel-green">
             <div className="p-label">Price stays above $0.25</div>
-            Keep 300 SigUSD + keep 30 SigUSD premium. Put expires worthless.
+            Keep 300 SigUSD + keep 3 SigUSD premium. Put expires worthless.
             Pure income.
           </div>
           <div className="panel panel-green">
             <div className="p-label">Price drops below $0.25</div>
-            Buy ERG at $0.25 (your target!) + keep 30 SigUSD premium. You wanted
+            Buy ERG at $0.25 (your target!) + keep 3 SigUSD premium. You wanted
             this price anyway.
           </div>
         </div>

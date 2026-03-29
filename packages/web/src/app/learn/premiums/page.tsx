@@ -1007,35 +1007,36 @@ export default function PremiumsPage() {
 
         <div className="worked-example">
           <div className="ex-title">
-            30-Day ERG $0.35 Call — Spot: $0.29
+            30-Day FIRO $0.75 Call — Spot: $0.65 — 100 Contracts
           </div>
 
           <div className="ex-scenario">
             <div className="ex-number">1</div>
             <div className="ex-content">
-              <strong>Intrinsic value: $0.00</strong> — The call is OTM. Strike
-              ($0.35) is above spot ($0.29). You can&apos;t exercise it for
-              profit right now.
+              <strong>Intrinsic value: $0.00</strong> — The call is OTM (out of
+              the money). Strike ($0.75) is above spot ($0.65). You can&apos;t
+              exercise it for profit right now.
             </div>
           </div>
 
           <div className="ex-scenario">
             <div className="ex-number">2</div>
             <div className="ex-content">
-              <strong>Time value: 15 SigUSD</strong> — 30 days until expiry.
-              ERG is volatile. The market prices in the possibility of ERG
-              reaching $0.35+.
+              <strong>Time value: 6 SigUSD</strong> — 30 days until expiry.
+              FIRO is volatile. The market prices in the possibility of FIRO
+              reaching $0.75+.
             </div>
           </div>
 
           <div className="ex-scenario">
             <div className="ex-number">3</div>
             <div className="ex-content">
-              <strong>Total premium: 15 SigUSD</strong> — This is what the
-              writer lists the option for on Etcha{"'"}s marketplace. The pricing
-              tool on Etcha suggests this price; the writer chose to match it.
+              <strong>Total premium: 6 SigUSD</strong> (for 100 contracts) — This
+              is what the writer lists the option for on Etcha{"'"}s marketplace.
+              The pricing tool on Etcha suggests this price; the writer chose to
+              match it.
               <div className="math">
-                Premium = $0.00 intrinsic + 15 SigUSD time value
+                Premium = $0.00 intrinsic + 6 SigUSD time value
               </div>
             </div>
           </div>
@@ -1043,13 +1044,13 @@ export default function PremiumsPage() {
           <div className="ex-scenario">
             <div className="ex-number">4</div>
             <div className="ex-content">
-              At expiry, ERG = $0.50 {"\u2192"}
+              At expiry, FIRO = $0.85 {"\u2192"}
               <div className="math">
-                Profit = ($0.50 − $0.35) × number of contracts − 15 SigUSD
+                Payout = ($0.85 − $0.75) × 100 = 10 SigUSD. Net profit = 10 − 6 = 4 SigUSD
               </div>
-              At expiry, ERG = $0.29 {"\u2192"}
+              At expiry, FIRO = $0.65 {"\u2192"}
               <div className="math loss">
-                Loss = 15 SigUSD (premium). The time value decayed to zero.
+                Loss = 6 SigUSD (premium). The time value decayed to zero.
               </div>
             </div>
           </div>

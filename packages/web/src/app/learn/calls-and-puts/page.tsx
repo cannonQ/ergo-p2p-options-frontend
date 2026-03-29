@@ -385,7 +385,7 @@ export default function CallsAndPutsPage() {
               fontFamily="Courier New"
               fontSize="9"
             >
-              {"15 SigUSD premium \u2192"}
+              {"6 SigUSD premium \u2192"}
             </text>
 
             {/* ARROW: Collateral lock */}
@@ -584,7 +584,7 @@ export default function CallsAndPutsPage() {
               fontSize="10"
               letterSpacing="1"
             >
-              {"ERG Price at Expiry \u2192"}
+              {"FIRO Price at Expiry \u2192"}
             </text>
             <text
               x="200"
@@ -704,7 +704,7 @@ export default function CallsAndPutsPage() {
               fontFamily="Courier New"
               fontSize="10"
             >
-              {"\u2190 buyer max loss: -15 SigUSD (premium)"}
+              {"\u2190 buyer max loss: -6 SigUSD (premium)"}
             </text>
 
             {/* WRITER P&L (amber/red inverse) */}
@@ -735,7 +735,7 @@ export default function CallsAndPutsPage() {
               fontFamily="Courier New"
               fontSize="10"
             >
-              {"\u2190 writer max profit: +15 SigUSD"}
+              {"\u2190 writer max profit: +6 SigUSD"}
             </text>
 
             {/* Legend */}
@@ -778,7 +778,7 @@ export default function CallsAndPutsPage() {
         </Graphic>
 
         <p className="section-text">
-          The buyer{"'"}s maximum loss is always the premium — 15 SigUSD, no
+          The buyer{"'"}s maximum loss is always the premium — 6 SigUSD, no
           more. The writer profits only when the price stays below the strike.
           Past the breakeven point (strike + premium), the buyer is in profit.
         </p>
@@ -868,7 +868,7 @@ export default function CallsAndPutsPage() {
               fontSize="10"
               letterSpacing="1"
             >
-              {"ERG Price at Expiry \u2192"}
+              {"FIRO Price at Expiry \u2192"}
             </text>
             <text
               x="160"
@@ -989,7 +989,7 @@ export default function CallsAndPutsPage() {
               fontFamily="Courier New"
               fontSize="10"
             >
-              {"buyer max loss: -20 SigUSD \u2192"}
+              {"buyer max loss: -6 SigUSD \u2192"}
             </text>
 
             {/* WRITER P&L (amber inverse) */}
@@ -1019,7 +1019,7 @@ export default function CallsAndPutsPage() {
               fontFamily="Courier New"
               fontSize="10"
             >
-              {"\u2190 writer max profit: +20 SigUSD"}
+              {"\u2190 writer max profit: +6 SigUSD"}
             </text>
 
             {/* Max buyer profit annotation */}
@@ -1153,27 +1153,27 @@ export default function CallsAndPutsPage() {
         <h2>A Call Trade on Etcha</h2>
 
         <div className="worked-example">
-          <div className="ex-title">Scenario: ERG $0.35 Call</div>
+          <div className="ex-title">Scenario: FIRO $0.75 Call (Cash-Settled)</div>
 
           <div className="ex-scenario">
             <div className="ex-number">1</div>
             <div className="ex-content">
-              ERG is trading at <strong>$0.29</strong>. You believe it{"'"}s
-              heading higher. You buy a <strong>$0.35 call</strong> on Etcha for{" "}
-              <strong>15 SigUSD</strong> premium.
+              FIRO is trading at <strong>$0.65</strong>. You believe it{"'"}s
+              heading higher. You buy <strong>100 contracts of the $0.75 call</strong> on
+              Etcha for <strong>6 SigUSD</strong> total premium.
             </div>
           </div>
 
           <div className="ex-scenario">
             <div className="ex-number">2</div>
             <div className="ex-content">
-              At expiry, ERG hits <strong>$0.50</strong>. Your option is in the
+              At expiry, FIRO hits <strong>$0.85</strong>. Your option is in the
               money.
               <div className="math">
-                {"Profit = ($0.50 \u2212 $0.35) \u00D7 number of contracts \u2212 15 SigUSD premium"}
+                {"Payout = ($0.85 \u2212 $0.75) \u00D7 100 = 10 SigUSD"}
               </div>
               <div className="math" style={{ marginTop: 2 }}>
-                {"Per-unit gain: $0.15 \u2014 minus 15 SigUSD premium = net profit"}
+                {"Net profit = 10 \u2212 6 = 4 SigUSD"}
               </div>
             </div>
           </div>
@@ -1181,10 +1181,10 @@ export default function CallsAndPutsPage() {
           <div className="ex-scenario">
             <div className="ex-number">3</div>
             <div className="ex-content">
-              Alternatively: ERG stays at <strong>$0.29</strong>. Your call
+              Alternatively: FIRO stays at <strong>$0.65</strong>. Your call
               expires worthless.
               <div className="math loss">
-                Loss = 15 SigUSD (the premium). Nothing more. Ever.
+                Loss = 6 SigUSD (the premium). Nothing more. Ever.
               </div>
             </div>
           </div>
