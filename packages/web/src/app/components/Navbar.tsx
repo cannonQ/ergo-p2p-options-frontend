@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { WalletButton } from "./WalletButton";
 
 const ASSET_CATEGORIES = [
@@ -46,8 +46,54 @@ const ASSET_CATEGORIES = [
   },
 ];
 
+// Flat list of all trade assets for keyboard navigation
+const ALL_ASSETS = ASSET_CATEGORIES.flatMap((cat) => cat.assets);
+
 export function Navbar() {
   const [tradeOpen, setTradeOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [focusIdx, setFocusIdx] = useState(-1);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Reset focus index when menu opens/closes
+  useEffect(() => {
+    if (!tradeOpen) setFocusIdx(-1);
+  }, [tradeOpen]);
+
+  // Scroll focused item into view
+  useEffect(() => {
+    if (focusIdx >= 0 && menuRef.current) {
+      const items = menuRef.current.querySelectorAll<HTMLAnchorElement>("[role='menuitem']");
+      items[focusIdx]?.focus();
+    }
+  }, [focusIdx]);
+
+  const handleMenuKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!tradeOpen) return;
+    const total = ALL_ASSETS.length;
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setFocusIdx((prev) => (prev + 1) % total);
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setFocusIdx((prev) => (prev - 1 + total) % total);
+        break;
+      case "Escape":
+        e.preventDefault();
+        setTradeOpen(false);
+        break;
+      case "Home":
+        e.preventDefault();
+        setFocusIdx(0);
+        break;
+      case "End":
+        e.preventDefault();
+        setFocusIdx(total - 1);
+        break;
+    }
+  }, [tradeOpen]);
 
   return (
     <nav className="border-b border-[#1e2330] bg-[#0a0c10]/85 backdrop-blur-xl sticky top-0 z-50">
@@ -59,7 +105,8 @@ export function Navbar() {
           </span>
         </Link>
 
-        <div className="flex items-center gap-6">
+        {/* Desktop nav */}
+        <div className="hidden md:flex items-center gap-6">
           {/* Trade dropdown */}
           <div
             className="relative"
@@ -67,39 +114,59 @@ export function Navbar() {
           >
             <button
               onClick={() => setTradeOpen(!tradeOpen)}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowDown" && !tradeOpen) {
+                  e.preventDefault();
+                  setTradeOpen(true);
+                  setFocusIdx(0);
+                }
+              }}
               className="text-[#8891a5] hover:text-[#e8eaf0] transition-colors flex items-center gap-1 font-mono text-sm"
+              aria-label="Trade menu"
+              aria-haspopup="menu"
+              aria-expanded={tradeOpen}
             >
               Trade
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
 
             {tradeOpen && (
               <div className="absolute top-full left-0 pt-2 w-72 z-50">
-              <div className="bg-[#0a0c10] border border-[#1e2330] rounded-lg shadow-xl py-1">
-                {ASSET_CATEGORIES.map((cat) => (
-                  <div key={cat.label}>
-                    <div className="px-3 py-2 text-[10px] font-bold text-[#c87941] uppercase tracking-widest border-b border-[#1e2330]/50 bg-[#12151c]">
-                      {cat.label}
+              <div ref={menuRef} onKeyDown={handleMenuKeyDown} className="bg-[#0a0c10] border border-[#1e2330] rounded-lg shadow-xl py-1" role="menu">
+                {(() => {
+                  let idx = 0;
+                  return ASSET_CATEGORIES.map((cat) => (
+                    <div key={cat.label}>
+                      <div className="px-3 py-2 text-[10px] font-bold text-[#c87941] uppercase tracking-widest border-b border-[#1e2330]/50 bg-[#12151c]" role="presentation">
+                        {cat.label}
+                      </div>
+                      {cat.assets.map((asset) => {
+                        const thisIdx = idx++;
+                        return (
+                          <Link
+                            key={asset.slug}
+                            href={`/app/trade/${asset.slug}`}
+                            role="menuitem"
+                            tabIndex={focusIdx === thisIdx ? 0 : -1}
+                            className={`flex items-center justify-between px-4 py-2 text-sm text-[#e8eaf0] transition-colors ${
+                              focusIdx === thisIdx ? "bg-[#1e2330]" : "hover:bg-[#1e2330]"
+                            }`}
+                            onClick={() => setTradeOpen(false)}
+                          >
+                            <span>{asset.name}</span>
+                            {"badge" in asset && asset.badge && (
+                              <span className="text-[9px] px-1.5 py-0.5 bg-[#34d399]/10 text-[#34d399] rounded">
+                                {asset.badge}
+                              </span>
+                            )}
+                          </Link>
+                        );
+                      })}
                     </div>
-                    {cat.assets.map((asset) => (
-                      <Link
-                        key={asset.slug}
-                        href={`/app/trade/${asset.slug}`}
-                        className="flex items-center justify-between px-4 py-2 text-sm text-[#e8eaf0] hover:bg-[#1e2330] transition-colors"
-                        onClick={() => setTradeOpen(false)}
-                      >
-                        <span>{asset.name}</span>
-                        {"badge" in asset && asset.badge && (
-                          <span className="text-[9px] px-1.5 py-0.5 bg-[#34d399]/10 text-[#34d399] rounded">
-                            {asset.badge}
-                          </span>
-                        )}
-                      </Link>
-                    ))}
-                  </div>
-                ))}
+                  ));
+                })()}
               </div>
               </div>
             )}
@@ -119,7 +186,70 @@ export function Navbar() {
 
           <WalletButton />
         </div>
+
+        {/* Mobile: wallet + hamburger */}
+        <div className="flex md:hidden items-center gap-3">
+          <WalletButton />
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="text-[#8891a5] hover:text-[#e8eaf0] p-1"
+            aria-label="Open navigation menu"
+            aria-expanded={mobileOpen}
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              {mobileOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
+        </div>
       </div>
+
+      {/* Mobile menu */}
+      {mobileOpen && (
+        <div className="md:hidden border-t border-[#1e2330] bg-[#0a0c10] px-4 py-4 space-y-3">
+          <Link
+            href="/app"
+            className="block text-[#8891a5] hover:text-[#e8eaf0] font-mono text-sm py-2"
+            onClick={() => setMobileOpen(false)}
+          >
+            Dashboard
+          </Link>
+          <Link
+            href="/app/market"
+            className="block text-[#8891a5] hover:text-[#e8eaf0] font-mono text-sm py-2"
+            onClick={() => setMobileOpen(false)}
+          >
+            Market
+          </Link>
+          <Link
+            href="/app/portfolio"
+            className="block text-[#8891a5] hover:text-[#e8eaf0] font-mono text-sm py-2"
+            onClick={() => setMobileOpen(false)}
+          >
+            Portfolio
+          </Link>
+          <div className="border border-[#c87941]/30 rounded-lg p-3 mt-1 bg-[#c87941]/5">
+            <div className="text-[10px] font-bold text-[#c87941] uppercase tracking-widest mb-2">Trade</div>
+            <div className="grid grid-cols-3 gap-2">
+              {ASSET_CATEGORIES.flatMap((cat) =>
+                cat.assets.map((asset) => (
+                  <Link
+                    key={asset.slug}
+                    href={`/app/trade/${asset.slug}`}
+                    className="text-xs text-[#e8eaf0] hover:text-[#c87941] font-mono py-1"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    {asset.name}
+                  </Link>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { TxStatus } from "@/app/components/TxStatus";
+import { useFocusTrap } from "@/lib/hooks/useFocusTrap";
+import { REGISTRY_RATES, ORACLE_DECIMAL } from "@ergo-options/core";
 
 interface ExerciseDialogProps {
   isOpen: boolean;
@@ -19,6 +21,8 @@ interface ExerciseDialogProps {
   collateralCap?: number;
   stablecoin: "USE" | "SigUSD";
   reserveBoxId: string;
+  contractSize?: number;
+  oracleIndex?: number;
   onExercise: (params: { quantity: number }) => Promise<string>;
 }
 
@@ -38,12 +42,35 @@ export function ExerciseDialog({
   collateralCap,
   stablecoin,
   reserveBoxId: _reserveBoxId,
+  contractSize,
+  oracleIndex,
   onExercise,
 }: ExerciseDialogProps) {
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen);
   const exerciseQty = Number(quantity);
   const [status, setStatus] = useState("");
   const [txId, setTxId] = useState("");
   const stableDecimals = stablecoin === "USE" ? 3 : 2;
+
+  // Compute per-contract delivery amounts using registry rate
+  const cSize = contractSize ?? 1;
+  const rate = oracleIndex !== undefined ? Number(REGISTRY_RATES[oracleIndex] ?? 0n) : 0;
+  const tokensPerContract = rate > 0 ? Math.floor(cSize * rate) : 0;
+  const rateIsPowerOf10 = rate > 0 && Math.log10(rate) === Math.floor(Math.log10(rate));
+  // Strike payment per contract = strikePrice * contractSize (in stablecoin)
+  const strikePerContract = strikePrice * cSize;
+
+  // Format underlying amount for display
+  const formatUnderlying = (contracts: number): string => {
+    const totalTokens = contracts * tokensPerContract;
+    if (rate <= 0) return `${(contracts * cSize).toFixed(cSize < 1 ? 4 : 2)} ${assetUnit}`;
+    if (rateIsPowerOf10) {
+      const human = totalTokens / rate;
+      const d = human >= 100 ? 0 : human >= 1 ? 2 : human >= 0.01 ? 4 : 6;
+      return `${human.toFixed(d)} ${assetUnit}`;
+    }
+    return `${totalTokens} ${assetUnit}`;
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -85,9 +112,12 @@ export function ExerciseDialog({
     if (!canExercise) return;
     try {
       setStatus("Building...");
+      setTxId("");  // Clear any previous state
       const resultTxId = await onExercise({ quantity: exerciseQty });
-      setTxId(resultTxId);
-      setStatus("Success!");
+      if (resultTxId) {
+        setTxId(resultTxId);
+        setStatus("Success!");
+      }
     } catch (err: any) {
       const msg = err?.message || String(err);
       console.error("[ExerciseDialog] Error:", err);
@@ -102,18 +132,18 @@ export function ExerciseDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative bg-[#12151c] border border-[#1e2330] rounded-xl shadow-2xl w-full max-w-md p-6 space-y-5">
+      <div className="absolute inset-0 bg-black/60" onClick={txId ? undefined : onClose} aria-hidden="true" />
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="exercise-title" className="relative bg-[#12151c] border border-[#1e2330] rounded-xl shadow-2xl w-full max-w-md p-6 space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">
+          <h2 id="exercise-title" className="text-lg font-bold">
             Exercise:{" "}
             <span className={accentText}>
               {assetName} {optionType === "call" ? "Call" : "Put"}
             </span>{" "}
             ${strikePrice.toFixed(strikePrice >= 100 ? 0 : strikePrice >= 1 ? 2 : 4)} Strike
           </h2>
-          <button onClick={onClose} className="text-[#8891a5] hover:text-[#e8eaf0] text-xl">&times;</button>
+          <button onClick={onClose} className="text-[#8891a5] hover:text-[#e8eaf0] text-xl" aria-label="Close exercise dialog">&times;</button>
         </div>
 
         {/* Exercise window badge */}
@@ -130,9 +160,9 @@ export function ExerciseDialog({
               <p className="text-[#8891a5]">You will:</p>
               <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 pl-2">
                 <span className="text-[#f87171]">Pay:</span>
-                <span className="text-[#e8eaf0] font-mono">{strikePrice.toFixed(stableDecimals)} {stablecoin} per contract (strike → writer)</span>
+                <span className="text-[#e8eaf0] font-mono">{strikePerContract.toFixed(stableDecimals)} {stablecoin} per contract (strike → writer)</span>
                 <span className="text-[#34d399]">Receive:</span>
-                <span className="text-[#e8eaf0] font-mono">1 {assetUnit} per contract (from reserve)</span>
+                <span className="text-[#e8eaf0] font-mono">{formatUnderlying(1)} per contract (from reserve)</span>
               </div>
             </div>
           )}
@@ -142,9 +172,9 @@ export function ExerciseDialog({
               <p className="text-[#8891a5]">You will:</p>
               <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 pl-2">
                 <span className="text-[#f87171]">Send:</span>
-                <span className="text-[#e8eaf0] font-mono">1 {assetUnit} per contract (to writer)</span>
+                <span className="text-[#e8eaf0] font-mono">{formatUnderlying(1)} per contract (to writer)</span>
                 <span className="text-[#34d399]">Receive:</span>
-                <span className="text-[#e8eaf0] font-mono">{strikePrice.toFixed(stableDecimals)} {stablecoin} per contract (from reserve)</span>
+                <span className="text-[#e8eaf0] font-mono">{strikePerContract.toFixed(stableDecimals)} {stablecoin} per contract (from reserve)</span>
               </div>
             </div>
           )}
@@ -178,11 +208,11 @@ export function ExerciseDialog({
             <>
               <div className="flex justify-between">
                 <span className="text-[#8891a5]">Total payment:</span>
-                <span className="text-[#e8eaf0] font-mono">{(strikePrice * exerciseQty).toFixed(stableDecimals)} {stablecoin}</span>
+                <span className="text-[#e8eaf0] font-mono">{(strikePerContract * exerciseQty).toFixed(stableDecimals)} {stablecoin}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[#8891a5]">Total received:</span>
-                <span className="text-[#34d399] font-mono">{exerciseQty} {assetUnit}</span>
+                <span className="text-[#34d399] font-mono">{formatUnderlying(exerciseQty)}</span>
               </div>
             </>
           )}
@@ -190,11 +220,11 @@ export function ExerciseDialog({
             <>
               <div className="flex justify-between">
                 <span className="text-[#8891a5]">Total sent:</span>
-                <span className="text-[#e8eaf0] font-mono">{exerciseQty} {assetUnit}</span>
+                <span className="text-[#e8eaf0] font-mono">{formatUnderlying(exerciseQty)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[#8891a5]">Total received:</span>
-                <span className="text-[#34d399] font-mono">{(strikePrice * exerciseQty).toFixed(stableDecimals)} {stablecoin}</span>
+                <span className="text-[#34d399] font-mono">{(strikePerContract * exerciseQty).toFixed(stableDecimals)} {stablecoin}</span>
               </div>
             </>
           )}
@@ -209,6 +239,24 @@ export function ExerciseDialog({
             <span className="text-[#8891a5] font-mono">0.0022 ERG</span>
           </div>
         </div>
+
+        {/* Success Summary */}
+        {txId && (
+          <div className="p-3 bg-[#34d399]/10 border border-[#34d399]/30 rounded-lg space-y-1 text-sm">
+            <p className="font-semibold text-[#34d399]">
+              Exercised {exerciseQty} {assetName} {optionType === "call" ? "Call" : "Put"} ${strikePrice >= 100 ? strikePrice.toFixed(0) : strikePrice.toFixed(4)}
+            </p>
+            {settlementType === "physical" && optionType === "call" && (
+              <p className="text-[#e8eaf0]">Paid: {(strikePerContract * exerciseQty).toFixed(stableDecimals)} {stablecoin} &middot; Received: {formatUnderlying(exerciseQty)}</p>
+            )}
+            {settlementType === "physical" && optionType === "put" && (
+              <p className="text-[#e8eaf0]">Sent: {formatUnderlying(exerciseQty)} &middot; Received: {(strikePerContract * exerciseQty).toFixed(stableDecimals)} {stablecoin}</p>
+            )}
+            {settlementType === "cash" && cashProfit > 0 && (
+              <p className="text-[#e8eaf0]">Received: {(cashProfit * exerciseQty).toFixed(stableDecimals)} {stablecoin} profit</p>
+            )}
+          </div>
+        )}
 
         {/* Status */}
         <TxStatus status={status} txId={txId} />

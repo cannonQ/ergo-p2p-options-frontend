@@ -41,19 +41,25 @@ export interface WriteOptionInput {
   dAppUIMintFee: bigint;
   /** dApp UI fee ErgoTree bytes */
   dAppUIFeeTree: Uint8Array;
+  /** V5: Auto-list flag (0 = deliver to wallet, 1 = deliver to sell order) */
+  autoList?: number;
+  /** V5: Premium per token in raw stablecoin units (required when autoList=1) */
+  premiumRaw?: bigint;
 }
 
 export interface WriteOptionResult {
   /** 0=form, 1=signing create, 2=bot minting, 3=bot delivering, 4=done */
   step: number;
   error: string | null;
+  warning: string | null;
   txIds: { create?: string };
   execute: (input: WriteOptionInput) => Promise<void>;
   reset: () => void;
 }
 
 const POLL_INTERVAL_MS = 10_000; // 10 seconds
-const POLL_TIMEOUT_MS = 5 * 60_000; // 5 minutes
+const POLL_TIMEOUT_MS = 15 * 60_000; // 15 minutes
+const POLL_SOFT_WARNING_MS = 5 * 60_000; // 5 minutes — show amber warning
 
 /**
  * Wait for a TX to appear in the mempool or get confirmed.
@@ -177,12 +183,21 @@ async function waitForState(
   targetStates: string[],
   abortSignal: AbortSignal,
   onStateChange?: (state: string) => void,
+  onSoftWarning?: () => void,
 ): Promise<PollResponse> {
-  const deadline = Date.now() + POLL_TIMEOUT_MS;
+  const startTime = Date.now();
+  const deadline = startTime + POLL_TIMEOUT_MS;
+  let softWarningFired = false;
 
   while (Date.now() < deadline) {
     if (abortSignal.aborted) {
       throw new Error("Operation cancelled");
+    }
+
+    // Fire soft warning after 5 minutes
+    if (!softWarningFired && Date.now() - startTime >= POLL_SOFT_WARNING_MS) {
+      softWarningFired = true;
+      onSoftWarning?.();
     }
 
     try {
@@ -211,8 +226,8 @@ async function waitForState(
   }
 
   throw new Error(
-    "Timed out waiting for bot to process the option (5 minutes). " +
-    "Check your portfolio — the definition box may need manual recovery.",
+    "The bot hasn't responded yet. Your collateral is safe — " +
+    "check Portfolio in a few minutes.",
   );
 }
 
@@ -230,6 +245,7 @@ function getContractErgoTree(): string {
 export function useWriteOption(): WriteOptionResult {
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [txIds, setTxIds] = useState<{ create?: string }>({});
   const executingRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -241,6 +257,7 @@ export function useWriteOption(): WriteOptionResult {
     }
     setStep(0);
     setError(null);
+    setWarning(null);
     setTxIds({});
     executingRef.current = false;
   }, []);
@@ -304,6 +321,8 @@ export function useWriteOption(): WriteOptionResult {
         issuerECPoint,
         dAppUIFeeTree: input.dAppUIFeeTree,
         changeErgoTree,
+        autoList: input.autoList,
+        premiumRaw: input.premiumRaw,
       };
 
       // Get wallet UTXOs via Nautilus
@@ -357,6 +376,7 @@ export function useWriteOption(): WriteOptionResult {
             setStep(3);
           }
         },
+        () => setWarning("Taking longer than usual \u2014 the bot is still working."),
       );
 
       // ---------------------------------------------------------------
@@ -387,5 +407,5 @@ export function useWriteOption(): WriteOptionResult {
     }
   }, []);
 
-  return { step, error, txIds, execute, reset };
+  return { step, error, warning, txIds, execute, reset };
 }

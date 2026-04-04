@@ -6,7 +6,7 @@ import Graphic from "../components/Graphic";
 import LessonHeader from "../components/LessonHeader";
 
 export const metadata: Metadata = {
-  title: "Writing Options — Earning Yield | Etcha Learn",
+  title: "Writing Options — Earning Premium | Etcha Learn",
   description:
     "Writers are the supply side of options. They lock collateral, mint an option token, and list it for sale. Learn about covered calls, cash-secured puts, and the P2P writer lifecycle on Etcha.",
 };
@@ -15,7 +15,7 @@ export default function WritingOptionsPage() {
   return (
     <>
       <LessonHeader current={3} />
-      <h1>Writing Options — Earning Yield</h1>
+      <h1>Writing Options — Earning Premium</h1>
       <p className="subtitle">
         Writers are the supply side of options. They lock collateral, mint an
         option token, and list it for sale. If a buyer appears, they collect a
@@ -509,7 +509,7 @@ export default function WritingOptionsPage() {
               fontSize="11"
               fontWeight="700"
             >
-              Covered Call: 1000 ERG, $0.35 Strike, 50 SigUSD Premium
+              Covered Call: 1000 ERG, $0.35 Strike, 5 SigUSD Premium
             </text>
 
             {/* Step 0: Buyer must exist */}
@@ -656,7 +656,7 @@ export default function WritingOptionsPage() {
               fontFamily="Courier New"
               fontSize="10"
             >
-              +50 SigUSD ✓
+              +5 SigUSD ✓
             </text>
 
             <text
@@ -674,12 +674,12 @@ export default function WritingOptionsPage() {
         <div className="panels-2col">
           <div className="panel panel-green">
             <div className="p-label">Price stays below $0.35</div>
-            Keep 1,000 ERG + keep 50 SigUSD premium. Option expires worthless.
+            Keep 1,000 ERG + keep 5 SigUSD premium. Option expires worthless.
             Best case for the writer.
           </div>
           <div className="panel panel-amber">
             <div className="p-label">Price rises above $0.35</div>
-            Sell ERG at $0.35 + keep 50 SigUSD. You miss the upside past $0.35.
+            Sell ERG at $0.35 + keep 5 SigUSD. You miss the upside past $0.35.
             Capped, not a loss — amber.
           </div>
         </div>
@@ -716,7 +716,7 @@ export default function WritingOptionsPage() {
               fontSize="11"
               fontWeight="700"
             >
-              Cash-Secured Put: 300 SigUSD, $0.25 Strike, 30 SigUSD Premium
+              Cash-Secured Put: 300 SigUSD, $0.25 Strike, 3 SigUSD Premium
             </text>
 
             <rect
@@ -860,7 +860,7 @@ export default function WritingOptionsPage() {
               fontFamily="Courier New"
               fontSize="10"
             >
-              +30 SigUSD ✓
+              +3 SigUSD ✓
             </text>
 
             <text
@@ -878,12 +878,12 @@ export default function WritingOptionsPage() {
         <div className="panels-2col">
           <div className="panel panel-green">
             <div className="p-label">Price stays above $0.25</div>
-            Keep 300 SigUSD + keep 30 SigUSD premium. Put expires worthless.
+            Keep 300 SigUSD + keep 3 SigUSD premium. Put expires worthless.
             Pure income.
           </div>
           <div className="panel panel-green">
             <div className="p-label">Price drops below $0.25</div>
-            Buy ERG at $0.25 (your target!) + keep 30 SigUSD premium. You wanted
+            Buy ERG at $0.25 (your target!) + keep 3 SigUSD premium. You wanted
             this price anyway.
           </div>
         </div>
@@ -984,7 +984,7 @@ export default function WritingOptionsPage() {
           <br />
           <br />
           <strong>Rolling is two transactions</strong> — Cancel the listed sell
-          order AND write a new option. It&#39;s not atomic and requires finding
+          order AND write a new option. You can&#39;t do it in one step, and it requires finding
           a new buyer.
           <br />
           <br />
@@ -997,9 +997,9 @@ export default function WritingOptionsPage() {
       {/* SECTION 6: UTXO STATE MACHINE */}
       <section>
         <div className="section-label">Under the Hood</div>
-        <h2>The UTXO Lifecycle on Etcha</h2>
+        <h2>The Option Lifecycle on Etcha</h2>
         <p className="section-text">
-          Every option on Etcha follows a deterministic state machine. Each step
+          Every option on Etcha follows a fixed sequence of steps. Each step
           is a transaction on the Ergo blockchain — no admin keys, no database.
         </p>
 

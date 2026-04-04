@@ -28,9 +28,9 @@ export async function GET(
 ) {
   const { boxId } = params;
 
-  if (!boxId || boxId.length !== 64) {
+  if (!boxId || !/^[0-9a-f]{64}$/i.test(boxId)) {
     return NextResponse.json(
-      { error: 'boxId must be a 64-character hex string' },
+      { error: 'boxId must be 64 hex characters' },
       { status: 400 },
     );
   }
@@ -38,9 +38,9 @@ export async function GET(
   const { searchParams } = new URL(request.url);
   const contractAddress = searchParams.get('contractAddress');
 
-  if (!contractAddress) {
+  if (!contractAddress || !/^[0-9a-f]+$/i.test(contractAddress)) {
     return NextResponse.json(
-      { error: 'contractAddress query parameter required' },
+      { error: 'contractAddress must be a hex ErgoTree' },
       { status: 400 },
     );
   }

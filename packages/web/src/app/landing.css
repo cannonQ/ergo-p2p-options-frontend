@@ -467,9 +467,38 @@
   font-family: 'DM Mono', monospace;
 }
 
-/* RESPONSIVE */
+/* LANDING HAMBURGER (hidden on desktop, shown on mobile) */
+.landing .landing-hamburger {
+  display: none;
+  background: none; border: none; cursor: pointer;
+  color: var(--text-secondary);
+  padding: 4px;
+  transition: color 0.3s;
+}
+.landing .landing-hamburger:hover { color: var(--text-primary); }
+
+.landing .landing-mobile-menu {
+  border-top: 1px solid var(--border);
+  background: rgba(10, 12, 16, 0.95);
+  backdrop-filter: blur(20px);
+  padding: 16px 0;
+}
+.landing .landing-mobile-menu a {
+  display: block;
+  padding: 10px 0;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 15px;
+  transition: color 0.3s;
+}
+.landing .landing-mobile-menu a:hover { color: var(--text-primary); }
+
+/* RESPONSIVE — Tablet */
 @media (max-width: 768px) {
   .landing .nav-links { display: none; }
+  .landing .landing-hamburger { display: block; }
+  .landing .hero { padding-top: 100px; }
+  .landing .hero-tag { margin-bottom: 20px; }
   .landing .hero-stats { flex-wrap: wrap; gap: 24px; }
   .landing .products-grid,
   .landing .steps-grid,
@@ -478,7 +507,28 @@
   .landing .arch-grid { grid-template-columns: 1fr; }
   .landing .market-grid { grid-template-columns: repeat(2, 1fr); }
   .landing .footer-content { flex-direction: column; gap: 24px; text-align: center; }
+  .landing .footer-links { justify-content: center; }
   .landing .compare-table { font-size: 12px; }
   .landing .compare-table th, .landing .compare-table td { padding: 12px 8px; }
   .landing .product-card { padding: 32px 24px; }
+  .landing section { padding: 80px 0; }
+  .landing .hero-actions { flex-direction: column; align-items: flex-start; }
+  .landing .cta-actions { flex-direction: column; align-items: center; }
+}
+
+/* RESPONSIVE — Phone */
+@media (max-width: 480px) {
+  .landing .container { padding: 0 16px; }
+  .landing section { padding: 56px 0; }
+  .landing .hero { padding-top: 80px; min-height: auto; }
+  .landing .hero-sub { font-size: 16px; }
+  .landing .hero-stats { gap: 16px; }
+  .landing .stat-value { font-size: 20px; }
+  .landing .market-grid { grid-template-columns: 1fr 1fr; }
+  .landing .compare-table { display: block; overflow-x: auto; }
+  .landing .settle-card { padding: 24px 20px; }
+  .landing .step-card { padding: 28px 20px; }
+  .landing .product-card { padding: 24px 16px; }
+  .landing .learn-card { padding: 28px 20px; }
+  .landing .footer-links { flex-wrap: wrap; gap: 16px; }
 }

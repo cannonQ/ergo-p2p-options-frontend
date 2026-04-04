@@ -152,8 +152,11 @@ export function buildExercisePhysicalCallTx(
 
     const successor = new OutputBuilder(successorValue, reserveBox.ergoTree)
       .setAdditionalRegisters(registers)
-      .addTokens({ tokenId: optionTokenId, amount: 1n })
-      .addTokens({ tokenId: selfCollateral.tokenId, amount: remainingCollateral });
+      .addTokens({ tokenId: optionTokenId, amount: 1n });
+    // Only add collateral token if some remains (full-drain leaves 0)
+    if (remainingCollateral > 0n) {
+      successor.addTokens({ tokenId: selfCollateral.tokenId, amount: remainingCollateral });
+    }
 
     const exerciser = new OutputBuilder(MIN_BOX_VALUE, changeErgoTree)
       .addTokens({ tokenId: underlyingTokenId, amount: totalDelivery });

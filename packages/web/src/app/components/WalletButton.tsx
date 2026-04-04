@@ -1,8 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useWalletStore } from "@/stores/wallet-store";
 import { waitForErgoConnector, type ErgoAPI } from "@/lib/wallet";
+import { useToast } from "./Toast";
+import { QRCodeSVG } from "qrcode.react";
+import { pollErgoPayTxStatus } from "@/lib/ergopay";
 
 interface DetectedWallet {
   name: string;
@@ -11,12 +15,15 @@ interface DetectedWallet {
 }
 
 export function WalletButton() {
-  const { connected, address, setConnected, setAddress, setApi, setErgBalance, disconnect } = useWalletStore();
+  const { connected, address, setConnected, setAddress, setApi, setErgBalance, setWalletType, disconnect } = useWalletStore();
+  const { toast } = useToast();
   const [connecting, setConnecting] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [wallets, setWallets] = useState<DetectedWallet[]>([]);
+  const [ergoPayQr, setErgoPayQr] = useState<{ url: string; sessionId: string } | null>(null);
+  const ergoPayPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Detect available wallets on mount
+  // Detect available wallets on mount + auto-reconnect
   useEffect(() => {
     async function detect() {
       const available = await waitForErgoConnector(3000);
@@ -32,8 +39,58 @@ export function WalletButton() {
         }
       }
       setWallets(detected);
+
+      // Auto-reconnect if we had a previous session
+      if (!connected) {
+        const lastWallet = localStorage.getItem("etcha_last_wallet");
+
+        // ErgoPay auto-reconnect: restore address from localStorage
+        if (lastWallet === "ergopay") {
+          const savedAddr = localStorage.getItem("etcha_ergopay_address");
+          if (savedAddr) {
+            setConnected(true);
+            setAddress(savedAddr);
+            setWalletType("ergopay");
+            // Fetch balance via node proxy
+            fetch(`/api/boxes?address=${savedAddr}`)
+              .then(r => r.ok ? r.json() : null)
+              .then(data => {
+                if (data?.boxes) {
+                  const totalNano = data.boxes.reduce((sum: number, b: any) => sum + Number(b.value || 0), 0);
+                  setErgBalance(String(totalNano));
+                }
+              })
+              .catch(() => {});
+          }
+        }
+
+        // Nautilus auto-reconnect: connect() auto-approves silently
+        if (lastWallet && lastWallet !== "ergopay") {
+          const connector = (window.ergoConnector as any)?.[lastWallet];
+          if (connector && typeof connector.connect === "function") {
+            try {
+              const ok = await connector.connect({ createErgoObject: true });
+              if (ok) {
+                const api: ErgoAPI = await connector.getContext();
+                const addrs = await api.get_used_addresses();
+                const addr = addrs[0] ?? (await api.get_change_address());
+                const balance = await api.get_balance("ERG");
+                setConnected(true);
+                setAddress(addr);
+                setApi(api);
+                setErgBalance(balance);
+                setWalletType("nautilus");
+              }
+            } catch {
+              // Auto-reconnect failed silently — user can connect manually
+              localStorage.removeItem("etcha_last_wallet");
+            }
+          }
+        }
+      }
     }
     detect();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const connectToWallet = useCallback(async (walletId: string) => {
@@ -59,13 +116,67 @@ export function WalletButton() {
       setAddress(addr);
       setApi(api);
       setErgBalance(balance);
+      setWalletType("nautilus");
+      localStorage.setItem("etcha_last_wallet", walletId);
     } catch (err: any) {
       console.error("Wallet connect error:", err);
-      alert(err.message || "Failed to connect wallet");
+      toast(err.message || "Failed to connect wallet");
     } finally {
       setConnecting(false);
     }
-  }, [setConnected, setAddress, setApi, setErgBalance]);
+  }, [setConnected, setAddress, setApi, setErgBalance, setWalletType, toast]);
+
+  const connectViaErgoPay = useCallback(async () => {
+    try {
+      setConnecting(true);
+      setShowMenu(false);
+
+      // Create session
+      const res = await fetch("/api/ergopay/init", { method: "POST" });
+      if (!res.ok) throw new Error("Failed to create ErgoPay session");
+      const { sessionId, ergoPayUrl } = await res.json();
+
+      setErgoPayQr({ url: ergoPayUrl, sessionId });
+
+      // Poll for address
+      ergoPayPollRef.current = setInterval(async () => {
+        try {
+          const status = await pollErgoPayTxStatus(sessionId);
+          if (status.status === "signed" && status.txId) {
+            // "txId" is actually the wallet address in the connect flow
+            if (ergoPayPollRef.current) clearInterval(ergoPayPollRef.current);
+            ergoPayPollRef.current = null;
+            setErgoPayQr(null);
+            const walletAddr = status.txId; // the address
+            setConnected(true);
+            setAddress(walletAddr);
+            setWalletType("ergopay");
+            localStorage.setItem("etcha_last_wallet", "ergopay");
+            localStorage.setItem("etcha_ergopay_address", walletAddr);
+            setConnecting(false);
+            // Fetch balance via our API proxy (Explorer has CORS restrictions)
+            try {
+              const balRes = await fetch(`/api/boxes?address=${walletAddr}`);
+              if (balRes.ok) {
+                const { boxes } = await balRes.json();
+                const totalNano = (boxes || []).reduce((sum: number, b: any) => sum + Number(b.value || 0), 0);
+                setErgBalance(String(totalNano));
+              }
+            } catch { /* non-critical */ }
+          } else if (status.status === "expired") {
+            if (ergoPayPollRef.current) clearInterval(ergoPayPollRef.current);
+            ergoPayPollRef.current = null;
+            setErgoPayQr(null);
+            setConnecting(false);
+            toast("Connection expired. Please try again.", "info");
+          }
+        } catch { /* keep polling */ }
+      }, 2000);
+    } catch (err: any) {
+      setConnecting(false);
+      toast(err.message || "Failed to connect via ErgoPay");
+    }
+  }, [setConnected, setAddress, setErgBalance, toast]);
 
   const handleDisconnect = useCallback(() => {
     // Try to disconnect from the wallet extension
@@ -77,6 +188,7 @@ export function WalletButton() {
       }
     }
     disconnect();
+    localStorage.removeItem("etcha_last_wallet");
     setShowMenu(false);
   }, [disconnect]);
 
@@ -163,7 +275,7 @@ export function WalletButton() {
   }
 
   // Not connected — show connect button or wallet picker
-  if (connecting) {
+  if (connecting && !ergoPayQr) {
     return (
       <button disabled className="px-4 py-1.5 bg-[#c87941] text-white rounded-lg text-sm font-medium opacity-50">
         Connecting...
@@ -171,13 +283,14 @@ export function WalletButton() {
     );
   }
 
-  // If only one wallet detected, connect directly. If multiple, show picker.
-  if (wallets.length === 0) {
-    return (
+  // Connect button + wallet picker (always includes ErgoPay option)
+  return (
+    <><div className="relative">
       <button
         onClick={async () => {
-          // Wait a bit more in case extension is slow
-          const available = await waitForErgoConnector(3000);
+          if (showMenu) { setShowMenu(false); return; }
+          // Detect browser extension wallets
+          const available = await waitForErgoConnector(1500);
           if (available) {
             const detected: DetectedWallet[] = [];
             for (const [key, value] of Object.entries(window.ergoConnector || {})) {
@@ -186,29 +299,9 @@ export function WalletButton() {
               }
             }
             setWallets(detected);
-            if (detected.length === 1) {
-              connectToWallet(detected[0].id);
-            } else if (detected.length > 1) {
-              setShowMenu(true);
-            } else {
-              alert("No Ergo wallet found. Please install Nautilus.");
-            }
-          } else {
-            alert("No Ergo wallet found. Please install the Nautilus browser extension.");
           }
+          setShowMenu(true);
         }}
-        className="px-4 py-1.5 bg-[#c87941] text-white rounded-lg text-sm font-medium hover:bg-[#2563eb] transition-colors"
-      >
-        Connect Wallet
-      </button>
-    );
-  }
-
-  // Multiple wallets available — show picker
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setShowMenu(!showMenu)}
         className="px-4 py-1.5 bg-[#c87941] text-white rounded-lg text-sm font-medium hover:bg-[#2563eb] transition-colors"
       >
         Connect Wallet
@@ -216,7 +309,7 @@ export function WalletButton() {
 
       {showMenu && (
         <div
-          className="absolute right-0 top-full mt-2 w-48 bg-[#0a0c10] border border-[#1e2330] rounded-lg shadow-xl z-50 py-1"
+          className="absolute right-0 top-full mt-2 w-56 bg-[#0a0c10] border border-[#1e2330] rounded-lg shadow-xl z-50 py-1"
           onMouseLeave={() => setShowMenu(false)}
         >
           <p className="px-3 py-1 text-[10px] text-[#c87941] uppercase tracking-wider font-bold">
@@ -231,8 +324,56 @@ export function WalletButton() {
               {w.name}
             </button>
           ))}
+          <div className="border-t border-[#1e2330] mt-1 pt-1">
+            <button
+              onClick={connectViaErgoPay}
+              className="w-full text-left px-3 py-2 text-sm text-[#e8eaf0] hover:bg-[#1e2330] transition-colors"
+            >
+              Mobile Wallet (ErgoPay)
+            </button>
+          </div>
         </div>
       )}
+
     </div>
+
+    {/* ErgoPay QR connect modal — portaled to document.body */}
+    {ergoPayQr && typeof document !== "undefined" && createPortal(
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.75)" }} onClick={() => {
+          if (ergoPayPollRef.current) clearInterval(ergoPayPollRef.current);
+          setErgoPayQr(null);
+          setConnecting(false);
+        }} />
+        <div style={{ position: "relative", zIndex: 1, background: "#12151c", border: "1px solid #1e2330", borderRadius: "12px", maxWidth: "400px", width: "calc(100% - 32px)", padding: "24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+            <h2 style={{ fontSize: "18px", fontWeight: "bold", color: "#e8eaf0", margin: 0 }}>Connect Mobile Wallet</h2>
+            <button
+              onClick={() => {
+                if (ergoPayPollRef.current) clearInterval(ergoPayPollRef.current);
+                setErgoPayQr(null);
+                setConnecting(false);
+              }}
+              style={{ background: "none", border: "none", color: "#8891a5", fontSize: "24px", cursor: "pointer", padding: "0 4px" }}
+              aria-label="Close"
+            >&times;</button>
+          </div>
+          <p style={{ fontSize: "14px", color: "#8891a5", marginBottom: "20px" }}>
+            Scan this QR code with your Ergo mobile wallet (Terminus or Minotaur) to connect.
+          </p>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
+            <div style={{ background: "white", borderRadius: "12px", padding: "16px" }}>
+              <QRCodeSVG value={ergoPayQr.url} size={220} level="M" />
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#8891a5", fontSize: "14px" }}>
+            <div style={{ width: "16px", height: "16px", border: "2px solid #c87941", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+            <span>Waiting for wallet...</span>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    )}
+    </>
   );
 }

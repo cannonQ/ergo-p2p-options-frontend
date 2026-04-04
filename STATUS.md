@@ -158,6 +158,8 @@
 
 ### Post-Alpha
 
+- [ ] **24H Volume** — StatsBar + option chain volume columns show "—" / 0. Need TX indexing (track buy events on sell contracts) to compute rolling 24h volume per asset and aggregate
+- [ ] **Mint/Deliver TX IDs on write page** — Steps 2-3 show "Bot is minting/delivering..." but no TX ID. Use node's `spentTransactionId` from `/blockchain/box/byId/{boxId}` in the poll endpoint to derive the mint TX when the definition box gets spent. No shared state needed between bot and web.
 - [ ] Batch listing (select multiple options, list all in one TX)
 - [ ] BuyTokenRequestV2 (bid orders — stablecoin-denominated buy requests)
 - [ ] Responsive mobile layout

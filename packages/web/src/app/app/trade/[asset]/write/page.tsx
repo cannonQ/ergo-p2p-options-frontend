@@ -20,10 +20,22 @@ import {
 } from "@ergo-options/core";
 import { bsCall, bsPut, blocksToYears, oracleVolToDecimal } from "@ergo-options/core";
 import { useWriteOption, type WriteOptionInput } from "@/lib/hooks/useWriteOption";
+import { useWriteOptionErgoPay } from "@/lib/hooks/useWriteOptionErgoPay";
 import { Tooltip } from "@/app/components/Tooltip";
+import { TxStatus } from "@/app/components/TxStatus";
+import { ErgoPayModal } from "@/app/components/ErgoPayModal";
 import { fetchHeight } from "@/lib/api";
+import { useToast } from "@/app/components/Toast";
+import { useWalletStore } from "@/stores/wallet-store";
 
-const ASSET_MAP: Record<string, { name: string; index: number; unit: string }> = {
+/** Safe Number→BigInt: guards against Infinity, NaN, and precision loss beyond 2^53 */
+function safeToBigInt(n: number): bigint {
+  if (!isFinite(n) || isNaN(n)) throw new Error(`Cannot convert ${n} to BigInt`);
+  if (Math.abs(n) > Number.MAX_SAFE_INTEGER) throw new Error(`Value ${n} exceeds safe integer range`);
+  return BigInt(Math.round(n));
+}
+
+const ASSET_MAP: Record<string, { name: string; index: number; unit: string; oracleUnit?: string }> = {
   // Crypto — Physical Delivery (Rosen Bridge)
   eth: { name: "ETH", index: 0, unit: "rsETH" },
   btc: { name: "BTC", index: 1, unit: "rsBTC" },
@@ -37,7 +49,7 @@ const ASSET_MAP: Record<string, { name: string; index: number; unit: string }> =
   atom: { name: "ATOM", index: 7, unit: "ATOM" },
   firo: { name: "FIRO", index: 19, unit: "FIRO" },
   // Commodities & Metals
-  gold: { name: "Gold", index: 18, unit: "DexyGold" },
+  gold: { name: "Gold", index: 18, unit: "DexyGold", oracleUnit: "Troy Oz" },
   silver: { name: "Silver", index: 11, unit: "Silver" },
   copper: { name: "Copper", index: 12, unit: "Copper" },
   brent: { name: "Brent", index: 13, unit: "Brent" },
@@ -54,8 +66,11 @@ const BLOCKS_PER_DAY = 720;
 const OPTION_CONTRACT_ERGOTREE = OPTION_RESERVE_ERGOTREE;
 
 // dApp UI fee address: 9ewpUXoFqTomiiAxkj7P5x1FLvQ5Ldsn95XZiTpJaVpgUr3VZeS
-// P2PK ErgoTree = 0x0008cd + 33-byte EC point
+// P2PK ErgoTree = 0x0008cd + 33-byte EC point (36 bytes / 72 hex chars)
 const DAPP_UI_FEE_TREE_HEX = '0008cd02383747243fed0a3ae9fcf0f3936d92447b57bb34c53faf5c5c0a105fbf42b4c8';
+if (DAPP_UI_FEE_TREE_HEX.length !== 72 || !DAPP_UI_FEE_TREE_HEX.startsWith('0008cd')) {
+  throw new Error('DAPP_UI_FEE_TREE_HEX is not a valid P2PK ErgoTree');
+}
 const DAPP_UI_FEE_TREE = new Uint8Array(
   DAPP_UI_FEE_TREE_HEX.match(/.{2}/g)!.map(b => parseInt(b, 16))
 );
@@ -64,6 +79,7 @@ const DAPP_UI_MINT_FEE = 10_000_000n;
 
 export default function WritePage({ params }: { params: { asset: string } }) {
   const info = ASSET_MAP[params.asset];
+  const { toast } = useToast();
 
   const [optionType, setOptionType] = useState<"call" | "put">("call");
   const [style, setStyle] = useState<"european" | "american">("european");
@@ -76,16 +92,29 @@ export default function WritePage({ params }: { params: { asset: string } }) {
   const [expiryInput, setExpiryInput] = useState("7");
   const [expiryUnit, setExpiryUnit] = useState<"days" | "blocks">("days");
   const [premium, setPremium] = useState("");
+  const [autoList, setAutoList] = useState(true);
   const [contractSize, setContractSize] = useState("");
 
   // Write option hook — single signature, bot handles mint + deliver
   const {
     step,
     error: writeError,
+    warning: writeWarning,
     txIds,
     execute: executeWrite,
     reset: resetWrite,
   } = useWriteOption();
+
+  // ErgoPay hook for mobile wallet signing
+  const ergoPay = useWriteOptionErgoPay();
+  const { walletType, address: walletAddress } = useWalletStore();
+  const isErgoPay = walletType === "ergopay";
+
+  // Unified step/error across both hooks
+  const activeStep = isErgoPay ? ergoPay.step : step;
+  const activeError = isErgoPay ? ergoPay.error : writeError;
+  const activeWarning = isErgoPay ? ergoPay.warning : writeWarning;
+  const activeTxIds = isErgoPay ? ergoPay.txIds : txIds;
 
   // Fetch oracle data client-side (spot price + volatility)
   const [spotPrice, setSpotPrice] = useState(0);
@@ -170,12 +199,22 @@ export default function WritePage({ params }: { params: { asset: string } }) {
     if (!info) return;
     const currentHeight = await fetchHeight();
     if (expiryBlocks <= 0) {
-      alert("Expiry must be greater than 0");
+      toast("Expiry must be greater than 0");
+      return;
+    }
+    const strikeNum = Number(strike) || 0;
+    if (strikeNum <= 0 || !isFinite(strikeNum) || strikeNum > 1e12) {
+      toast("Strike price must be between 0 and $1,000,000,000,000");
+      return;
+    }
+    const cSizeNum = Number(contractSize) || 0;
+    if (cSizeNum <= 0 || !isFinite(cSizeNum) || cSizeNum > 1e10) {
+      toast("Contract size must be greater than 0");
       return;
     }
     const expiryHeight = BigInt(currentHeight + expiryBlocks);
     if (expiryHeight <= BigInt(currentHeight)) {
-      alert(`Maturity height ${expiryHeight} is not in the future (current: ${currentHeight}). Check your expiry input.`);
+      toast(`Maturity height ${expiryHeight} is not in the future (current: ${currentHeight}). Check your expiry input.`);
       return;
     }
     console.log(`[Write] currentHeight=${currentHeight}, expiryBlocks=${expiryBlocks}, maturityHeight=${expiryHeight}`);
@@ -188,16 +227,19 @@ export default function WritePage({ params }: { params: { asset: string } }) {
     const oracleIdx = info.index;
     const rate = REGISTRY_RATES[oracleIdx] ?? 1_000_000n;
 
-    // Strike price in oracle units (USD * ORACLE_DECIMAL)
-    const strikeBigint = BigInt(Math.round(Number(strike) * Number(ORACLE_DECIMAL)));
+    // Strike price per contract in oracle units
+    // For fractional contracts (e.g. 0.001 Troy Oz), scale strike by contractSize
+    // so on-chain strikePerContract = strikePrice * stablecoinDecimal / ORACLE_DECIMAL is correct
+    const contractSizeNum_ = Number(contractSize) || 1;
+    const strikeBigint = safeToBigInt(Number(strike) * contractSizeNum_ * Number(ORACLE_DECIMAL));
 
-    // Share size: contract size in oracle units (×10^6)
-    // e.g. 0.001 BTC at price $68000 → shareSize = 0.001 * 1_000_000 = 1000
+    // Share size: always in oracle units (×10^6)
+    // The on-chain contract uses shareSize in oracle units for exercise delivery
     const contractSizeNum = Number(contractSize) || 1;
-    const shareSize = BigInt(Math.round(contractSizeNum * Number(ORACLE_DECIMAL)));
+    const shareSize = safeToBigInt(contractSizeNum * Number(ORACLE_DECIMAL));
 
     // Collateral cap for cash-settled (how much stablecoin per contract at max loss)
-    // For physical, this is unused but must be > 0
+    // For physical, this is unused but must be > 0. Already scaled by contractSize.
     const collateralCap = strikeBigint > 0n ? strikeBigint : 1n;
 
     // Collateral token setup
@@ -210,14 +252,14 @@ export default function WritePage({ params }: { params: { asset: string } }) {
 
     if (isErgCall) {
       // ERG call: collateral in nanoERG
-      ergCollateral = BigInt(Math.round(colAmount * 1e9));
+      ergCollateral = safeToBigInt(colAmount * 1e9);
     } else if (optTypeNum === 0 && settlNum === 0) {
       // Physical non-ERG call: collateral in underlying token
       const tokenId = REGISTRY_TOKEN_IDS[oracleIdx];
       if (!tokenId) throw new Error("No token ID for this asset");
       collateralToken = {
         tokenId,
-        amount: BigInt(Math.round(colAmount * Number(rate))),
+        amount: safeToBigInt(colAmount * Number(rate)),
       };
     } else {
       // Put or cash-settled: collateral in stablecoin
@@ -225,7 +267,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
       const stableDecimal = stablecoin === "USE" ? 1000n : 100n;
       collateralToken = {
         tokenId: stableId,
-        amount: BigInt(Math.round(colAmount * Number(stableDecimal))),
+        amount: safeToBigInt(colAmount * Number(stableDecimal)),
       };
     }
 
@@ -234,6 +276,13 @@ export default function WritePage({ params }: { params: { asset: string } }) {
     const typeStr = optionType === "call" ? "Call" : "Put";
     const strikeStr = Number(strike).toFixed(2);
     const optionName = `${assetName} ${typeStr} $${strikeStr}`;
+
+    // V5: Auto-list premium in raw stablecoin units
+    const stablecoinDec = stablecoin === "USE" ? 1000 : 100;
+    const premiumNum = Number(premium) || suggestedPremium || 0;
+    const premiumRawVal = autoList && premiumNum > 0
+      ? safeToBigInt(premiumNum * stablecoinDec)
+      : 0n;
 
     const input: WriteOptionInput = {
       contractErgoTree: OPTION_CONTRACT_ERGOTREE,
@@ -251,10 +300,18 @@ export default function WritePage({ params }: { params: { asset: string } }) {
       ergCollateral,
       dAppUIMintFee: DAPP_UI_MINT_FEE,
       dAppUIFeeTree: DAPP_UI_FEE_TREE,
+      autoList: autoList ? 1 : 0,
+      premiumRaw: premiumRawVal,
     };
 
-    await executeWrite(input);
+    if (isErgoPay && walletAddress) {
+      await ergoPay.execute(input, walletAddress);
+    } else {
+      await executeWrite(input);
+    }
   }, [
+    isErgoPay,
+    walletAddress,
     optionType,
     style,
     settlement,
@@ -263,6 +320,9 @@ export default function WritePage({ params }: { params: { asset: string } }) {
     stablecoin,
     expiryBlocks,
     stablecoinDecimal,
+    autoList,
+    premium,
+    suggestedPremium,
     info,
     executeWrite,
   ]);
@@ -290,7 +350,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
         <h1 className="text-xl font-bold mt-2">Write an Option on {info.name}</h1>
       </div>
 
-      {step === 0 ? (
+      {(isErgoPay ? ergoPay.step <= 1 : step === 0) ? (
         <div className="bg-[#12151c] border border-[#1e2330] rounded-lg p-6 space-y-5">
           {/* Row 1: Type + Style */}
           <div className="grid grid-cols-2 gap-6">
@@ -416,121 +476,164 @@ export default function WritePage({ params }: { params: { asset: string } }) {
             </div>
           </div>
 
-          {/* Contract Size */}
-          <div>
-            <label className="block text-sm text-[#8891a5] mb-2">
-              Contract Size ({optionType === "call" && settlement === "physical" ? info.unit : "USD equivalent"})
-            </label>
-            <div className="flex items-center gap-3">
-              <input type="number" value={contractSize} onChange={(e) => setContractSize(e.target.value)}
-                placeholder="0"
-                min="0"
-                step={(() => {
-                  const val = Number(contractSize) || 0;
-                  if (val <= 0) return "0.001";
-                  const mag = Math.pow(10, Math.floor(Math.log10(val)));
-                  return mag.toString();
-                })()}
-                className="w-40 bg-[#0a0c10] border border-[#1e2330] rounded-lg px-4 py-2 text-[#e8eaf0] font-mono focus:border-[#c87941] focus:outline-none" />
-              <span className="text-sm text-[#8891a5]">
-                {optionType === "call" && settlement === "physical" ? info.unit : "USD"} per contract
-              </span>
+          {/* Contract Size + Number of Contracts — side by side */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-[#8891a5] mb-2">
+                Contract Size ({optionType === "call" && settlement === "physical" ? (info.oracleUnit ?? info.unit) : "USD equivalent"})
+              </label>
+              <div className="flex items-center gap-2">
+                <input type="number" value={contractSize} onChange={(e) => setContractSize(e.target.value)}
+                  placeholder="0"
+                  min="0"
+                  step={(() => {
+                    const val = Number(contractSize) || 0;
+                    if (val <= 0) return "0.001";
+                    const mag = Math.pow(10, Math.floor(Math.log10(val)));
+                    return mag.toString();
+                  })()}
+                  className="w-full bg-[#0a0c10] border border-[#1e2330] rounded-lg px-4 py-2 text-[#e8eaf0] font-mono focus:border-[#c87941] focus:outline-none" />
+                <span className="text-xs text-[#8891a5] whitespace-nowrap">
+                  {optionType === "call" && settlement === "physical" ? (info.oracleUnit ?? info.unit) : "USD"}
+                </span>
+              </div>
+              {cSize > 0 && spotPrice > 0 && (
+                <p className="mt-1 text-xs text-[#8891a5]">
+                  1 contract = <span className="text-[#e8eaf0] font-semibold">{contractSize} {info.oracleUnit ?? info.unit}</span>
+                  {" "}(~<span className="text-[#e09a5f]">${contractUsdValue.toFixed(2)}</span>)
+                </p>
+              )}
             </div>
-            {cSize > 0 && spotPrice > 0 && (
-              <p className="mt-1 text-sm text-[#8891a5]">
-                1 contract = <span className="text-[#e8eaf0] font-semibold">{contractSize} {info.unit}</span>
-                {" "}(~<span className="text-[#e09a5f]">${contractUsdValue.toFixed(2)}</span>)
-              </p>
-            )}
-          </div>
-
-          {/* Number of Contracts */}
-          <div>
-            <label className="block text-sm text-[#8891a5] mb-2">
-              Number of Contracts
-            </label>
-            <input type="number" value={numContracts} onChange={(e) => setNumContracts(e.target.value)}
-              placeholder="10" min="1" step="1"
-              className="w-full bg-[#0a0c10] border border-[#1e2330] rounded-lg px-4 py-2 text-[#e8eaf0] font-mono focus:border-[#c87941] focus:outline-none" />
+            <div>
+              <label className="block text-sm text-[#8891a5] mb-2">
+                Number of Contracts
+              </label>
+              <input type="number" value={numContracts} onChange={(e) => setNumContracts(e.target.value)}
+                placeholder="10" min="1" step="1"
+                className="w-full bg-[#0a0c10] border border-[#1e2330] rounded-lg px-4 py-2 text-[#e8eaf0] font-mono focus:border-[#c87941] focus:outline-none" />
+            </div>
           </div>
 
           {/* Collateral Required (auto-computed) */}
-          {contracts > 0 && cSize > 0 && (
-            <div className="p-4 bg-[#0a0c10] rounded-lg border border-[#1e2330]">
-              <h3 className="text-sm font-semibold text-[#e8eaf0] mb-2">Collateral Required</h3>
-              <div className="text-sm space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-[#8891a5]">{contracts} contracts × {contractSize} {optionType === "call" && settlement === "physical" ? info.unit : stablecoin}</span>
-                  <span className="text-[#e8eaf0] font-mono font-semibold">
-                    {collateral.toFixed(collateral >= 1 ? 4 : 6)} {optionType === "call" && settlement === "physical" ? info.unit : stablecoin}
-                  </span>
-                </div>
-                {spotPrice > 0 && (
+          {contracts > 0 && cSize > 0 && (() => {
+            const isPhysicalCall = optionType === "call" && settlement === "physical";
+            const displayUnit = isPhysicalCall ? (info.oracleUnit ?? info.unit) : stablecoin;
+            // For assets with non-decimal rates (e.g. DexyGold), show token count
+            const rate = isPhysicalCall ? Number(REGISTRY_RATES[info.index] ?? 0n) : 0;
+            const hasTokenUnit = isPhysicalCall && info.oracleUnit && info.unit !== info.oracleUnit && rate > 0;
+            const tokenCount = hasTokenUnit ? Math.ceil(collateral * rate) : 0;
+            return (
+              <div className="p-4 bg-[#0a0c10] rounded-lg border border-[#1e2330]">
+                <h3 className="text-sm font-semibold text-[#e8eaf0] mb-2">Collateral Required</h3>
+                <div className="text-sm space-y-1">
                   <div className="flex justify-between">
-                    <span className="text-[#8891a5]">USD value</span>
-                    <span className="text-[#e09a5f] font-mono">~${(collateral * (optionType === "call" && settlement === "physical" ? spotPrice : 1)).toFixed(2)}</span>
+                    <span className="text-[#8891a5]">{contracts} contracts × {contractSize} {displayUnit}</span>
+                    {hasTokenUnit ? (
+                      <span className="text-[#e8eaf0] font-mono font-semibold">
+                        {tokenCount} {info.unit}
+                      </span>
+                    ) : (
+                      <span className="text-[#e8eaf0] font-mono font-semibold">
+                        {collateral.toFixed(collateral >= 1 ? 4 : 6)} {displayUnit}
+                      </span>
+                    )}
                   </div>
-                )}
+                  {hasTokenUnit && (
+                    <div className="flex justify-between">
+                      <span className="text-[#8891a5]">{collateral.toFixed(collateral >= 1 ? 4 : 6)} {info.oracleUnit}</span>
+                      <span className="text-[#8891a5] text-xs">({rate} {info.unit} per {info.oracleUnit})</span>
+                    </div>
+                  )}
+                  {spotPrice > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-[#8891a5]">USD value</span>
+                      <span className="text-[#e09a5f] font-mono">~${(collateral * (isPhysicalCall ? spotPrice : 1)).toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
-          {/* Stablecoin */}
-          <div>
-            <label className="block text-sm text-[#8891a5] mb-2">Stablecoin for Strike Payment</label>
-            <div className="flex gap-2">
-              {(["USE", "SigUSD"] as const).map((s) => (
-                <button key={s} onClick={() => setStablecoin(s)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    stablecoin === s
-                      ? "bg-[#e09a5f]/20 text-[#e09a5f] border border-[#e09a5f]/30"
-                      : "bg-[#1e2330] text-[#8891a5] hover:text-[#e8eaf0]"
-                  }`}>
-                  {s} (${s === "USE" ? "1.000" : "1.00"})
-                </button>
-              ))}
+          {/* Stablecoin + Est. Premium — side by side */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-[#8891a5] mb-2">Stablecoin for Strike Payment</label>
+              <div className="flex gap-2">
+                {(["USE", "SigUSD"] as const).map((s) => (
+                  <button key={s} onClick={() => setStablecoin(s)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      stablecoin === s
+                        ? "bg-[#e09a5f]/20 text-[#e09a5f] border border-[#e09a5f]/30"
+                        : "bg-[#1e2330] text-[#8891a5] hover:text-[#e8eaf0]"
+                    }`}>
+                    {s} (${s === "USE" ? "1.000" : "1.00"})
+                  </button>
+                ))}
+              </div>
+              {strike && (
+                <p className="mt-1 text-xs text-[#8891a5]">
+                  Strike payment per contract: {strikeUsdPerContract.toFixed(stablecoin === "USE" ? 3 : 2)} {stablecoin}
+                </p>
+              )}
             </div>
-            {strike && (
-              <p className="mt-1 text-xs text-[#8891a5]">
-                Strike payment per contract: {strikeUsdPerContract.toFixed(stablecoin === "USE" ? 3 : 2)} {stablecoin}
-              </p>
-            )}
+            <div>
+              <label className="block text-sm text-[#8891a5] mb-2">Est. Premium (Black-Scholes)</label>
+              {suggestedPremium > 0 ? (
+                <p className="py-2 text-[#e09a5f] font-mono text-lg">
+                  {suggestedPremium.toFixed(suggestedPremium < 0.01 ? 6 : 3)} <span className="text-sm text-[#8891a5]">{stablecoin}/contract</span>
+                  <span className="ml-2 text-xs text-[#8891a5]">(σ={(oracleVolToDecimal(oracleVol) * 100).toFixed(1)}%)</span>
+                </p>
+              ) : (
+                <p className="py-2 text-xs text-[#8891a5]">
+                  {spotPrice <= 0 ? "Waiting for oracle price..." : "—"}
+                </p>
+              )}
+            </div>
           </div>
 
-          {/* B-S Suggested Premium */}
-          <div className="p-4 bg-[#0a0c10] rounded-lg border border-[#1e2330]">
-            <h3 className="text-sm font-semibold text-[#e8eaf0] mb-2">
-              Suggested Premium (Black-Scholes)
-            </h3>
-            <div className="flex items-center gap-3">
-              <input type="number" value={premium || (suggestedPremium > 0 ? suggestedPremium.toFixed(6) : "")}
-                onChange={(e) => setPremium(e.target.value)}
-                placeholder="0.000000"
-                step={(() => {
-                  const val = Number(premium) || suggestedPremium;
-                  if (val <= 0) return "0.001";
-                  const mag = Math.floor(Math.log10(val));
-                  return Math.pow(10, mag).toString();
-                })()}
-                className="w-40 bg-[#12151c] border border-[#1e2330] rounded-lg px-3 py-2 text-[#e09a5f] font-mono focus:border-[#c87941] focus:outline-none" />
-              <span className="text-sm text-[#8891a5]">{stablecoin}/contract</span>
-              {premium && suggestedPremium > 0 && (
-                <button
-                  onClick={() => setPremium("")}
-                  className="text-xs text-[#c87941] hover:underline"
-                >
-                  Reset to B-S
-                </button>
-              )}
-              {suggestedPremium > 0 && !premium && (
-                <span className="text-xs text-[#8891a5]">
-                  (σ={(oracleVolToDecimal(oracleVol) * 100).toFixed(1)}%)
-                </span>
-              )}
-            </div>
-            {suggestedPremium <= 0 && spotPrice <= 0 && (
-              <p className="mt-1 text-xs text-[#e09a5f]">
-                Connect wallet and wait for oracle price to compute suggested premium
+          {/* V5: Auto-list toggle + premium input */}
+          <div className="p-4 bg-[#0a0c10] rounded-lg border border-[#1e2330] space-y-3">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={autoList}
+                onChange={(e) => setAutoList(e.target.checked)}
+                className="w-4 h-4 rounded border-[#1e2330] bg-[#0a0c10] text-[#c87941] focus:ring-[#c87941]"
+              />
+              <span className="text-sm text-[#e8eaf0] font-medium">Auto-list for sale after minting</span>
+            </label>
+            {autoList && (
+              <div>
+                <label className="block text-xs text-[#8891a5] mb-1">
+                  Premium per token ({stablecoin})
+                  {suggestedPremium > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setPremium(suggestedPremium.toFixed(6))}
+                      className="ml-2 text-[#c87941] hover:underline"
+                    >
+                      Use B-S: {suggestedPremium.toFixed(suggestedPremium < 0.01 ? 6 : 3)}
+                    </button>
+                  )}
+                </label>
+                <input
+                  type="number"
+                  value={premium || (suggestedPremium > 0 ? suggestedPremium.toFixed(6) : "")}
+                  onChange={(e) => setPremium(e.target.value)}
+                  placeholder={suggestedPremium > 0 ? suggestedPremium.toFixed(6) : "0.000"}
+                  step="0.001"
+                  min="0"
+                  className="w-full bg-[#12151c] border border-[#1e2330] rounded-lg px-3 py-2 text-[#e09a5f] font-mono focus:border-[#c87941] focus:outline-none"
+                />
+                <p className="mt-1 text-xs text-[#8891a5]">
+                  Your tokens will be listed at this price immediately after minting. You can cancel anytime from Portfolio.
+                </p>
+              </div>
+            )}
+            {!autoList && (
+              <p className="text-xs text-[#8891a5]">
+                Tokens will be delivered to your wallet. List for sale manually from Portfolio.
               </p>
             )}
           </div>
@@ -542,7 +645,16 @@ export default function WritePage({ params }: { params: { asset: string } }) {
               <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
                 <span className="text-[#8891a5]">Lock:</span>
                 <span className="text-[#e8eaf0] font-mono">
-                  {collateral.toFixed(collateral >= 1 ? 4 : 6)} {optionType === "call" && settlement === "physical" ? info.unit : stablecoin}
+                  {(() => {
+                    const isPhysicalCall = optionType === "call" && settlement === "physical";
+                    const rate = isPhysicalCall ? Number(REGISTRY_RATES[info.index] ?? 0n) : 0;
+                    const hasTokenUnit = isPhysicalCall && info.oracleUnit && info.unit !== info.oracleUnit && rate > 0;
+                    if (hasTokenUnit) {
+                      const tokenCount = Math.ceil(collateral * rate);
+                      return <>{tokenCount} {info.unit}</>;
+                    }
+                    return <>{collateral.toFixed(collateral >= 1 ? 4 : 6)} {isPhysicalCall ? (info.oracleUnit ?? info.unit) : stablecoin}</>;
+                  })()}
                   {info.index !== ERG_ORACLE_INDEX && (
                     <span className="text-[#8891a5]"> + {ergDeposit.toFixed(4)} ERG (fees)</span>
                   )}
@@ -568,31 +680,55 @@ export default function WritePage({ params }: { params: { asset: string } }) {
             </div>
           )}
 
-          <p className="text-xs text-[#8891a5]">
-            After minting, list your option for sale from the Portfolio page.
-          </p>
+          {!autoList && (
+            <p className="text-xs text-[#8891a5]">
+              After minting, list your option for sale from the Portfolio page.
+            </p>
+          )}
 
           {/* Submit */}
           <button
             onClick={handleWrite}
             className="w-full py-3 bg-[#c87941] text-white rounded-lg font-medium hover:bg-[#2563eb] transition-colors disabled:opacity-50"
-            disabled={!strike || contracts <= 0 || cSize <= 0}>
-            Lock Collateral &amp; Mint
+            disabled={!strike || contracts <= 0 || cSize <= 0 || activeStep > 0}>
+            {activeStep > 0 ? "Submitting..." : isErgoPay ? "Sign with Mobile Wallet" : "Lock Collateral & Mint"}
           </button>
           <p className="text-xs text-[#8891a5] text-center">
-            You sign once. Our bot handles the rest in ~1 minute.
+            {isErgoPay
+              ? "A QR code will appear for you to scan with your Ergo wallet app."
+              : "You sign once. Our open-source bots handle the rest in ~3-6 blocks."}
           </p>
+
+          {/* ErgoPay error display */}
+          {isErgoPay && ergoPay.error && (
+            <div className="bg-[#2a1215] border border-[#4d1a1e] rounded-lg px-4 py-3 text-sm text-[#f87171]">
+              {ergoPay.error}
+            </div>
+          )}
+
+          {/* ErgoPay modal for mobile signing */}
+          {ergoPay.ergoPayUrl && ergoPay.ergoPayRequestId && (
+            <ErgoPayModal
+              open={!!ergoPay.ergoPayUrl}
+              onClose={() => ergoPay.reset()}
+              ergoPayUrl={ergoPay.ergoPayUrl}
+              requestId={ergoPay.ergoPayRequestId}
+              message={`Writing option: ${info?.name || ""} ${optionType === "call" ? "Call" : "Put"} $${strike}`}
+              onSigned={(txId) => ergoPay.onErgoPaySigned(txId)}
+              onExpired={() => ergoPay.reset()}
+            />
+          )}
         </div>
       ) : (
         /* Step progress for TX chain */
         <div className="bg-[#12151c] border border-[#1e2330] rounded-lg p-6 space-y-4">
           <h2 className="text-lg font-semibold mb-2">
-            {step >= 4 ? "Option Created" : "Creating Option..."}
+            {activeStep >= 4 ? "Option Created" : "Creating Option..."}
           </h2>
           {[
             {
               label: "Create Definition Box",
-              desc: step === 1 ? "Sign with Nautilus" : "Collateral locked at contract address",
+              desc: activeStep === 1 ? (isErgoPay ? "Sign with mobile wallet" : "Sign with Nautilus") : "Collateral locked at contract address",
               num: 1,
               isUserAction: true,
             },
@@ -605,10 +741,12 @@ export default function WritePage({ params }: { params: { asset: string } }) {
               isUserAction: false,
             },
             {
-              label: "Deliver to Wallet",
+              label: autoList ? "List for Sale" : "Deliver to Wallet",
               desc: step === 3
-                ? "Bot is delivering... (~30s)"
-                : "Option tokens sent to your wallet",
+                ? (autoList ? "Bot is listing... (~30s)" : "Bot is delivering... (~30s)")
+                : (autoList
+                    ? `${contracts} tokens listed at ${(Number(premium) || suggestedPremium || 0).toFixed(3)} ${stablecoin}/token`
+                    : "Option tokens sent to your wallet"),
               num: 3,
               isUserAction: false,
             },
@@ -635,13 +773,19 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                 </div>
                 <p className="text-xs text-[#8891a5]">{s.desc}</p>
                 {s.num === 1 && txIds.create && (
-                  <p className="text-xs text-[#c87941] font-mono mt-0.5 truncate">
-                    TX: {txIds.create}
-                  </p>
+                  <div className="mt-0.5">
+                    <TxStatus status="" txId={txIds.create} />
+                  </div>
                 )}
               </div>
             </div>
           ))}
+
+          {writeWarning && !writeError && (
+            <div className="mt-4 p-3 bg-[#e09a5f]/10 border border-[#e09a5f]/30 rounded-lg text-sm text-[#e09a5f]">
+              <p className="break-words">{writeWarning}</p>
+            </div>
+          )}
 
           {writeError && (
             <div className="mt-4 p-3 bg-[#f87171]/10 border border-[#f87171]/30 rounded-lg text-sm text-[#f87171]">
@@ -652,7 +796,9 @@ export default function WritePage({ params }: { params: { asset: string } }) {
 
           {step >= 4 && !writeError && (
             <div className="mt-4 p-3 bg-[#34d399]/10 border border-[#34d399]/30 rounded-lg text-sm text-[#34d399]">
-              Option created successfully! {contracts} tokens are in your wallet.
+              {autoList
+                ? `Option listed successfully! ${contracts} tokens at ${(Number(premium) || suggestedPremium || 0).toFixed(3)} ${stablecoin}/token.`
+                : `Option created successfully! ${contracts} tokens are in your wallet.`}
             </div>
           )}
 

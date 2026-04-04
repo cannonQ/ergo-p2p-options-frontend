@@ -26,6 +26,26 @@ body {
   font-family: 'Space Grotesk', var(--font-geist-sans), -apple-system, sans-serif;
 }
 
+/* Focus-visible: copper ring on keyboard focus for all interactive elements */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent-copper);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Suppress default outline when not focus-visible (mouse clicks) */
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible),
+input:focus:not(:focus-visible) {
+  outline: none;
+}
+
 @keyframes slide-in-right {
   from {
     transform: translateX(100%);
@@ -37,4 +57,12 @@ body {
 
 .animate-slide-in {
   animation: slide-in-right 0.2s ease-out;
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slide-up 0.2s ease-out;
 }

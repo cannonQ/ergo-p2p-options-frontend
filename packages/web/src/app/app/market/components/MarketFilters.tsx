@@ -1,7 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ParsedReserve } from "@/lib/reserve-scanner";
+
+const ASSET_SLUG: Record<string, string> = {
+  ETH: "eth", BTC: "btc", BNB: "bnb", DOGE: "doge", ADA: "ada", ERG: "erg",
+  HNS: "hns", CKB: "ckb", ATOM: "atom", FIRO: "firo",
+  Gold: "gold", XAU: "gold", Silver: "silver", XAG: "silver", Copper: "copper", XCU: "copper",
+  Brent: "brent", BRENT: "brent", WTI: "wti", NatGas: "natgas", NGAS: "natgas",
+  LITHIUM: "natgas", "S&P 500": "spx", SPX: "spx", DJI: "dji",
+};
 
 interface MarketFiltersProps {
   reserves: ParsedReserve[];
@@ -30,6 +39,7 @@ function formatBlocksToTime(blocks: number): string {
 }
 
 export function MarketFilters({ reserves, spotPrices, currentHeight }: MarketFiltersProps) {
+  const router = useRouter();
   const [assetFilter, setAssetFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [expiryFilter, setExpiryFilter] = useState("all");
@@ -137,6 +147,10 @@ export function MarketFilters({ reserves, spotPrices, currentHeight }: MarketFil
                 return (
                   <tr
                     key={r.boxId}
+                    onClick={() => {
+                      const slug = ASSET_SLUG[r.assetName];
+                      if (slug) router.push(`/app/trade/${slug}`);
+                    }}
                     className={`border-b border-[#1e2330]/50 hover:bg-[#1e2330]/30 cursor-pointer ${
                       isITM ? "bg-[#34d399]/5" : ""
                     }`}

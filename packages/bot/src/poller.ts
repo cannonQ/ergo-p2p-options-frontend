@@ -1,15 +1,37 @@
 /**
  * Poller — checks for new blocks and triggers scans.
  */
+// Timestamp all console output
+const _origLog = console.log;
+const _origErr = console.error;
+const _origWarn = console.warn;
+const _ts = () => new Date().toLocaleTimeString('en-US', { hour12: false });
+console.log = (...args: any[]) => _origLog(_ts(), ...args);
+console.error = (...args: any[]) => _origErr(_ts(), ...args);
+console.warn = (...args: any[]) => _origWarn(_ts(), ...args);
+
 import { config } from './config.js';
 import { scanAll, type ClassifiedBox } from './scanner.js';
 import { BoxState } from '@ergo-options/core';
-import { upsertBox, getRetryCount, incrementRetry, markResolved } from './state.js';
+import { upsertBox, getRetryCount, incrementRetry, markResolved, getPendingTxId, setPendingTxId, clearPendingTxId } from './state.js';
 import { executeDelivery } from './actions/deliver.js';
 import { executeClose } from './actions/close.js';
 import { executeMint } from './actions/mint.js';
 
 let lastHeight = 0;
+
+/**
+ * Check if a previously submitted TX is still in the mempool.
+ * Returns true if the TX is pending (skip action), false if gone (confirmed or dropped).
+ */
+async function isTxInMempool(txId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${config.nodeUrl}/transactions/unconfirmed/byTransactionId/${txId}`);
+    return res.ok; // 200 = still pending
+  } catch {
+    return false;
+  }
+}
 
 async function getCurrentHeight(): Promise<number> {
   const res = await fetch(`${config.nodeUrl}/info`);
@@ -20,6 +42,17 @@ async function getCurrentHeight(): Promise<number> {
 
 async function handleBox(box: ClassifiedBox, currentHeight: number) {
   upsertBox(box.boxId, box.contractAddr, box.state, box.creationHeight);
+
+  // Check if a previously submitted TX is still in the mempool — skip action if so
+  const pendingTxId = getPendingTxId(box.boxId);
+  if (pendingTxId) {
+    if (await isTxInMempool(pendingTxId)) {
+      console.log(`[SKIP] Box ${box.boxId.slice(0, 16)}... has pending TX ${pendingTxId.slice(0, 12)}... in mempool`);
+      return;
+    }
+    // TX is no longer in mempool — confirmed or dropped, clear it
+    clearPendingTxId(box.boxId);
+  }
 
   const age = currentHeight - box.creationHeight;
 
@@ -34,6 +67,7 @@ async function handleBox(box: ClassifiedBox, currentHeight: number) {
             incrementRetry(box.boxId, 'MINT');
             if (txId) {
               console.log(`[ACTION] Mint TX submitted: ${txId}`);
+              setPendingTxId(box.boxId, txId);
               markResolved(box.boxId);
             }
           } catch (err) {
@@ -46,16 +80,18 @@ async function handleBox(box: ClassifiedBox, currentHeight: number) {
       }
       break;
 
-    case BoxState.MINTED_UNDELIVERED:
-      if (age > config.stuckDeliveryBlocks) {
-        const retries = getRetryCount(box.boxId);
+    case BoxState.MINTED_UNDELIVERED: {
+      const retries = getRetryCount(box.boxId);
+      // First delivery attempt: act immediately. Retries: wait for stuckDeliveryBlocks.
+      if (retries === 0 || age > config.stuckDeliveryBlocks) {
         if (retries < config.maxDeliveryRetries) {
-          console.log(`[ACTION] Retrying delivery for ${box.boxId.slice(0, 16)}... (attempt ${retries + 1})`);
+          console.log(`[ACTION] ${retries === 0 ? 'Delivering' : 'Retrying delivery for'} ${box.boxId.slice(0, 16)}... (attempt ${retries + 1})`);
           try {
             const txId = await executeDelivery(box, currentHeight);
             incrementRetry(box.boxId, 'DELIVER_RETRY');
             if (txId) {
               console.log(`[ACTION] Delivery TX submitted: ${txId}`);
+              setPendingTxId(box.boxId, txId);
               markResolved(box.boxId);
             }
           } catch (err) {
@@ -67,6 +103,7 @@ async function handleBox(box: ClassifiedBox, currentHeight: number) {
         }
       }
       break;
+    }
 
     case BoxState.RESERVE:
       // Normal state — no action needed
@@ -80,6 +117,7 @@ async function handleBox(box: ClassifiedBox, currentHeight: number) {
           incrementRetry(box.boxId, 'CLOSE');
           if (txId) {
             console.log(`[ACTION] Close TX submitted: ${txId}`);
+            setPendingTxId(box.boxId, txId);
           }
           markResolved(box.boxId);
         } catch (err) {

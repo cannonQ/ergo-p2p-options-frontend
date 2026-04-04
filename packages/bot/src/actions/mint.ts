@@ -145,14 +145,7 @@ export async function executeMint(
 
   // --- Compute token count ---
   const fleetLikeBox = nodeBoxToFleetLike(raw);
-  const isErgCall =
-    params.optionType === 0 &&
-    params.settlementType === 0 &&
-    params.oracleIndex === ERG_ORACLE_INDEX;
-
-  const registryRates = isErgCall ? REGISTRY_RATES : undefined;
-
-  const numTokens = computeTokenCount(params, fleetLikeBox as any, registryRates);
+  const numTokens = computeTokenCount(params, fleetLikeBox as any, REGISTRY_RATES);
   if (numTokens <= 1n) {
     console.warn(`[MINT] Box ${shortId}... computed token count <= 1, skipping`);
     return null;
@@ -174,6 +167,11 @@ export async function executeMint(
   }
 
   // --- Build output assets ---
+  const isErgCall =
+    params.optionType === 0 &&
+    params.settlementType === 0 &&
+    params.oracleIndex === ERG_ORACLE_INDEX;
+
   const reserveAssets: { tokenId: string; amount: bigint }[] = [
     { tokenId: definitionBoxId, amount: numTokens },
   ];

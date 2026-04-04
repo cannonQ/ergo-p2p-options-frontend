@@ -84,13 +84,13 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const indexStr = searchParams.get("index");
 
-  if (indexStr === null) {
-    return NextResponse.json({ error: "index parameter required" }, { status: 400 });
+  if (indexStr === null || !/^\d+$/.test(indexStr)) {
+    return NextResponse.json({ error: "index must be a non-negative integer" }, { status: 400 });
   }
 
   const index = parseInt(indexStr, 10);
-  if (isNaN(index) || index < 0 || index > 20) {
-    return NextResponse.json({ error: "invalid index" }, { status: 400 });
+  if (index < 0 || index > 20) {
+    return NextResponse.json({ error: "index must be between 0 and 20" }, { status: 400 });
   }
 
   try {

@@ -172,7 +172,8 @@ function parseR4Name(r4hex: string): string {
       if ((b & 0x80) === 0) break;
       shift += 7;
     }
-    return new TextDecoder().decode(bytes.slice(offset, offset + len)) || "Option";
+    const raw = new TextDecoder().decode(bytes.slice(offset, offset + len));
+    return raw.replace(/[^\w\s$.\-/()]/g, "").substring(0, 100) || "Option";
   } catch {
     return "Option";
   }

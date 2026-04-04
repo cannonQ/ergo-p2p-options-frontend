@@ -27,9 +27,11 @@ export default function PremiumsPage() {
         <div className="section-label">Anatomy of a Premium</div>
         <h2>Two Components, One Price</h2>
         <p className="section-text">
-          Every premium splits into intrinsic value (the &quot;in the
-          money&quot; portion) and time value (which decays to zero at expiry).
-          Out-of-the-money options are pure time value.
+          Think of a premium as two parts: the <strong>real value</strong> (what
+          the option is worth if you used it right now) and the{" "}
+          <strong>hope value</strong> (what it might be worth later). In trading
+          terms, these are called intrinsic value and time value. Out-of-the-money
+          options are pure hope value — the real value is zero.
         </p>
 
         <Graphic>
@@ -541,8 +543,8 @@ export default function PremiumsPage() {
         <div className="section-label">Time Decay</div>
         <h2>The Clock Is Always Ticking</h2>
         <p className="section-text">
-          Time value decays to zero at expiry. The decay accelerates in the
-          final 30 days — slowly at first, then a cliff. This is why writers
+          Time value decays to zero at expiry. The decay speeds up in the
+          final 30 days — slowly at first, then drops off a cliff. This is why writers
           prefer short-dated options and buyers want more time.
         </p>
 
@@ -784,8 +786,8 @@ export default function PremiumsPage() {
               fontFamily="Courier New"
               fontSize="11"
             >
-              This curve is called theta ({"\u03B8"}) — time decay. It&apos;s
-              always working against the buyer.
+              Time decay (traders call it &quot;theta&quot;) is always
+              working against the buyer.
             </text>
           </svg>
         </Graphic>
@@ -1005,35 +1007,36 @@ export default function PremiumsPage() {
 
         <div className="worked-example">
           <div className="ex-title">
-            30-Day ERG $0.35 Call — Spot: $0.29
+            30-Day FIRO $0.75 Call — Spot: $0.65 — 100 Contracts
           </div>
 
           <div className="ex-scenario">
             <div className="ex-number">1</div>
             <div className="ex-content">
-              <strong>Intrinsic value: $0.00</strong> — The call is OTM. Strike
-              ($0.35) is above spot ($0.29). You can&apos;t exercise it for
-              profit right now.
+              <strong>Intrinsic value: $0.00</strong> — The call is OTM (out of
+              the money). Strike ($0.75) is above spot ($0.65). You can&apos;t
+              exercise it for profit right now.
             </div>
           </div>
 
           <div className="ex-scenario">
             <div className="ex-number">2</div>
             <div className="ex-content">
-              <strong>Time value: 15 SigUSD</strong> — 30 days until expiry.
-              ERG is volatile. The market prices in the possibility of ERG
-              reaching $0.35+.
+              <strong>Time value: 6 SigUSD</strong> — 30 days until expiry.
+              FIRO is volatile. The market prices in the possibility of FIRO
+              reaching $0.75+.
             </div>
           </div>
 
           <div className="ex-scenario">
             <div className="ex-number">3</div>
             <div className="ex-content">
-              <strong>Total premium: 15 SigUSD</strong> — This is what the
-              writer lists the option for via FixedPriceSell. Black-Scholes on
-              the Etcha UI suggests this price; the writer chose to match it.
+              <strong>Total premium: 6 SigUSD</strong> (for 100 contracts) — This
+              is what the writer lists the option for on Etcha{"'"}s marketplace.
+              The pricing tool on Etcha suggests this price; the writer chose to
+              match it.
               <div className="math">
-                Premium = $0.00 intrinsic + 15 SigUSD time value
+                Premium = $0.00 intrinsic + 6 SigUSD time value
               </div>
             </div>
           </div>
@@ -1041,25 +1044,25 @@ export default function PremiumsPage() {
           <div className="ex-scenario">
             <div className="ex-number">4</div>
             <div className="ex-content">
-              At expiry, ERG = $0.50 {"\u2192"}
+              At expiry, FIRO = $0.85 {"\u2192"}
               <div className="math">
-                Profit = ($0.50 − $0.35) × contract_size − 15 SigUSD
+                Payout = ($0.85 − $0.75) × 100 = 10 SigUSD. Net profit = 10 − 6 = 4 SigUSD
               </div>
-              At expiry, ERG = $0.29 {"\u2192"}
+              At expiry, FIRO = $0.65 {"\u2192"}
               <div className="math loss">
-                Loss = 15 SigUSD (premium). The time value decayed to zero.
+                Loss = 6 SigUSD (premium). The time value decayed to zero.
               </div>
             </div>
           </div>
         </div>
 
         <Callout variant="amber" label="Etcha-specific">
-          <strong>Black-Scholes is a suggestion, not a fill.</strong> The option
-          contract has no concept of premiums. The premium is a separate
-          FixedPriceSell market order. The writer prices it; the market decides
-          if it&apos;s fair. IV and Greeks on the Etcha UI are frontend tools —
-          the contract enforces only strike, oracle price, collateral, and
-          expiry.
+          <strong>The pricing tool is a suggestion, not a guaranteed fill.</strong> The
+          option contract has no concept of premiums. The premium is set by the writer
+          when they list the option for sale. The writer prices it; the market decides
+          if it&apos;s fair. Implied volatility and pricing indicators on the Etcha UI
+          are tools to help — the contract enforces only strike, oracle price,
+          collateral, and expiry.
         </Callout>
       </section>
 
@@ -1077,7 +1080,7 @@ export default function PremiumsPage() {
         prev={{ href: "/learn/calls-and-puts", title: "Calls & Puts" }}
         next={{
           href: "/learn/writing-options",
-          title: "Writing Options — Earning Yield",
+          title: "Writing Options — Earning Premium",
         }}
       />
     </>

@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import { useWalletStore } from "@/stores/wallet-store";
 import type { ParsedSellOrder } from "@/lib/sell-order-scanner";
 import { TxStatus } from "@/app/components/TxStatus";
+import { ErgoPayModal } from "@/app/components/ErgoPayModal";
+import { prepareErgoPayTx, fetchWalletBoxes } from "@/lib/ergopay-sign";
+import { REGISTRY_RATES, ORACLE_DECIMAL } from "@ergo-options/core";
 
 interface TradePanelProps {
   assetName: string;
@@ -14,6 +17,9 @@ interface TradePanelProps {
   premium: number;      // USD per contract (from cheapest sell order)
   available: number;    // total contracts available
   sellOrder?: ParsedSellOrder; // cheapest sell order to buy from
+  contractSize?: number; // oracle units per contract (e.g. 0.001 for Gold)
+  oracleIndex?: number;
+  assetUnit?: string;   // token name (e.g. "DexyGold", "rsETH")
   onClose: () => void;
 }
 
@@ -36,6 +42,9 @@ export function TradePanel({
   premium,
   available,
   sellOrder,
+  contractSize,
+  oracleIndex,
+  assetUnit,
   onClose,
 }: TradePanelProps) {
   const { connected, api } = useWalletStore();
@@ -44,6 +53,7 @@ export function TradePanel({
   const [slippage, setSlippage] = useState<string>("1.0");
   const [status, setStatus] = useState<string>("");
   const [txId, setTxId] = useState<string>("");
+  const [ergoPayData, setErgoPayData] = useState<{ url: string; requestId: string } | null>(null);
 
   // Derive stablecoin info from sell order
   const coin = sellOrder ? stablecoinName(sellOrder.paymentTokenId) : "USE";
@@ -55,23 +65,45 @@ export function TradePanel({
   const accentColor = isCall ? "#34d399" : "#f87171";
   const typeLabel = isCall ? "Call" : "Put";
 
-  // Exercise math
-  const exerciseReceive = isCall
-    ? `${qty} ${assetName}`
-    : `${(qty * strike).toFixed(stableDecimals)} ${coin}`;
-  const exercisePay = isCall
-    ? `${(qty * strike).toFixed(stableDecimals)} ${coin}`
-    : `${qty} ${assetName}`;
+  // Exercise math — scale by contractSize and show actual token delivery
+  const cSize = contractSize ?? 1;
+  const strikePerToken = strike * cSize;
+
+  // Compute actual token delivery per contract using registry rate
+  const rate = oracleIndex !== undefined ? Number(REGISTRY_RATES[oracleIndex] ?? 0n) : 0;
+  const tokensPerContract = rate > 0 ? Math.floor(cSize * rate) : 0;
+  const unit = assetUnit ?? assetName;
+
+  // Display: show human-readable amount with token name
+  // For crypto (rate is power of 10): divide raw by rate → "0.001 rsETH"
+  // For non-decimal (DexyGold rate=31103): show raw tokens → "31 DexyGold"
+  const totalTokens = qty * tokensPerContract;
+  const rateIsPowerOf10 = rate > 0 && Math.log10(rate) === Math.floor(Math.log10(rate));
+  let underlyingDisplay: string;
+  if (rate <= 0) {
+    underlyingDisplay = `${(qty * cSize).toFixed(cSize < 1 ? 4 : 2)} ${unit}`;
+  } else if (rateIsPowerOf10) {
+    // Crypto: 1000000 rsETH tokens / 10^9 = 0.001 rsETH
+    const humanAmount = totalTokens / rate;
+    const d = humanAmount >= 100 ? 0 : humanAmount >= 1 ? 2 : humanAmount >= 0.01 ? 4 : 6;
+    underlyingDisplay = `${humanAmount.toFixed(d)} ${unit}`;
+  } else {
+    // Non-decimal rate (DexyGold): show raw token count
+    underlyingDisplay = `${totalTokens} ${unit}`;
+  }
+  const exerciseReceive = isCall ? underlyingDisplay : `${(qty * strikePerToken).toFixed(stableDecimals)} ${coin}`;
+  const exercisePay = isCall ? `${(qty * strikePerToken).toFixed(stableDecimals)} ${coin}` : underlyingDisplay;
+  const exerciseReceiveUsd = isCall ? qty * cSize * spotPrice : qty * strikePerToken;
   const breakeven = isCall
-    ? strike + premium * spotPrice
-    : strike - premium * spotPrice;
+    ? strike + premium / cSize
+    : strike - premium / cSize;
 
   // Close on Escape
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && !txId) onClose();
     },
-    [onClose]
+    [onClose, txId]
   );
 
   useEffect(() => {
@@ -88,7 +120,8 @@ export function TradePanel({
       setStatus("No sell order available");
       return;
     }
-    if (!connected || !api) {
+    const { walletType, address: walletAddress } = useWalletStore.getState();
+    if (!connected || (!api && walletType !== "ergopay")) {
       setStatus("Connect wallet first");
       return;
     }
@@ -106,14 +139,20 @@ export function TradePanel({
       const nodeBox = await boxRes.json();
 
       // 2. Get buyer's wallet UTXOs
-      const { getWalletUtxos } = await import("@/lib/wallet");
       const { nautilusBoxToFleet, nodeBoxToFleet } = await import("@/lib/box-utils");
-      const rawUtxos = await getWalletUtxos(api);
-      const buyerBoxes = rawUtxos.map(nautilusBoxToFleet);
+      let buyerBoxes: any[];
+      let walletErgoTree: string;
+      if (walletType === "ergopay" && walletAddress) {
+        buyerBoxes = await fetchWalletBoxes(walletAddress);
+        walletErgoTree = buyerBoxes[0]?.ergoTree || "";
+      } else {
+        const { getWalletUtxos } = await import("@/lib/wallet");
+        const rawUtxos = await getWalletUtxos(api);
+        buyerBoxes = rawUtxos.map(nautilusBoxToFleet);
+        walletErgoTree = rawUtxos[0]?.ergoTree;
+      }
       const sellBoxFleet = nodeBoxToFleet(nodeBox);
 
-      // 3. Get wallet change address ErgoTree
-      const walletErgoTree = rawUtxos[0]?.ergoTree;
       if (!walletErgoTree) throw new Error("No wallet UTXOs found");
 
       // 4. Get current height (must be >= max creationHeight of all inputs)
@@ -181,20 +220,29 @@ export function TradePanel({
         height,
       );
 
-      // 8. Sign via Nautilus
-      setStatus("Sign in wallet...");
+      // 8. Sign
       const eip12Tx = unsignedTx.toEIP12Object();
-      const { signTx } = await import("@/lib/wallet");
-      const signedTx = await signTx(api, eip12Tx);
 
-      // 9. Submit
-      setStatus("Submitting...");
-      const { submitTransaction } = await import("@/lib/api");
-      const submittedTxId = await submitTransaction(signedTx);
+      if (walletType === "ergopay" && walletAddress) {
+        setStatus("Scan QR to sign...");
+        const { ergoPayUrl, requestId } = await prepareErgoPayTx(
+          eip12Tx, walletAddress, `Etcha: Buy ${assetName} option`,
+        );
+        setErgoPayData({ url: ergoPayUrl, requestId });
+      } else {
+        setStatus("Sign in wallet...");
+        const { signTx } = await import("@/lib/wallet");
+        const signedTx = await signTx(api, eip12Tx);
 
-      setTxId(submittedTxId);
-      setStatus("Success!");
-      console.log("Buy TX submitted:", submittedTxId);
+        // 9. Submit
+        setStatus("Submitting...");
+        const { submitTransaction } = await import("@/lib/api");
+        const submittedTxId = await submitTransaction(signedTx);
+
+        setTxId(submittedTxId);
+        setStatus("Success!");
+        console.log("Buy TX submitted:", submittedTxId);
+      }
     } catch (err: any) {
       const msg = err?.message || String(err);
       console.error("Buy TX failed:", err);
@@ -213,11 +261,12 @@ export function TradePanel({
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 z-40"
-        onClick={onClose}
+        onClick={() => { if (!txId) onClose(); }}
+        aria-hidden="true"
       />
 
       {/* Slide-out panel */}
-      <div className="fixed top-0 right-0 h-full w-full max-w-md bg-[#12151c] border-l border-[#1e2330] z-50 overflow-y-auto shadow-2xl animate-slide-in">
+      <div role="dialog" aria-modal="true" aria-label={`Trade ${assetName} ${typeLabel}`} className="fixed top-0 right-0 h-full w-full max-w-md bg-[#12151c] border-l border-[#1e2330] z-50 overflow-y-auto shadow-2xl animate-slide-in">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e2330]">
           <div className="flex items-center gap-2">
@@ -234,6 +283,7 @@ export function TradePanel({
           <button
             onClick={onClose}
             className="text-[#8891a5] hover:text-[#e8eaf0] text-xl leading-none px-2"
+            aria-label="Close trade panel"
           >
             x
           </button>
@@ -241,9 +291,10 @@ export function TradePanel({
 
         <div className="px-5 py-5 space-y-5">
           {/* Buy / Sell toggle */}
-          <div className="flex gap-2">
+          <div className="flex gap-2" role="group" aria-label="Trade direction">
             <button
               onClick={() => setSide("buy")}
+              aria-pressed={side === "buy"}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
                 side === "buy"
                   ? "bg-[#c87941] text-white"
@@ -254,6 +305,7 @@ export function TradePanel({
             </button>
             <button
               onClick={() => setSide("sell")}
+              aria-pressed={side === "sell"}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
                 side === "sell"
                   ? "bg-[#c87941] text-white"
@@ -306,7 +358,10 @@ export function TradePanel({
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-[#8891a5]">You receive</span>
-              <span className="text-[#34d399] font-mono">{exerciseReceive}</span>
+              <span className="text-[#34d399] font-mono">
+                {exerciseReceive}
+                {isCall && exerciseReceiveUsd > 0 && <span className="text-[#8891a5] ml-1">(~${exerciseReceiveUsd.toFixed(2)})</span>}
+              </span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-[#8891a5]">You pay</span>
@@ -315,7 +370,7 @@ export function TradePanel({
             <div className="flex justify-between text-sm">
               <span className="text-[#8891a5]">Breakeven</span>
               <span className="text-[#e8eaf0] font-mono">
-                ${breakeven.toFixed(4)}/{assetName}
+                ${breakeven >= 100 ? breakeven.toFixed(0) : breakeven.toFixed(4)}/{assetName}
               </span>
             </div>
           </div>
@@ -372,6 +427,23 @@ export function TradePanel({
 
           {/* Status / TX ID */}
           <TxStatus status={status} txId={txId} />
+
+          {/* ErgoPay signing modal */}
+          {ergoPayData && (
+            <ErgoPayModal
+              open={!!ergoPayData}
+              onClose={() => { setErgoPayData(null); setStatus(""); }}
+              ergoPayUrl={ergoPayData.url}
+              requestId={ergoPayData.requestId}
+              message={`Buy ${assetName} option`}
+              onSigned={(signedTxId) => {
+                setErgoPayData(null);
+                setTxId(signedTxId);
+                setStatus("Success!");
+              }}
+              onExpired={() => { setErgoPayData(null); setStatus("Signing expired"); }}
+            />
+          )}
 
           {/* Spot price footer */}
           <div className="text-center text-xs text-[#8891a5]">

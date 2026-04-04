@@ -142,7 +142,9 @@ function parseR4Name(r4hex: string): string {
       if ((b & 0x80) === 0) break;
       shift += 7;
     }
-    return new TextDecoder().decode(bytes.slice(offset, offset + len));
+    const raw = new TextDecoder().decode(bytes.slice(offset, offset + len));
+    // Sanitize: allow alphanumeric, spaces, basic symbols; truncate to 100 chars
+    return raw.replace(/[^\w\s$.\-/()]/g, "").substring(0, 100) || "Unknown";
   } catch {
     return "Unknown";
   }
@@ -159,6 +161,7 @@ export interface MyBox {
   strikePrice?: number;
   maturityDate?: number;
   oracleIndex?: number;
+  contractSize?: number;
   tokenCount?: number;
   collateralTokenId?: string;
   collateralAmount?: string;
@@ -168,30 +171,34 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const walletECPoint = searchParams.get("ecPoint"); // 33-byte EC point as hex (66 chars)
 
-  if (!walletECPoint || walletECPoint.length !== 66) {
-    return NextResponse.json({ error: "ecPoint parameter required (66 hex chars)" }, { status: 400 });
+  if (!walletECPoint || !/^[0-9a-f]{66}$/i.test(walletECPoint)) {
+    return NextResponse.json({ error: "ecPoint must be 66 hex characters" }, { status: 400 });
   }
 
   try {
-    const ergoTree = CONTRACT_ADDRESSES[0]?.ergoTree ?? OPTION_RESERVE_ERGOTREE;
     const currentHeight = await fetchHeight();
 
-    // Scan contract for all unspent boxes
-    const res = await fetch(
-      `${NODE_URL}/blockchain/box/unspent/byErgoTree?offset=0&limit=200`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(ergoTree),
-      },
-    );
-
-    if (!res.ok) {
-      return NextResponse.json({ boxes: [] });
+    // Scan all contract addresses for unspent boxes
+    const allBoxes: any[] = [];
+    for (const contract of CONTRACT_ADDRESSES) {
+      try {
+        const res = await fetch(
+          `${NODE_URL}/blockchain/box/unspent/byErgoTree?offset=0&limit=200`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(contract.ergoTree),
+          },
+        );
+        if (res.ok) {
+          const rawData = await res.json();
+          const items: any[] = rawData.items ?? rawData;
+          allBoxes.push(...items);
+        }
+      } catch {
+        // Skip failed contract scans
+      }
     }
-
-    const rawData = await res.json();
-    const allBoxes: any[] = rawData.items ?? rawData;
 
     const myBoxes: MyBox[] = [];
 
@@ -245,6 +252,7 @@ export async function GET(request: Request) {
         strikePrice: params?.strikePrice,
         maturityDate: params?.maturityDate,
         oracleIndex: params?.oracleIndex,
+        contractSize: params ? params.shareSize / Number(ORACLE_DECIMAL) : undefined,
         tokenCount: tokenQty > 1 ? tokenQty - 1 : undefined,
         collateralTokenId: box.assets?.[1]?.tokenId,
         collateralAmount: box.assets?.[1]?.amount?.toString(),

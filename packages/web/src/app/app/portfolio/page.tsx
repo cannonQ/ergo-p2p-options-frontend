@@ -2,6 +2,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useWalletStore } from "@/stores/wallet-store";
+import { SkeletonRow } from "@/app/components/Skeleton";
+import { useToast } from "@/app/components/Toast";
+import { ErgoPayModal } from "@/app/components/ErgoPayModal";
+import { prepareErgoPayTx, fetchWalletBoxes } from "@/lib/ergopay-sign";
 import {
   USE_TOKEN_ID,
   SIGUSD_TOKEN_ID,
@@ -30,7 +34,7 @@ const KNOWN_TOKENS: Record<string, { name: string; decimals: number }> = {
 
 // Add Rosen Bridge tokens from registry
 const ROSEN_NAMES: Record<number, string> = {
-  0: "rsETH", 1: "rsBTC", 2: "rsBNB", 3: "rsDOGE", 4: "rsADA", 18: "DexyGold",
+  0: "rsETH", 1: "rsBTC", 2: "rsBNB", 3: "rsDOGE", 4: "rsADA", 17: "ERG", 18: "DexyGold",
 };
 const ROSEN_DECIMALS: Record<number, number> = {
   0: 9, 1: 8, 2: 9, 3: 6, 4: 6, 18: 0,
@@ -86,6 +90,7 @@ function PaginatedSection({
               onClick={() => setPage(Math.max(0, page - 1))}
               disabled={page === 0}
               className="px-2 py-1 bg-[#1e2330] rounded text-[#8891a5] hover:text-[#e8eaf0] disabled:opacity-30"
+              aria-label="Previous page"
             >
               &larr;
             </button>
@@ -94,6 +99,7 @@ function PaginatedSection({
               onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
               disabled={page >= totalPages - 1}
               className="px-2 py-1 bg-[#1e2330] rounded text-[#8891a5] hover:text-[#e8eaf0] disabled:opacity-30"
+              aria-label="Next page"
             >
               &rarr;
             </button>
@@ -116,6 +122,7 @@ interface ContractBox {
   strikePrice?: number;
   maturityDate?: number;
   oracleIndex?: number;
+  contractSize?: number;
   tokenCount?: number;
   collateralTokenId?: string;
   collateralAmount?: string;
@@ -129,6 +136,23 @@ function formatBlocksToTime(blocks: number): string {
   if (hours < 24) return `~${hours}h ${minutes % 60}m`;
   const days = Math.floor(hours / 24);
   return `~${days}d ${hours % 24}h`;
+}
+
+/** Format collateral value: show token amount if present, otherwise ERG */
+function formatCollateral(box: ContractBox): string {
+  if (box.collateralTokenId && box.collateralAmount) {
+    const known = KNOWN_TOKENS[box.collateralTokenId];
+    if (known) {
+      const raw = BigInt(box.collateralAmount);
+      const display = known.decimals > 0
+        ? (Number(raw) / Math.pow(10, known.decimals)).toFixed(known.decimals)
+        : raw.toString();
+      return `${display} ${known.name.replace(" (Dexy USD)", "")}`;
+    }
+    // Unknown token — show raw
+    return `${box.collateralAmount} ???`;
+  }
+  return `${(box.value / 1e9).toFixed(4)} ERG`;
 }
 
 import { nautilusBoxToFleet, nodeBoxToFleet } from "@/lib/box-utils";
@@ -205,10 +229,12 @@ interface HoldingPosition {
   oracleIndex: number;
   assetName: string;
   state: string;
+  contractSize?: number;
 }
 
 export default function PortfolioPage() {
-  const { connected, address: _address, api, ergBalance } = useWalletStore();
+  const { connected, address: walletAddr, api, ergBalance, walletType } = useWalletStore();
+  const { toast } = useToast();
   const [tokens, setTokens] = useState<WalletToken[]>([]);
   const [holdings, setHoldings] = useState<HoldingPosition[]>([]);
   const [contractBoxes, setContractBoxes] = useState<ContractBox[]>([]);
@@ -220,31 +246,65 @@ export default function PortfolioPage() {
   const [sellModalOpen, setSellModalOpen] = useState(false);
   const [sellModalBox, setSellModalBox] = useState<ContractBox | null>(null);
   const [sellModalTokenBalance, setSellModalTokenBalance] = useState(0n);
+  const [sellModalContractSize, setSellModalContractSize] = useState<number | undefined>();
 
   // Exercise modal state
   const [exerciseModalOpen, setExerciseModalOpen] = useState(false);
   const [exerciseModalBox, setExerciseModalBox] = useState<ContractBox | null>(null);
   const [exerciseModalTokenBalance, setExerciseModalTokenBalance] = useState(0n);
   const [exerciseModalSpotPrice, setExerciseModalSpotPrice] = useState<number | undefined>();
+  const [exerciseModalContractSize, setExerciseModalContractSize] = useState<number | undefined>();
+  const [exerciseModalOracleIndex, setExerciseModalOracleIndex] = useState<number | undefined>();
+  const [exerciseModalStablecoin, setExerciseModalStablecoin] = useState<"USE" | "SigUSD">("USE");
 
   // Open sell orders belonging to wallet
   const [openOrders, setOpenOrders] = useState<(ParsedSellOrder & { optionName?: string })[]>([]);
 
+  // Lookup maps built during loadTokens
+  const [tokenIdToName, setTokenIdToName] = useState<Map<string, string>>(new Map());
+  const [reserveBoxIdToTokenId, setReserveBoxIdToTokenId] = useState<Map<string, string>>(new Map());
+  const [walletTokenMap, setWalletTokenMap] = useState<Map<string, bigint>>(new Map());
+
   // Action status for Reclaim/Close/Cancel buttons
   const [actionStatus, setActionStatus] = useState<Record<string, string>>({});
 
+  // Success banner for actions that remove the row (close, cancel)
+  const [successBanner, setSuccessBanner] = useState<{ message: string; txId: string } | null>(null);
+
+  // ErgoPay signing modal state (shared across all TX flows)
+  const [ergoPayModal, setErgoPayModal] = useState<{
+    url: string;
+    requestId: string;
+    message: string;
+    onSigned: (txId: string) => void;
+  } | null>(null);
+
+  // Error state for failed data loading
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const loadTokens = useCallback(async () => {
-    if (!api) return;
+    if (!api && walletType !== "ergopay") return;
+    if (walletType === "ergopay" && !walletAddr) return;
     setLoading(true);
+    setLoadError(null);
     try {
       // Always fetch current height first
       try {
         const h = await fetchHeight();
         if (h > 0) setCurrentHeight(h);
-      } catch { /* ignore */ }
+      } catch { /* ignore — height is non-critical */ }
 
-      const utxos = await api.get_utxos();
-      if (!utxos) { setLoading(false); return; }
+      // Fetch UTXOs — either from Nautilus API or node for ErgoPay
+      let utxos: any[];
+      if (walletType === "ergopay" && walletAddr) {
+        const boxRes = await fetch(`/api/boxes?address=${walletAddr}`);
+        if (!boxRes.ok) throw new Error("Failed to fetch wallet boxes");
+        const { boxes } = await boxRes.json();
+        utxos = boxes || [];
+      } else {
+        utxos = await api.get_utxos();
+      }
+      if (!utxos || utxos.length === 0) { setLoading(false); return; }
 
       const tokenMap = new Map<string, bigint>();
       for (const utxo of utxos) {
@@ -255,6 +315,8 @@ export default function PortfolioPage() {
           }
         }
       }
+
+      setWalletTokenMap(new Map(tokenMap));
 
       const tokenList: WalletToken[] = [];
       for (const [tokenId, rawAmount] of tokenMap) {
@@ -284,8 +346,16 @@ export default function PortfolioPage() {
         if (reservesRes.ok) {
           const { reserves } = await reservesRes.json();
           const holdingPositions: HoldingPosition[] = [];
+          const nameMap = new Map<string, string>();
+          const boxToTokenMap = new Map<string, string>();
 
           for (const reserve of reserves) {
+            // Build lookup maps for all reserves (not just RESERVE state)
+            if (reserve.optionTokenId) {
+              nameMap.set(reserve.optionTokenId, reserve.name);
+              boxToTokenMap.set(reserve.boxId, reserve.optionTokenId);
+            }
+
             if (!reserve.optionTokenId || reserve.state !== "RESERVE") continue;
             const walletQty = tokenMap.get(reserve.optionTokenId);
             if (walletQty && walletQty > 0n) {
@@ -302,11 +372,14 @@ export default function PortfolioPage() {
                 oracleIndex: reserve.oracleIndex,
                 assetName: reserve.assetName,
                 state: reserve.state,
+                contractSize: reserve.contractSize,
               });
             }
           }
 
           setHoldings(holdingPositions);
+          setTokenIdToName(nameMap);
+          setReserveBoxIdToTokenId(boxToTokenMap);
         }
       } catch (err) {
         console.error("Failed to scan holdings:", err);
@@ -315,11 +388,15 @@ export default function PortfolioPage() {
       // Also scan contract address for boxes belonging to this wallet
       try {
         // Try all wallet addresses + all UTXOs to find EC points
-        const addrs = await api.get_used_addresses();
+        let addrs: string[] = [];
+        if (walletType === "ergopay" && walletAddr) {
+          addrs = [walletAddr];
+        } else if (api) {
+          addrs = await api.get_used_addresses();
+        }
         const allECPoints = new Set<string>();
 
         // Get EC point for each wallet address via node API
-        // Ergo P2PK addresses decode to a raw 33-byte public key
         for (const addr of (addrs || []).slice(0, 5)) {
           try {
             const rawRes = await fetch(`/api/address-to-raw?address=${addr}`);
@@ -375,18 +452,19 @@ export default function PortfolioPage() {
       }
     } catch (err) {
       console.error("Failed to load tokens:", err);
+      setLoadError("Failed to load portfolio data. Check your connection and try again.");
     } finally {
       setLoading(false);
     }
-  }, [api]);
+  }, [api, walletType, walletAddr]);
 
   useEffect(() => {
-    if (connected && api) {
+    if (connected && (api || walletType === "ergopay")) {
       loadTokens();
       const interval = setInterval(loadTokens, 120_000);
       return () => clearInterval(interval);
     }
-  }, [connected, api, loadTokens]);
+  }, [connected, api, walletType, loadTokens]);
 
   // ═══════════════════════════════════════════════════════════════
   // TX FLOW: List for Sale
@@ -431,15 +509,28 @@ export default function PortfolioPage() {
       }
 
       if (walletTokenBalance <= 0n) {
-        alert("You don't have any option tokens for this contract in your wallet. They may not have been delivered yet.");
+        toast("You don't have any option tokens for this contract in your wallet. They may not have been delivered yet.");
         return;
+      }
+
+      // Read R8 to get shareSize → contractSize
+      let contractSize: number | undefined;
+      const r8hex = nodeBox.additionalRegisters?.R8;
+      if (r8hex) {
+        const r8bytes = hexToBytesOracle(r8hex);
+        const r8vals = parseCollLong(r8bytes);
+        if (r8vals && r8vals.length >= 3) {
+          const shareSize = Number(r8vals[2]);
+          contractSize = shareSize / 1_000_000; // ORACLE_DECIMAL
+        }
       }
 
       setSellModalBox(box);
       setSellModalTokenBalance(walletTokenBalance);
+      setSellModalContractSize(contractSize);
       setSellModalOpen(true);
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      toast(`Error: ${err.message}`);
     }
   }, [api]);
 
@@ -448,7 +539,8 @@ export default function PortfolioPage() {
     premiumPerToken: bigint;
     tokenAmount: bigint;
   }) => {
-    if (!api || !sellModalBox) throw new Error("Wallet not connected");
+    if (!sellModalBox) throw new Error("No option selected");
+    if (!api && walletType !== "ergopay") throw new Error("Wallet not connected");
 
     // Dynamically import Fleet SDK (only needed for TX building)
     const { OutputBuilder, TransactionBuilder } = await import("@fleet-sdk/core");
@@ -467,9 +559,17 @@ export default function PortfolioPage() {
     }
     const optionTokenId = r7hex.slice(4);
 
-    // Get wallet ErgoTree for change address and seller SigmaProp
-    const rawUtxos = await getWalletUtxos(api);
-    const fleetBoxes = rawUtxos.map(nautilusBoxToFleet);
+    // Get wallet UTXOs
+    let fleetBoxes: any[];
+    let walletErgoTree: string;
+    if (walletType === "ergopay" && walletAddr) {
+      fleetBoxes = await fetchWalletBoxes(walletAddr);
+      walletErgoTree = fleetBoxes[0]?.ergoTree || "";
+    } else {
+      const rawUtxos = await getWalletUtxos(api);
+      fleetBoxes = rawUtxos.map(nautilusBoxToFleet);
+      walletErgoTree = rawUtxos[0].ergoTree;
+    }
 
     // Find boxes containing the option token
     const tokenBoxes = fleetBoxes.filter((b: any) =>
@@ -479,8 +579,6 @@ export default function PortfolioPage() {
       throw new Error("No wallet boxes contain the option token");
     }
 
-    // Use all wallet boxes as potential inputs (Fleet SDK selects what's needed)
-    const walletErgoTree = rawUtxos[0].ergoTree;
     const height = await fetchHeight();
 
     const txFee = MINER_FEE;
@@ -516,23 +614,37 @@ export default function PortfolioPage() {
       .build();
 
     const eip12Tx = unsignedTx.toEIP12Object();
+
+    if (walletType === "ergopay" && walletAddr) {
+      const { ergoPayUrl, requestId } = await prepareErgoPayTx(eip12Tx, walletAddr, "Etcha: List option for sale");
+      return new Promise<string>((resolve, reject) => {
+        setErgoPayModal({
+          url: ergoPayUrl, requestId,
+          message: "List option for sale",
+          onSigned: (txId) => {
+            setErgoPayModal(null);
+            setTimeout(() => loadTokens(), 5000);
+            resolve(txId);
+          },
+        });
+      });
+    }
+
     const signedTx = await signTx(api, eip12Tx);
     const txId = await submitTransaction(signedTx);
 
     console.log("Sell order TX submitted:", txId);
-
-    // Refresh after a short delay
     setTimeout(() => loadTokens(), 5000);
 
     return txId;
-  }, [api, sellModalBox, loadTokens]);
+  }, [api, walletType, walletAddr, sellModalBox, loadTokens]);
 
   // ═══════════════════════════════════════════════════════════════
   // TX FLOW: Reclaim (Refund definition box)
   // ═══════════════════════════════════════════════════════════════
 
   const handleReclaim = useCallback(async (box: ContractBox) => {
-    if (!api) return;
+    if (!api && walletType !== "ergopay") return;
 
     setActionStatus((prev) => ({ ...prev, [box.boxId]: "Preparing..." }));
 
@@ -543,10 +655,15 @@ export default function PortfolioPage() {
       const nodeBox = await fetchBoxById(box.boxId);
       const contractBox = nodeBoxToFleet(nodeBox);
 
-      // Get wallet UTXOs for additional ERG input (to cover miner fee)
-      const rawUtxos = await getWalletUtxos(api);
-      const fleetWalletBoxes = rawUtxos.map(nautilusBoxToFleet);
-      const walletErgoTree = rawUtxos[0].ergoTree;
+      // Get wallet ErgoTree for the refund output
+      let walletErgoTree: string;
+      if (walletType === "ergopay" && walletAddr) {
+        const walletBoxes = await fetchWalletBoxes(walletAddr);
+        walletErgoTree = walletBoxes[0]?.ergoTree || "";
+      } else {
+        const rawUtxos = await getWalletUtxos(api);
+        walletErgoTree = rawUtxos[0].ergoTree;
+      }
 
       const height = await fetchHeight();
       const txFee = MINER_FEE;
@@ -582,24 +699,40 @@ export default function PortfolioPage() {
         .payFee(txFee)
         .build();
 
-      setActionStatus((prev) => ({ ...prev, [box.boxId]: "Sign in wallet..." }));
-
       const eip12Tx = unsignedTx.toEIP12Object();
-      console.log("[Reclaim] EIP-12 TX:", JSON.stringify(eip12Tx, (_, v) => typeof v === 'bigint' ? v.toString() : v).slice(0, 500));
-      const signedTx = await signTx(api, eip12Tx);
-      const txId = await submitTransaction(signedTx);
 
-      setActionStatus((prev) => ({ ...prev, [box.boxId]: `Submitted: ${txId.slice(0, 8)}...` }));
-      console.log("Reclaim TX submitted:", txId);
-
-      setTimeout(() => {
-        setActionStatus((prev) => {
-          const next = { ...prev };
-          delete next[box.boxId];
-          return next;
+      if (walletType === "ergopay" && walletAddr) {
+        setActionStatus((prev) => ({ ...prev, [box.boxId]: "Scan QR to sign..." }));
+        const { ergoPayUrl, requestId } = await prepareErgoPayTx(eip12Tx, walletAddr, `Etcha: Reclaim collateral`);
+        setErgoPayModal({
+          url: ergoPayUrl, requestId,
+          message: "Reclaim collateral from unminted option",
+          onSigned: (txId) => {
+            setErgoPayModal(null);
+            setContractBoxes((prev) => prev.filter((b) => b.boxId !== box.boxId));
+            setSuccessBanner({ message: "Collateral reclaimed", txId });
+            loadTokens();
+          },
         });
-        loadTokens();
-      }, 10000);
+      } else {
+        setActionStatus((prev) => ({ ...prev, [box.boxId]: "Sign in wallet..." }));
+        console.log("[Reclaim] EIP-12 TX:", JSON.stringify(eip12Tx, (_, v) => typeof v === 'bigint' ? v.toString() : v).slice(0, 500));
+        const signedTx = await signTx(api, eip12Tx);
+        const txId = await submitTransaction(signedTx);
+
+        setActionStatus((prev) => ({ ...prev, [box.boxId]: `Submitted: ${txId.slice(0, 8)}...` }));
+        setContractBoxes((prev) => prev.filter((b) => b.boxId !== box.boxId));
+        console.log("Reclaim TX submitted:", txId);
+
+        setTimeout(() => {
+          setActionStatus((prev) => {
+            const next = { ...prev };
+            delete next[box.boxId];
+            return next;
+          });
+          loadTokens();
+        }, 10000);
+      }
     } catch (err: any) {
       const msg = err?.message || String(err);
       setActionStatus((prev) => ({ ...prev, [box.boxId]: `Error: ${msg.slice(0, 40)}` }));
@@ -619,7 +752,7 @@ export default function PortfolioPage() {
   // ═══════════════════════════════════════════════════════════════
 
   const handleClose = useCallback(async (box: ContractBox) => {
-    if (!api) return;
+    if (!api && walletType !== "ergopay") return;
 
     setActionStatus((prev) => ({ ...prev, [box.boxId]: "Preparing..." }));
 
@@ -630,25 +763,25 @@ export default function PortfolioPage() {
       const nodeBox = await fetchBoxById(box.boxId);
       const reserveBox = nodeBoxToFleet(nodeBox);
 
-      // Get wallet UTXOs for miner fee
-      const rawUtxos = await getWalletUtxos(api);
-      const fleetWalletBoxes = rawUtxos.map(nautilusBoxToFleet);
-      const walletErgoTree = rawUtxos[0].ergoTree;
-
       const height = await fetchHeight();
       const txFee = MINER_FEE;
 
-      // Extract issuer address from R9 — the first Coll[Byte] in Coll[Coll[Byte]]
-      // The issuer is the user themselves (this is their box from portfolio)
-      // Issuer ErgoTree = 0008cd + R9[0] EC point
-      // Since this is the user's own box, the issuer ErgoTree = walletErgoTree
-      const issuerErgoTree = walletErgoTree;
+      // Extract issuer address from R9 (first EC point in Coll[Coll[Byte]])
+      const r9hex = nodeBox.additionalRegisters?.R9;
+      if (!r9hex) throw new Error("Reserve box missing R9 register");
+      const r9bytes = hexToBytesOracle(r9hex);
+      const issuerECPoint = extractECPointFromR9(r9bytes);
+      if (!issuerECPoint) throw new Error("Cannot parse issuer EC point from R9");
+      const ecHex = Array.from(issuerECPoint).map(b => b.toString(16).padStart(2, '0')).join('');
+      const issuerErgoTree = "0008cd" + ecHex;
 
-      // All inputs: the reserve box + wallet boxes for fee
-      const allInputs = [reserveBox, ...fleetWalletBoxes];
+      // Only the reserve box as input — fee comes from reserve ERG.
+      // Contract requires OUTPUTS.size == 2 (issuer output + miner fee).
+      // Including wallet boxes would create a 3rd change output, failing the script.
+      const allInputs = [reserveBox];
 
-      // Output[0]: collateral + ERG goes back to issuer (the user)
-      const issuerOutputValue = BigInt(reserveBox.value);
+      // Output[0]: collateral + ERG goes back to issuer (minus fee)
+      const issuerOutputValue = BigInt(reserveBox.value) - txFee;
       const issuerOutput = new OutputBuilder(issuerOutputValue, issuerErgoTree);
 
       // Add collateral tokens (tokens[1]) if present
@@ -666,7 +799,7 @@ export default function PortfolioPage() {
       const builder = new TransactionBuilder(height)
         .from(allInputs)
         .to([issuerOutput])
-        .sendChangeTo(walletErgoTree)
+        .sendChangeTo(issuerErgoTree)
         .payFee(txFee);
 
       // Burn the singleton option token
@@ -678,24 +811,32 @@ export default function PortfolioPage() {
       }
 
       const unsignedTx = builder.build();
-
-      setActionStatus((prev) => ({ ...prev, [box.boxId]: "Sign in wallet..." }));
-
       const eip12Tx = unsignedTx.toEIP12Object();
-      const signedTx = await signTx(api, eip12Tx);
-      const txId = await submitTransaction(signedTx);
 
-      setActionStatus((prev) => ({ ...prev, [box.boxId]: `Submitted: ${txId.slice(0, 8)}...` }));
-      console.log("Close TX submitted:", txId);
-
-      setTimeout(() => {
-        setActionStatus((prev) => {
-          const next = { ...prev };
-          delete next[box.boxId];
-          return next;
+      if (walletType === "ergopay" && walletAddr) {
+        setActionStatus((prev) => ({ ...prev, [box.boxId]: "Scan QR to sign..." }));
+        const { ergoPayUrl, requestId } = await prepareErgoPayTx(eip12Tx, walletAddr, `Etcha: Close expired ${box.name}`);
+        setErgoPayModal({
+          url: ergoPayUrl,
+          requestId,
+          message: `Close expired option: ${box.name}`,
+          onSigned: (txId) => {
+            setErgoPayModal(null);
+            setContractBoxes((prev) => prev.filter((b) => b.boxId !== box.boxId));
+            setSuccessBanner({ message: "Option closed — collateral returned to your wallet", txId });
+            loadTokens();
+          },
         });
+      } else {
+        setActionStatus((prev) => ({ ...prev, [box.boxId]: "Sign in wallet..." }));
+        const signedTx = await signTx(api, eip12Tx);
+        const txId = await submitTransaction(signedTx);
+
+        setContractBoxes((prev) => prev.filter((b) => b.boxId !== box.boxId));
+        setSuccessBanner({ message: "Option closed — collateral returned to your wallet", txId });
+        console.log("Close TX submitted:", txId);
         loadTokens();
-      }, 10000);
+      }
     } catch (err: any) {
       const msg = err?.message || String(err);
       setActionStatus((prev) => ({ ...prev, [box.boxId]: `Error: ${msg.slice(0, 40)}` }));
@@ -715,7 +856,7 @@ export default function PortfolioPage() {
   // ═══════════════════════════════════════════════════════════════
 
   const handleCancelSellOrder = useCallback(async (order: ParsedSellOrder) => {
-    if (!api) return;
+    if (!api && walletType !== "ergopay") return;
 
     setActionStatus((prev) => ({ ...prev, [order.boxId]: "Preparing..." }));
 
@@ -727,15 +868,20 @@ export default function PortfolioPage() {
       const sellBox = nodeBoxToFleet(nodeBox);
 
       // Get wallet UTXOs for miner fee
-      const rawUtxos = await getWalletUtxos(api);
-      const fleetWalletBoxes = rawUtxos.map(nautilusBoxToFleet);
-      const walletErgoTree = rawUtxos[0].ergoTree;
+      let fleetWalletBoxes: any[];
+      let walletErgoTree: string;
+      if (walletType === "ergopay" && walletAddr) {
+        fleetWalletBoxes = await fetchWalletBoxes(walletAddr);
+        walletErgoTree = fleetWalletBoxes[0]?.ergoTree || "";
+      } else {
+        const rawUtxos = await getWalletUtxos(api);
+        fleetWalletBoxes = rawUtxos.map(nautilusBoxToFleet);
+        walletErgoTree = rawUtxos[0].ergoTree;
+      }
 
       const height = await fetchHeight();
       const txFee = MINER_FEE;
 
-      // The FixedPriceSell contract allows the seller (R4 SigmaProp) to spend freely.
-      // We simply send all contents (ERG + option tokens) back to the wallet.
       const allInputs = [sellBox, ...fleetWalletBoxes];
 
       const unsignedTx = new TransactionBuilder(height)
@@ -744,23 +890,33 @@ export default function PortfolioPage() {
         .payFee(txFee)
         .build();
 
-      setActionStatus((prev) => ({ ...prev, [order.boxId]: "Sign in wallet..." }));
-
       const eip12Tx = unsignedTx.toEIP12Object();
-      const signedTx = await signTx(api, eip12Tx);
-      const txId = await submitTransaction(signedTx);
 
-      setActionStatus((prev) => ({ ...prev, [order.boxId]: `Cancelled: ${txId.slice(0, 8)}...` }));
-      console.log("Cancel sell order TX submitted:", txId);
-
-      setTimeout(() => {
-        setActionStatus((prev) => {
-          const next = { ...prev };
-          delete next[order.boxId];
-          return next;
+      if (walletType === "ergopay" && walletAddr) {
+        setActionStatus((prev) => ({ ...prev, [order.boxId]: "Scan QR to sign..." }));
+        const { ergoPayUrl, requestId } = await prepareErgoPayTx(eip12Tx, walletAddr, "Etcha: Cancel sell order");
+        setErgoPayModal({
+          url: ergoPayUrl, requestId,
+          message: "Cancel sell order",
+          onSigned: (txId) => {
+            setErgoPayModal(null);
+            setOpenOrders((prev) => prev.filter((o) => o.boxId !== order.boxId));
+            setSuccessBanner({ message: "Sell order cancelled — tokens returned to your wallet", txId });
+            toast(`Sell order cancelled — TX: ${txId.slice(0, 12)}...`);
+            loadTokens();
+          },
         });
+      } else {
+        setActionStatus((prev) => ({ ...prev, [order.boxId]: "Sign in wallet..." }));
+        const signedTx = await signTx(api, eip12Tx);
+        const txId = await submitTransaction(signedTx);
+
+        setOpenOrders((prev) => prev.filter((o) => o.boxId !== order.boxId));
+        setSuccessBanner({ message: "Sell order cancelled — tokens returned to your wallet", txId });
+        toast(`Sell order cancelled — TX: ${txId.slice(0, 12)}...`);
+        console.log("Cancel sell order TX submitted:", txId);
         loadTokens();
-      }, 10000);
+      }
     } catch (err: any) {
       const msg = err?.message || String(err);
       if (msg.includes("declined") || msg.includes("Refused")) {
@@ -784,7 +940,7 @@ export default function PortfolioPage() {
   // ═══════════════════════════════════════════════════════════════
 
   const handleExerciseClick = useCallback(async (box: ContractBox) => {
-    if (!api) return;
+    if (!api && walletType !== "ergopay") return;
 
     try {
       // Get option token ID from reserve box R7
@@ -811,7 +967,7 @@ export default function PortfolioPage() {
       }
 
       if (walletTokenBalance <= 0n) {
-        alert("You don't have any option tokens for this contract.");
+        toast("You don't have any option tokens for this contract.");
         return;
       }
 
@@ -829,12 +985,28 @@ export default function PortfolioPage() {
         } catch { /* will show as undefined in dialog */ }
       }
 
+      // Read R8 for contractSize and stablecoinDecimal
+      let exContractSize: number | undefined;
+      let exStablecoin: "USE" | "SigUSD" = "USE";
+      const r8hex = nodeBox.additionalRegisters?.R8;
+      if (r8hex) {
+        const r8bytes = hexToBytesOracle(r8hex);
+        const r8vals = parseCollLong(r8bytes);
+        if (r8vals && r8vals.length >= 11) {
+          exContractSize = Number(r8vals[2]) / 1_000_000;
+          exStablecoin = Number(r8vals[10]) === 100 ? "SigUSD" : "USE";
+        }
+      }
+
       setExerciseModalBox(box);
       setExerciseModalTokenBalance(walletTokenBalance);
       setExerciseModalSpotPrice(spotPrice);
+      setExerciseModalContractSize(exContractSize);
+      setExerciseModalOracleIndex(box.oracleIndex);
+      setExerciseModalStablecoin(exStablecoin);
       setExerciseModalOpen(true);
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      toast(`Error: ${err.message}`);
     }
   }, [api]);
 
@@ -884,8 +1056,13 @@ export default function PortfolioPage() {
     // 5. Get wallet UTXOs, separate option token boxes from payment boxes
     const r7hex = regs.R7;
     const optionTokenId = r7hex.startsWith("0e20") ? r7hex.slice(4) : "";
-    const rawUtxos = await getWalletUtxos(api);
-    const allBoxes = rawUtxos.map(nautilusBoxToFleet);
+    let allBoxes: any[];
+    if (walletType === "ergopay" && walletAddr) {
+      allBoxes = await fetchWalletBoxes(walletAddr);
+    } else {
+      const rawUtxos = await getWalletUtxos(api);
+      allBoxes = rawUtxos.map(nautilusBoxToFleet);
+    }
 
     const optionTokenBoxes = allBoxes.filter((b: any) =>
       b.assets.some((a: any) => a.tokenId === optionTokenId)
@@ -902,7 +1079,7 @@ export default function PortfolioPage() {
       throw new Error("No option tokens found in wallet — you may have already exercised this position. Refresh the page.");
     }
 
-    const walletErgoTree = rawUtxos[0]?.ergoTree;
+    const walletErgoTree = allBoxes[0]?.ergoTree;
     if (!walletErgoTree) throw new Error("No wallet UTXOs found");
 
     let height = await fetchHeight();
@@ -1000,6 +1177,25 @@ export default function PortfolioPage() {
     const eip12Tx = unsignedTx.toEIP12Object();
     console.log("[Exercise] EIP-12 TX:", JSON.stringify(eip12Tx, (_, v) => typeof v === 'bigint' ? v.toString() : v).slice(0, 500));
 
+    if (walletType === "ergopay" && walletAddr) {
+      console.log("[Exercise] Preparing ErgoPay signing...");
+      const { ergoPayUrl, requestId } = await prepareErgoPayTx(
+        eip12Tx, walletAddr, `Etcha: Exercise ${box.name}`,
+      );
+      return new Promise<string>((resolve) => {
+        setErgoPayModal({
+          url: ergoPayUrl, requestId,
+          message: `Exercise: ${box.name}`,
+          onSigned: (txId) => {
+            setErgoPayModal(null);
+            console.log("[Exercise] ErgoPay TX signed:", txId);
+            setTimeout(() => loadTokens(), 5000);
+            resolve(txId);
+          },
+        });
+      });
+    }
+
     console.log("[Exercise] Requesting Nautilus signature...");
     const signedTx = await signTx(api, eip12Tx);
     console.log("[Exercise] Signed, submitting...");
@@ -1007,7 +1203,11 @@ export default function PortfolioPage() {
     const txId = await submitTransaction(signedTx);
 
     console.log("[Exercise] TX submitted:", txId);
-    setTimeout(() => loadTokens(), 5000);
+    // Delay refresh to let the dialog show success state first.
+    // Don't clear exerciseModalBox — the dialog persists until user closes it.
+    setTimeout(() => {
+      loadTokens();
+    }, 10000);
     return txId;
   }, [api, exerciseModalBox, loadTokens]);
 
@@ -1046,12 +1246,53 @@ export default function PortfolioPage() {
         </button>
       </div>
 
+      {/* Success banner for close/cancel actions */}
+      {successBanner && (
+        <div className="flex items-center justify-between bg-[#0d2818] border border-[#1a4d2e] rounded-lg px-4 py-3">
+          <span className="text-sm text-[#4ade80]">{successBanner.message}</span>
+          <a
+            href={`https://ergexplorer.com/transactions#${successBanner.txId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-[#8891a5] hover:text-[#4ade80] transition-colors ml-4 whitespace-nowrap"
+          >
+            {successBanner.txId.slice(0, 12)}...
+          </a>
+        </div>
+      )}
+
+      {/* Error banner */}
+      {loadError && (
+        <div className="flex items-center justify-between bg-[#2a1215] border border-[#4d1a1e] rounded-lg px-4 py-3">
+          <span className="text-sm text-[#f87171]">{loadError}</span>
+          <button
+            onClick={loadTokens}
+            className="text-xs text-[#8891a5] hover:text-[#f87171] transition-colors ml-4 whitespace-nowrap"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* ErgoPay signing modal (shared across all portfolio TX flows) */}
+      {ergoPayModal && (
+        <ErgoPayModal
+          open={!!ergoPayModal}
+          onClose={() => setErgoPayModal(null)}
+          ergoPayUrl={ergoPayModal.url}
+          requestId={ergoPayModal.requestId}
+          message={ergoPayModal.message}
+          onSigned={ergoPayModal.onSigned}
+          onExpired={() => setErgoPayModal(null)}
+        />
+      )}
+
       {/* Active Options (Holding) */}
       <PaginatedSection title="Active Options (Holding)" total={holdings.length} pageSize={PAGE_SIZE}>
         {(page) => {
           const pageHoldings = holdings.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
           return (
-            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-hidden">
+            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[#1e2330]">
@@ -1083,8 +1324,23 @@ export default function PortfolioPage() {
                           </span>
                           <span className="text-xs ml-1 text-[#8891a5]">{h.settlement}</span>
                         </td>
-                        <td className="py-2 px-4 text-right font-mono text-[#e09a5f]">
-                          ${h.strikePrice >= 100 ? h.strikePrice.toFixed(0) : h.strikePrice.toFixed(4)}
+                        <td className="py-2 px-4 text-right">
+                          {(() => {
+                            const size = h.contractSize ?? 1;
+                            const perUnit = h.strikePrice / size;
+                            return (
+                              <div>
+                                <div className="font-mono text-[#e09a5f]">
+                                  ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(4)}
+                                </div>
+                                {size !== 1 && (
+                                  <div className="text-[10px] text-[#8891a5]">
+                                    {size} × ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(2)} = ${h.strikePrice >= 100 ? h.strikePrice.toFixed(0) : h.strikePrice.toFixed(2)}/contract
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className="py-2 px-4 text-right text-xs">
                           {isExpired ? (
@@ -1154,7 +1410,7 @@ export default function PortfolioPage() {
                   }) : (
                     <tr>
                       <td colSpan={7} className="text-center py-8 text-[#8891a5]">
-                        {loading ? "Scanning..." : "No active option positions"}
+                        {loading ? <table className="w-full"><tbody><SkeletonRow cols={7} /><SkeletonRow cols={7} /></tbody></table> : "No active option positions"}
                       </td>
                     </tr>
                   )}
@@ -1170,7 +1426,7 @@ export default function PortfolioPage() {
         {(page) => {
           const pageItems = writtenOptions.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
           return (
-            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-hidden">
+            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-x-auto">
               {pageItems.length > 0 ? (
                 <table className="w-full text-sm">
                   <thead>
@@ -1179,7 +1435,8 @@ export default function PortfolioPage() {
                       <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Type</th>
                       <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Strike</th>
                       <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Expiry</th>
-                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">ERG Locked</th>
+                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Qty</th>
+                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Value Locked</th>
                       <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Status</th>
                       <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Action</th>
                     </tr>
@@ -1188,6 +1445,10 @@ export default function PortfolioPage() {
                     {pageItems.map((box) => {
                       const isExpired = box.state === "EXPIRED";
                       const blocksToExpiry = (box.maturityDate ?? 0) - currentHeight;
+                      const blocksToClose = (box.maturityDate ?? 0) + exerciseWindow - currentHeight;
+                      const optTokenId = reserveBoxIdToTokenId.get(box.boxId);
+                      const walletBal = optTokenId ? (walletTokenMap.get(optTokenId) ?? 0n) : 0n;
+                      const isFullyExercised = box.state === "RESERVE" && !box.tokenCount && walletBal === 0n;
                       return (
                         <tr key={box.boxId} className="border-b border-[#1e2330]/50 hover:bg-[#1e2330]/30">
                           <td className="py-2 px-4 text-[#e8eaf0]">{box.name}</td>
@@ -1199,41 +1460,74 @@ export default function PortfolioPage() {
                             </span>
                             <span className="text-xs ml-1 text-[#8891a5]">{box.settlement}</span>
                           </td>
-                          <td className="py-2 px-4 text-right font-mono text-[#e09a5f]">
-                            {box.strikePrice ? `$${box.strikePrice >= 100 ? box.strikePrice.toFixed(0) : box.strikePrice.toFixed(4)}` : "\u2014"}
+                          <td className="py-2 px-4 text-right">
+                            {box.strikePrice ? (() => {
+                              const size = box.contractSize ?? 1;
+                              const perUnit = box.strikePrice / size;
+                              return (
+                                <div>
+                                  <div className="font-mono text-[#e09a5f]">
+                                    ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(4)}
+                                  </div>
+                                  {size !== 1 && (
+                                    <div className="text-[10px] text-[#8891a5]">
+                                      {size} × ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(2)} = ${box.strikePrice >= 100 ? box.strikePrice.toFixed(0) : box.strikePrice.toFixed(2)}/contract
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })() : "\u2014"}
                           </td>
                           <td className="py-2 px-4 text-right text-xs">
                             {isExpired ? (
                               <span className="text-[#f87171]">Expired</span>
+                            ) : blocksToExpiry <= 0 && blocksToClose > 0 ? (
+                              <span className="text-[#e09a5f]">Exercise window</span>
                             ) : blocksToExpiry > 0 ? (
                               <span className="text-[#e8eaf0]">{formatBlocksToTime(blocksToExpiry)}</span>
                             ) : (
                               <span className="text-[#e09a5f]">Exercise window</span>
                             )}
                           </td>
+                          <td className="py-2 px-4 text-right font-mono text-[#e8eaf0]">
+                            {walletBal > 0n ? walletBal.toString() : box.tokenCount ?? "\u2014"}
+                          </td>
                           <td className="py-2 px-4 text-right font-mono text-[#8891a5]">
-                            {(box.value / 1e9).toFixed(4)}
+                            {formatCollateral(box)}
                           </td>
                           <td className="py-2 px-4 text-right">
-                            <span className={`text-xs px-2 py-0.5 rounded ${
-                              isExpired ? "bg-[#f87171]/20 text-[#f87171]" : "bg-[#34d399]/20 text-[#34d399]"
-                            }`}>
-                              {isExpired ? "Expired" : "Active"}
-                            </span>
+                            {isExpired ? (
+                              <span className="text-xs px-2 py-0.5 rounded bg-[#f87171]/20 text-[#f87171]">Expired</span>
+                            ) : blocksToExpiry <= 0 && blocksToClose > 0 ? (
+                              <span className="text-xs text-[#e09a5f]">
+                                Refund in {formatBlocksToTime(blocksToClose)}
+                              </span>
+                            ) : isFullyExercised ? (
+                              <span className="text-xs px-2 py-0.5 rounded bg-[#e09a5f]/20 text-[#e09a5f]">Exercised</span>
+                            ) : (
+                              <span className="text-xs px-2 py-0.5 rounded bg-[#34d399]/20 text-[#34d399]">Active</span>
+                            )}
                           </td>
                           <td className="py-2 px-4 text-right">
                             {actionStatus[box.boxId] ? (
                               <span className="text-xs text-[#8891a5]">{actionStatus[box.boxId]}</span>
                             ) : (
                               <>
-                                {box.state === "RESERVE" && (
-                                  <button
-                                    onClick={() => handleListForSaleClick(box)}
-                                    className="text-xs px-2 py-1 bg-[#c87941]/20 text-[#c87941] rounded hover:bg-[#c87941]/30"
-                                  >
-                                    List for Sale
-                                  </button>
-                                )}
+                                {box.state === "RESERVE" && (() => {
+                                  if (isFullyExercised) {
+                                    return <span className="text-xs text-[#8891a5]">Closeable after expiry</span>;
+                                  }
+                                  return walletBal > 0n ? (
+                                    <button
+                                      onClick={() => handleListForSaleClick(box)}
+                                      className="text-xs px-2 py-1 bg-[#c87941]/20 text-[#c87941] rounded hover:bg-[#c87941]/30"
+                                    >
+                                      List for Sale
+                                    </button>
+                                  ) : (
+                                    <span className="text-xs text-[#8891a5]">No tokens</span>
+                                  );
+                                })()}
                                 {box.state === "EXPIRED" && (
                                   <button
                                     onClick={() => handleClose(box)}
@@ -1252,7 +1546,7 @@ export default function PortfolioPage() {
                 </table>
               ) : (
                 <div className="p-8 text-center text-[#8891a5]">
-                  {loading ? "Scanning..." : "No written options"}
+                  {loading ? <table className="w-full"><tbody><SkeletonRow cols={8} /><SkeletonRow cols={8} /></tbody></table> : "No written options"}
                 </div>
               )}
             </div>
@@ -1260,12 +1554,12 @@ export default function PortfolioPage() {
         }}
       </PaginatedSection>
 
-      {/* Open Orders */}
-      <PaginatedSection title="Open Orders" total={openOrders.length} pageSize={PAGE_SIZE}>
+      {/* My Sell Orders */}
+      <PaginatedSection title="My Sell Orders" total={openOrders.length} pageSize={PAGE_SIZE}>
         {(page) => {
           const pageItems = openOrders.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
           return (
-            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-hidden">
+            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-x-auto">
               {pageItems.length > 0 ? (
                 <table className="w-full text-sm">
                   <thead>
@@ -1284,8 +1578,10 @@ export default function PortfolioPage() {
                       const premiumDisplay = (Number(order.premiumPerToken) / Math.pow(10, decimals)).toFixed(decimals);
                       return (
                         <tr key={order.boxId} className="border-b border-[#1e2330]/50 hover:bg-[#1e2330]/30">
-                          <td className="py-2 px-4 font-mono text-xs text-[#e8eaf0]">
-                            {order.optionTokenId.slice(0, 10)}...{order.optionTokenId.slice(-6)}
+                          <td className="py-2 px-4 text-xs text-[#e8eaf0]">
+                            {tokenIdToName.get(order.optionTokenId) ?? (
+                              <span className="font-mono">{order.optionTokenId.slice(0, 10)}...{order.optionTokenId.slice(-6)}</span>
+                            )}
                           </td>
                           <td className="py-2 px-4 text-right font-mono text-[#e09a5f]">
                             {premiumDisplay} {isUSE ? "USE" : "SigUSD"}
@@ -1319,7 +1615,7 @@ export default function PortfolioPage() {
                 </table>
               ) : (
                 <div className="p-8 text-center text-[#8891a5]">
-                  {loading ? "Scanning..." : "No open sell orders"}
+                  {loading ? <table className="w-full"><tbody><SkeletonRow cols={5} /><SkeletonRow cols={5} /></tbody></table> : "No open sell orders"}
                 </div>
               )}
             </div>
@@ -1332,7 +1628,7 @@ export default function PortfolioPage() {
         {(page) => {
           const pageBoxes = pendingBoxes.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
           return (
-            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-hidden">
+            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-x-auto">
               {pageBoxes.length > 0 ? (
                 <table className="w-full text-sm">
                   <thead>
@@ -1341,7 +1637,7 @@ export default function PortfolioPage() {
                       <th className="text-left py-3 px-4 text-[#8891a5] font-medium">State</th>
                       <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Strike</th>
                       <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Expiry</th>
-                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">ERG Locked</th>
+                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Value Locked</th>
                       <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Action</th>
                     </tr>
                   </thead>
@@ -1362,8 +1658,23 @@ export default function PortfolioPage() {
                              "Expired"}
                           </span>
                         </td>
-                        <td className="py-2 px-4 text-right font-mono text-[#e09a5f]">
-                          {box.strikePrice ? `$${box.strikePrice >= 100 ? box.strikePrice.toFixed(0) : box.strikePrice.toFixed(4)}` : "\u2014"}
+                        <td className="py-2 px-4 text-right">
+                          {box.strikePrice ? (() => {
+                            const size = box.contractSize ?? 1;
+                            const perUnit = box.strikePrice / size;
+                            return (
+                              <div>
+                                <div className="font-mono text-[#e09a5f]">
+                                  ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(4)}
+                                </div>
+                                {size !== 1 && (
+                                  <div className="text-[10px] text-[#8891a5]">
+                                    {size} × ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(2)} = ${box.strikePrice >= 100 ? box.strikePrice.toFixed(0) : box.strikePrice.toFixed(2)}/contract
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })() : "\u2014"}
                         </td>
                         {/* Expiry info */}
                         <td className="py-2 px-4 text-right">
@@ -1400,7 +1711,7 @@ export default function PortfolioPage() {
                           })() : "\u2014"}
                         </td>
                         <td className="py-2 px-4 text-right font-mono text-[#8891a5]">
-                          {(box.value / 1e9).toFixed(4)}
+                          {formatCollateral(box)}
                         </td>
                         <td className="py-2 px-4 text-right">
                           {actionStatus[box.boxId] ? (
@@ -1469,7 +1780,7 @@ export default function PortfolioPage() {
           const pageRows = allRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
           return (
-            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-hidden">
+            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[#1e2330]">
@@ -1520,6 +1831,7 @@ export default function PortfolioPage() {
           strikePrice={sellModalBox.strikePrice}
           maturityDate={sellModalBox.maturityDate}
           oracleIndex={sellModalBox.oracleIndex}
+          contractSize={sellModalContractSize}
           onSubmit={handleListForSaleSubmit}
         />
       )}
@@ -1538,13 +1850,15 @@ export default function PortfolioPage() {
           settlementType={(exerciseModalBox.settlement as "physical" | "cash") ?? "cash"}
           strikePrice={exerciseModalBox.strikePrice ?? 0}
           assetName={exerciseModalBox.name?.split(" ")[0] ?? ""}
-          assetUnit={exerciseModalBox.name?.split(" ")[0] ?? ""}
+          assetUnit={exerciseModalOracleIndex !== undefined ? (ROSEN_NAMES[exerciseModalOracleIndex] ?? exerciseModalBox.name?.split(" ")[0] ?? "") : (exerciseModalBox.name?.split(" ")[0] ?? "")}
           expiryBlocks={(exerciseModalBox.maturityDate ?? 0) - currentHeight}
           style={(exerciseModalBox.style as "european" | "american") ?? "european"}
           spotPrice={exerciseModalSpotPrice}
           collateralCap={undefined}
-          stablecoin="USE"
+          stablecoin={exerciseModalStablecoin}
           reserveBoxId={exerciseModalBox.boxId}
+          contractSize={exerciseModalContractSize}
+          oracleIndex={exerciseModalOracleIndex}
           onExercise={handleExerciseSubmit}
         />
       )}

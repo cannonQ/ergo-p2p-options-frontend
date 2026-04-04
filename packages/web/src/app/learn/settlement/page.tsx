@@ -29,7 +29,7 @@ export default function SettlementPage() {
         <p className="section-text">
           The settlement mode is chosen when the option is created — not at
           exercise. Both paths start from the same ErgoScript contract. The
-          oracle provides the spot price; the contract handles the rest.
+          oracle provides the current market price (spot price); the contract handles the rest.
         </p>
 
         <Graphic>
@@ -692,8 +692,9 @@ export default function SettlementPage() {
         </Graphic>
 
         <Callout variant="neutral">
-          Rosen Bridge uses decentralized watchers — not a single bridge
-          operator. Etcha uses rsTokens as physical delivery assets. The bridge
+          Rosen Bridge uses a network of independent operators (called watchers)
+          who verify that assets on other chains match the tokens minted on Ergo.
+          Etcha uses these rsTokens as physical delivery assets. The bridge
           operates upstream; it&apos;s not involved at exercise time.
         </Callout>
       </section>
@@ -764,7 +765,7 @@ export default function SettlementPage() {
                 <td className="row-label">Small size trades</td>
                 <td>
                   <strong style={{ color: "var(--lp-copper)" }}>Cash</strong> —
-                  Avoid bridge overhead
+                  Avoid bridge fees and extra steps
                 </td>
               </tr>
             </tbody>
@@ -784,10 +785,10 @@ export default function SettlementPage() {
       <Takeaway>
         <p>
           Physical settlement delivers the actual token — use it when you want
-          to accumulate an asset. Cash settlement pays the price difference in
-          stablecoins — use it for speculation, hedging, and anything you
-          can&apos;t physically deliver (gold, oil, equities). The settlement
-          mode is chosen at creation, not at exercise.
+          to accumulate an asset (rsETH, ERG, DexyGold). Cash settlement pays the
+          price difference in stablecoins — use it for speculation, hedging, and
+          assets without on-chain tokens (oil, equities). The settlement mode is
+          chosen at creation, not at exercise.
         </p>
       </Takeaway>
 

@@ -94,6 +94,10 @@ export async function scanAll(currentHeight: number): Promise<ClassifiedBox[]> {
       const boxes = await fetchBoxesByErgoTree(ergoTree);
 
       for (const box of boxes) {
+        // Skip boxes without R8 — these are not option reserve boxes
+        // (e.g. FixedPriceSell or BuyTokenRequest boxes that share an ErgoTree prefix)
+        if (!box.additionalRegisters.R8) continue;
+
         const assets = box.assets.map(a => ({
           tokenId: a.tokenId,
           amount: BigInt(a.amount),
