@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { bsCall, bsPut, blocksToYears, oracleVolToDecimal } from "@ergo-options/core";
+import { bsCall, bsPut, blocksToYears, oracleVolToDecimal, REGISTRY_RATES, ORACLE_DECIMAL, ASSET_NAMES } from "@ergo-options/core";
 import { TxStatus } from "@/app/components/TxStatus";
 import { useFocusTrap } from "@/lib/hooks/useFocusTrap";
 
@@ -77,8 +77,9 @@ export function ListForSaleModal({
         const T = blocksToYears(blocksToExpiry);
         const sigma = spotData.vol ? oracleVolToDecimal(spotData.vol) : 0.5;
         const S = spotData.price;
-        const K = strikePrice;
         const size = contractSize ?? 1;
+        // strikePrice from R8 is per-contract (strike * contractSize). B-S needs per-unit.
+        const K = strikePrice / size;
 
         // If past maturity, premium = intrinsic value only
         let premium: number;
@@ -188,30 +189,53 @@ export function ListForSaleModal({
               <span className="text-[#e09a5f] font-mono">${spotPrice.toFixed(4)}</span>
             </div>
           )}
-          {strikePrice !== undefined && (
+          {strikePrice !== undefined && (() => {
+            const size = contractSize ?? 1;
+            const strikePerUnit = strikePrice / size;
+            return (
             <div>
               <span className="text-[#64748b]">Strike:</span>{" "}
-              <span className="text-[#e8eaf0] font-mono">${strikePrice.toFixed(4)}</span>
+              <span className="text-[#e8eaf0] font-mono">${strikePerUnit.toFixed(4)}</span>
+              {size !== 1 && (
+                <span className="text-[#8891a5] text-xs ml-1">(${strikePrice.toFixed(size >= 100 ? 0 : 4)}/contract)</span>
+              )}
               {spotPrice !== null && (
                 <span className={`ml-2 text-xs ${
-                  (optionType === "call" ? spotPrice > strikePrice : spotPrice < strikePrice)
+                  (optionType === "call" ? spotPrice > strikePerUnit : spotPrice < strikePerUnit)
                     ? "text-[#34d399]" : "text-[#f87171]"
                 }`}>
                   {optionType === "call"
-                    ? (spotPrice > strikePrice ? "ITM" : "OTM")
-                    : (spotPrice < strikePrice ? "ITM" : "OTM")}
+                    ? (spotPrice > strikePerUnit ? "ITM" : "OTM")
+                    : (spotPrice < strikePerUnit ? "ITM" : "OTM")}
                 </span>
               )}
             </div>
-          )}
-          {contractSize !== undefined && contractSize !== 1 && spotPrice !== null && (
-            <div>
-              <span className="text-[#64748b]">Each token:</span>{" "}
-              <span className="text-[#e8eaf0] font-mono">{contractSize}</span>
-              <span className="text-[#8891a5]"> of underlying</span>
-              <span className="text-[#8891a5] ml-1">(~${(contractSize * spotPrice).toFixed(2)})</span>
-            </div>
-          )}
+            );
+          })()}
+          {contractSize !== undefined && contractSize !== 1 && spotPrice !== null && (() => {
+            const UNIT_NAMES: Record<number, string> = { 0: "rsETH", 1: "rsBTC", 2: "rsBNB", 3: "rsDOGE", 4: "rsADA", 17: "ERG", 18: "DexyGold" };
+            const rate = oracleIndex !== undefined ? Number(REGISTRY_RATES[oracleIndex] ?? 0n) : 0;
+            const rateIsPow10 = rate > 0 && Math.log10(rate) % 1 === 0;
+            const unitName = oracleIndex !== undefined ? (UNIT_NAMES[oracleIndex] ?? ASSET_NAMES[oracleIndex] ?? "tokens") : "tokens";
+            // Non-decimal rates (e.g. DexyGold 31103): show token count. Decimal rates: show oracle units.
+            if (rate > 0 && !rateIsPow10) {
+              const tokenCount = Math.ceil(contractSize * rate);
+              return (
+                <div>
+                  <span className="text-[#64748b]">Each token:</span>{" "}
+                  <span className="text-[#e8eaf0] font-mono">{tokenCount} {unitName}</span>
+                  <span className="text-[#8891a5] ml-1">(~${(contractSize * spotPrice).toFixed(2)})</span>
+                </div>
+              );
+            }
+            return (
+              <div>
+                <span className="text-[#64748b]">Each token:</span>{" "}
+                <span className="text-[#e8eaf0] font-mono">{contractSize} {unitName}</span>
+                <span className="text-[#8891a5] ml-1">(~${(contractSize * spotPrice).toFixed(2)})</span>
+              </div>
+            );
+          })()}
           {suggestedPremium !== null && (
             <div>
               <span className="text-[#64748b]">B-S Suggested:</span>{" "}
@@ -301,24 +325,33 @@ export function ListForSaleModal({
         </div>
 
         {/* Summary */}
-        {isValid && premiumRaw !== null && tokenAmount !== null && (
-          <div className="bg-[#1e2330]/50 border border-[#334155] rounded-lg p-3 text-sm space-y-1">
-            <div className="flex justify-between text-[#8891a5]">
-              <span>Total premium (if fully filled)</span>
-              <span className="text-[#e09a5f] font-mono">
-                {(Number(premiumRaw * tokenAmount) / Math.pow(10, decimals)).toFixed(decimals)}{" "}
-                {stablecoin}
-              </span>
+        {isValid && premiumRaw !== null && tokenAmount !== null && (() => {
+          const totalPremium = Number(premiumRaw * tokenAmount) / Math.pow(10, decimals);
+          const feeAmount = totalPremium * 0.01;
+          const sellerReceives = totalPremium - feeAmount;
+          return (
+            <div className="bg-[#1e2330]/50 border border-[#334155] rounded-lg p-3 text-sm space-y-1">
+              <div className="flex justify-between text-[#8891a5]">
+                <span>Total premium (if fully filled)</span>
+                <span className="text-[#e09a5f] font-mono">
+                  {totalPremium.toFixed(decimals)} {stablecoin}
+                </span>
+              </div>
+              <div className="flex justify-between text-[#8891a5]">
+                <span>Protocol fee (1%)</span>
+                <span className="text-[#64748b] font-mono">
+                  −{feeAmount.toFixed(feeAmount < 0.01 ? 4 : decimals)} {stablecoin}
+                </span>
+              </div>
+              <div className="flex justify-between text-[#8891a5] border-t border-[#334155] pt-1 mt-1">
+                <span>You receive</span>
+                <span className="text-[#34d399] font-mono">
+                  {sellerReceives.toFixed(decimals)} {stablecoin}
+                </span>
+              </div>
             </div>
-            <div className="flex justify-between text-[#8891a5]">
-              <span>dApp fee (1%)</span>
-              <span className="text-[#64748b] font-mono">
-                {(Number(premiumRaw * tokenAmount) / Math.pow(10, decimals) * 0.01).toFixed(decimals)}{" "}
-                {stablecoin}
-              </span>
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Error / Success */}
         {error && (

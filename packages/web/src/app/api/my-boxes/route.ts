@@ -161,6 +161,7 @@ export interface MyBox {
   strikePrice?: number;
   maturityDate?: number;
   oracleIndex?: number;
+  contractSize?: number;
   tokenCount?: number;
   collateralTokenId?: string;
   collateralAmount?: string;
@@ -251,6 +252,7 @@ export async function GET(request: Request) {
         strikePrice: params?.strikePrice,
         maturityDate: params?.maturityDate,
         oracleIndex: params?.oracleIndex,
+        contractSize: params ? params.shareSize / Number(ORACLE_DECIMAL) : undefined,
         tokenCount: tokenQty > 1 ? tokenQty - 1 : undefined,
         collateralTokenId: box.assets?.[1]?.tokenId,
         collateralAmount: box.assets?.[1]?.amount?.toString(),

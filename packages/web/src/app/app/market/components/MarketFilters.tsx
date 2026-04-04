@@ -7,8 +7,9 @@ import type { ParsedReserve } from "@/lib/reserve-scanner";
 const ASSET_SLUG: Record<string, string> = {
   ETH: "eth", BTC: "btc", BNB: "bnb", DOGE: "doge", ADA: "ada", ERG: "erg",
   HNS: "hns", CKB: "ckb", ATOM: "atom", FIRO: "firo",
-  Gold: "gold", Silver: "silver", Copper: "copper", Brent: "brent", WTI: "wti", NatGas: "natgas",
-  "S&P 500": "spx", DJI: "dji",
+  Gold: "gold", XAU: "gold", Silver: "silver", XAG: "silver", Copper: "copper", XCU: "copper",
+  Brent: "brent", BRENT: "brent", WTI: "wti", NatGas: "natgas", NGAS: "natgas",
+  LITHIUM: "natgas", "S&P 500": "spx", SPX: "spx", DJI: "dji",
 };
 
 interface MarketFiltersProps {

@@ -41,6 +41,10 @@ export interface WriteOptionInput {
   dAppUIMintFee: bigint;
   /** dApp UI fee ErgoTree bytes */
   dAppUIFeeTree: Uint8Array;
+  /** V5: Auto-list flag (0 = deliver to wallet, 1 = deliver to sell order) */
+  autoList?: number;
+  /** V5: Premium per token in raw stablecoin units (required when autoList=1) */
+  premiumRaw?: bigint;
 }
 
 export interface WriteOptionResult {
@@ -317,6 +321,8 @@ export function useWriteOption(): WriteOptionResult {
         issuerECPoint,
         dAppUIFeeTree: input.dAppUIFeeTree,
         changeErgoTree,
+        autoList: input.autoList,
+        premiumRaw: input.premiumRaw,
       };
 
       // Get wallet UTXOs via Nautilus

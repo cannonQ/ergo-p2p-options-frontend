@@ -112,9 +112,12 @@ export function ExerciseDialog({
     if (!canExercise) return;
     try {
       setStatus("Building...");
+      setTxId("");  // Clear any previous state
       const resultTxId = await onExercise({ quantity: exerciseQty });
-      setTxId(resultTxId);
-      setStatus("Success!");
+      if (resultTxId) {
+        setTxId(resultTxId);
+        setStatus("Success!");
+      }
     } catch (err: any) {
       const msg = err?.message || String(err);
       console.error("[ExerciseDialog] Error:", err);
@@ -129,7 +132,7 @@ export function ExerciseDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden="true" />
+      <div className="absolute inset-0 bg-black/60" onClick={txId ? undefined : onClose} aria-hidden="true" />
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="exercise-title" className="relative bg-[#12151c] border border-[#1e2330] rounded-xl shadow-2xl w-full max-w-md p-6 space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">

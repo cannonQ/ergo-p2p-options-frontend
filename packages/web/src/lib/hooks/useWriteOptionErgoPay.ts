@@ -39,6 +39,8 @@ export interface WriteOptionInput {
   ergCollateral?: bigint;
   dAppUIMintFee: bigint;
   dAppUIFeeTree: Uint8Array;
+  autoList?: number;
+  premiumRaw?: bigint;
 }
 
 export interface WriteOptionErgoPayResult {
@@ -216,6 +218,8 @@ export function useWriteOptionErgoPay(): WriteOptionErgoPayResult {
         issuerECPoint,
         dAppUIFeeTree: input.dAppUIFeeTree,
         changeErgoTree,
+        autoList: input.autoList,
+        premiumRaw: input.premiumRaw,
       };
 
       const unsignedTx = buildCreateOptionTx(explorerBoxes, createParams, currentHeight);

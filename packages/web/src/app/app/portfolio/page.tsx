@@ -122,6 +122,7 @@ interface ContractBox {
   strikePrice?: number;
   maturityDate?: number;
   oracleIndex?: number;
+  contractSize?: number;
   tokenCount?: number;
   collateralTokenId?: string;
   collateralAmount?: string;
@@ -228,6 +229,7 @@ interface HoldingPosition {
   oracleIndex: number;
   assetName: string;
   state: string;
+  contractSize?: number;
 }
 
 export default function PortfolioPage() {
@@ -370,6 +372,7 @@ export default function PortfolioPage() {
                 oracleIndex: reserve.oracleIndex,
                 assetName: reserve.assetName,
                 state: reserve.state,
+                contractSize: reserve.contractSize,
               });
             }
           }
@@ -899,6 +902,7 @@ export default function PortfolioPage() {
             setErgoPayModal(null);
             setOpenOrders((prev) => prev.filter((o) => o.boxId !== order.boxId));
             setSuccessBanner({ message: "Sell order cancelled — tokens returned to your wallet", txId });
+            toast(`Sell order cancelled — TX: ${txId.slice(0, 12)}...`);
             loadTokens();
           },
         });
@@ -909,6 +913,7 @@ export default function PortfolioPage() {
 
         setOpenOrders((prev) => prev.filter((o) => o.boxId !== order.boxId));
         setSuccessBanner({ message: "Sell order cancelled — tokens returned to your wallet", txId });
+        toast(`Sell order cancelled — TX: ${txId.slice(0, 12)}...`);
         console.log("Cancel sell order TX submitted:", txId);
         loadTokens();
       }
@@ -1198,7 +1203,11 @@ export default function PortfolioPage() {
     const txId = await submitTransaction(signedTx);
 
     console.log("[Exercise] TX submitted:", txId);
-    setTimeout(() => loadTokens(), 5000);
+    // Delay refresh to let the dialog show success state first.
+    // Don't clear exerciseModalBox — the dialog persists until user closes it.
+    setTimeout(() => {
+      loadTokens();
+    }, 10000);
     return txId;
   }, [api, exerciseModalBox, loadTokens]);
 
@@ -1315,8 +1324,23 @@ export default function PortfolioPage() {
                           </span>
                           <span className="text-xs ml-1 text-[#8891a5]">{h.settlement}</span>
                         </td>
-                        <td className="py-2 px-4 text-right font-mono text-[#e09a5f]">
-                          ${h.strikePrice >= 100 ? h.strikePrice.toFixed(0) : h.strikePrice.toFixed(4)}
+                        <td className="py-2 px-4 text-right">
+                          {(() => {
+                            const size = h.contractSize ?? 1;
+                            const perUnit = h.strikePrice / size;
+                            return (
+                              <div>
+                                <div className="font-mono text-[#e09a5f]">
+                                  ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(4)}
+                                </div>
+                                {size !== 1 && (
+                                  <div className="text-[10px] text-[#8891a5]">
+                                    {size} × ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(2)} = ${h.strikePrice >= 100 ? h.strikePrice.toFixed(0) : h.strikePrice.toFixed(2)}/contract
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className="py-2 px-4 text-right text-xs">
                           {isExpired ? (
@@ -1436,8 +1460,23 @@ export default function PortfolioPage() {
                             </span>
                             <span className="text-xs ml-1 text-[#8891a5]">{box.settlement}</span>
                           </td>
-                          <td className="py-2 px-4 text-right font-mono text-[#e09a5f]">
-                            {box.strikePrice ? `$${box.strikePrice >= 100 ? box.strikePrice.toFixed(0) : box.strikePrice.toFixed(4)}` : "\u2014"}
+                          <td className="py-2 px-4 text-right">
+                            {box.strikePrice ? (() => {
+                              const size = box.contractSize ?? 1;
+                              const perUnit = box.strikePrice / size;
+                              return (
+                                <div>
+                                  <div className="font-mono text-[#e09a5f]">
+                                    ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(4)}
+                                  </div>
+                                  {size !== 1 && (
+                                    <div className="text-[10px] text-[#8891a5]">
+                                      {size} × ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(2)} = ${box.strikePrice >= 100 ? box.strikePrice.toFixed(0) : box.strikePrice.toFixed(2)}/contract
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })() : "\u2014"}
                           </td>
                           <td className="py-2 px-4 text-right text-xs">
                             {isExpired ? (
@@ -1619,8 +1658,23 @@ export default function PortfolioPage() {
                              "Expired"}
                           </span>
                         </td>
-                        <td className="py-2 px-4 text-right font-mono text-[#e09a5f]">
-                          {box.strikePrice ? `$${box.strikePrice >= 100 ? box.strikePrice.toFixed(0) : box.strikePrice.toFixed(4)}` : "\u2014"}
+                        <td className="py-2 px-4 text-right">
+                          {box.strikePrice ? (() => {
+                            const size = box.contractSize ?? 1;
+                            const perUnit = box.strikePrice / size;
+                            return (
+                              <div>
+                                <div className="font-mono text-[#e09a5f]">
+                                  ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(4)}
+                                </div>
+                                {size !== 1 && (
+                                  <div className="text-[10px] text-[#8891a5]">
+                                    {size} × ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(2)} = ${box.strikePrice >= 100 ? box.strikePrice.toFixed(0) : box.strikePrice.toFixed(2)}/contract
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })() : "\u2014"}
                         </td>
                         {/* Expiry info */}
                         <td className="py-2 px-4 text-right">

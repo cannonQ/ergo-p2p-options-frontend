@@ -40,6 +40,10 @@ export interface CreateOptionParams {
   collateralToken?: { tokenId: string; amount: bigint };
   /** ERG collateral (for ERG calls only) */
   ergCollateral?: bigint;
+  /** V5: Auto-list flag (0 = deliver to wallet, 1 = deliver to sell order) */
+  autoList?: number;
+  /** V5: Premium per token in raw stablecoin units (required when autoList=1) */
+  premiumRaw?: bigint;
   /** Writer's 33-byte compressed EC point */
   issuerECPoint: Uint8Array;
   /** dApp UI fee ErgoTree bytes */
@@ -77,7 +81,7 @@ export function buildCreateOptionTx(
   // R7: Coll[Byte] — placeholder 32 zero bytes (set to real box ID after mint)
   const r7dummy = new Uint8Array(32);
 
-  // R8: Coll[Long] — 11 parameters
+  // R8: Coll[Long] — 13 parameters (V5: +autoList, +premiumRaw)
   const r8params = [
     params.optionType,
     params.style,
@@ -90,6 +94,8 @@ export function buildCreateOptionTx(
     params.settlementType,
     params.collateralCap,
     params.stablecoinDecimal,
+    params.autoList ?? 0,
+    params.premiumRaw ?? 0n,
   ].map(BigInt);
 
   // Calculate total ERG for the definition box.
@@ -97,12 +103,15 @@ export function buildCreateOptionTx(
   // Fee schedule — each step deducts from the box's ERG value:
   //   1. Create TX:  user pays boxValue (this TX)
   //   2. Mint TX:    bot deducts 1×txFee + dAppUIMintFee
-  //   3. Deliver TX: bot deducts 1×txFee + MIN_BOX_VALUE (delivery output)
+  //   3. Deliver TX: bot deducts 1×txFee + deliveryOutputValue
+  //      Mode A (wallet):     deliveryOutputValue = MIN_BOX_VALUE
+  //      Mode B (sell order): deliveryOutputValue = MIN_BOX_VALUE + txFee
   //   4. Exercise/Close TX: deducts 1×txFee
   //
   // After all steps the reserve must still hold >= MIN_BOX_VALUE.
-  // So minimum ERG = 3×txFee + dAppUIMintFee + 2×MIN_BOX_VALUE (ERG call adds collateral on top).
-  // Token-collateral options need 4×txFee + 3×MIN because the box carries no extra ERG.
+  // Extra ERG for sell order box when auto-listing (Mode B needs MIN_BOX_VALUE + txFee instead of just MIN_BOX_VALUE)
+  const autoListExtra = (params.autoList ?? 0) === 1 ? txFee : 0n;
+
   let boxValue: bigint;
   if (!params.collateralToken) {
     // ERG call: collateral is in box value (nanoERG)
@@ -110,10 +119,11 @@ export function buildCreateOptionTx(
       (params.ergCollateral ?? 0n) +
       3n * txFee +
       params.dAppUIMintFee +
-      2n * MIN_BOX_VALUE;
+      2n * MIN_BOX_VALUE +
+      autoListExtra;
   } else {
     // Token collateral (physical non-ERG or cash-settled)
-    boxValue = 4n * txFee + params.dAppUIMintFee + 3n * MIN_BOX_VALUE;
+    boxValue = 4n * txFee + params.dAppUIMintFee + 3n * MIN_BOX_VALUE + autoListExtra;
   }
 
   // Build the definition output box
