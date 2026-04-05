@@ -222,9 +222,15 @@ export function OptionChain({
       const callSell = sellByStrikeType.get(`call:${strike}`);
       const putSell = sellByStrikeType.get(`put:${strike}`);
 
+      // Find expiry from on-chain reserve at this strike
+      const reserveAtStrike = reserves.find(r => r.strikePrice === strike);
+      const expiryStr = reserveAtStrike
+        ? `blk ${reserveAtStrike.maturityHeight}`
+        : "—";
+
       return {
         strike,
-        expiry: "—",
+        expiry: expiryStr,
         callPremium: callSell?.cheapestPremium,
         callAvail: callSell?.totalAvail ?? 0,
         callOI,
@@ -421,6 +427,13 @@ export function OptionChain({
                     }`}>
                       {formatStrike(row.strike)}
                       {isATM && <span className="ml-1 text-[10px] text-[#c87941]">ATM</span>}
+                      {(() => {
+                        const res = reserves.find(r => r.strikePrice === row.strike);
+                        if (res?.contractSize && res.contractSize !== 1) {
+                          return <div className="text-[9px] text-[#8891a5] font-normal">×{res.contractSize >= 1 ? res.contractSize.toFixed(0) : res.contractSize} {assetUnit}</div>;
+                        }
+                        return null;
+                      })()}
                     </td>
                     {/* Put side */}
                     <td className={`py-2 px-2 text-left ${row.putIV ? "text-[#a78bfa]" : "text-[#8891a5]/30"} ${isITMPut ? "bg-[#f87171]/5" : ""}`}>

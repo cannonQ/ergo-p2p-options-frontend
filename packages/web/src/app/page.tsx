@@ -331,6 +331,74 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* HOW IT WORKS — DEEP DIVE */}
+      <section className="learn-section" id="how-it-works">
+        <div className="container">
+          <div className="section-tag">How It Works</div>
+          <h2>How does Etcha work?</h2>
+          <p className="section-desc">
+            Every step explained — from locking collateral to exercising options.
+            What happens on-chain, what the bot does, and why you {"don't"} need to trust anyone.
+          </p>
+          <div className="learn-grid">
+            <Link href="/how-it-works/writing-an-option" className="learn-card">
+              <div className="learn-icon">&#9998;</div>
+              <h3>Writing an Option</h3>
+              <p>
+                Lock collateral, mint tokens, deliver to wallet. One signature — the
+                bot handles the rest. Three TXs, all enforced by contract.
+              </p>
+              <span className="learn-link">Read guide &rarr;</span>
+            </Link>
+            <Link href="/how-it-works/trading" className="learn-card">
+              <div className="learn-icon">&#8644;</div>
+              <h3>Trading Options</h3>
+              <p>
+                List tokens at your price in SigUSD or USE. Buyers purchase from the
+                sell order. Partial fills supported.
+              </p>
+              <span className="learn-link">Read guide &rarr;</span>
+            </Link>
+            <Link href="/how-it-works/settlement" className="learn-card">
+              <div className="learn-icon">&#9878;</div>
+              <h3>Settlement</h3>
+              <p>
+                Exercise in-the-money options. Close expired reserves. Refund before
+                mint. Every path explained.
+              </p>
+              <span className="learn-link">Read guide &rarr;</span>
+            </Link>
+            <Link href="/how-it-works/cancel-and-manage" className="learn-card">
+              <div className="learn-icon">&#9881;</div>
+              <h3>Cancel &amp; Manage</h3>
+              <p>
+                Cancel sell orders anytime. Full fee breakdown. Complete token flow
+                diagram.
+              </p>
+              <span className="learn-link">Read guide &rarr;</span>
+            </Link>
+            <Link href="/how-it-works/the-bot" className="learn-card">
+              <div className="learn-icon">&#9211;</div>
+              <h3>The Bot</h3>
+              <p>
+                Open source, permissionless, trustless. Anyone can run it. If it
+                disappears, nothing is lost.
+              </p>
+              <span className="learn-link">Read guide &rarr;</span>
+            </Link>
+            <Link href="/how-it-works/security" className="learn-card">
+              <div className="learn-icon">&#9919;</div>
+              <h3>Security &amp; Trust</h3>
+              <p>
+                The smart contract is the only thing you trust. Full security model
+                and glossary.
+              </p>
+              <span className="learn-link">Read guide &rarr;</span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* ARCHITECTURE */}
       <section className="arch-section">
         <div className="container">
@@ -490,6 +558,7 @@ export default function LandingPage() {
             </div>
             <ul className="footer-links">
               <li><a href="/learn/calls-and-puts">Learn</a></li>
+              <li><a href="/how-it-works/writing-an-option">How It Works</a></li>
               <li><a href="https://github.com/cannonQ" target="_blank" rel="noopener noreferrer">GitHub</a></li>
               <li><a href="https://t.me/eraborea" target="_blank" rel="noopener noreferrer">Telegram</a></li>
             </ul>

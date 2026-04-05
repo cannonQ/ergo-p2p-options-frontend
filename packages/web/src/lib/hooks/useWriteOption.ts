@@ -280,16 +280,19 @@ export function useWriteOption(): WriteOptionResult {
       const currentHeight = await fetchHeight();
 
       // Underlying token ID for R5 register.
-      // Physical: the Rosen Bridge token ID (or empty for ERG).
-      // Cash: the stablecoin token ID (USE or SigUSD) — collateral IS the stablecoin.
+      // Physical call: the Rosen Bridge token ID (collateral IS the underlying).
+      // Physical put: the stablecoin token ID (collateral IS the stablecoin).
+      // Cash: the stablecoin token ID (collateral IS the stablecoin).
+      // ERG call: empty (collateral in box Value).
       let underlyingId: string;
-      if (input.settlementType === 1) {
-        // Cash-settled: R5 = stablecoin token ID (must match tokens[1] in output)
+      if (input.settlementType === 1 || input.optionType === 1) {
+        // Cash-settled OR physical put: R5 = stablecoin token ID (matches collateral token)
         const { USE_TOKEN_ID, SIGUSD_TOKEN_ID } = await import("@ergo-options/core");
         underlyingId = input.stablecoinDecimal === 1000n ? USE_TOKEN_ID : SIGUSD_TOKEN_ID;
       } else if (input.oracleIndex === ERG_ORACLE_INDEX) {
         underlyingId = "";
       } else {
+        // Physical call: R5 = underlying token ID from registry
         underlyingId = REGISTRY_TOKEN_IDS[input.oracleIndex] ?? "";
       }
 
@@ -398,8 +401,22 @@ export function useWriteOption(): WriteOptionResult {
       // ---------------------------------------------------------------
       setStep(4);
     } catch (err: any) {
-      const message =
-        err?.message || err?.info || String(err);
+      let message = err?.message || err?.info || String(err);
+      // Translate Fleet SDK InsufficientInputs to human-readable
+      if (message.includes('Insufficient inputs')) {
+        const useMatch = message.includes('a55b8735ed1a99e46c2c89f8994aacdf4b1109bdcf682f1e5b34479c6e392669');
+        const sigUsdMatch = message.includes('03faf2cb329f2e90d6d23b58d91bbb6c046aa143261cc21f52fbe2824bfcbf04');
+        const nanoErgMatch = message.includes('nanoErgs');
+        if (useMatch) {
+          message = 'Insufficient USE (Dexy USD) in wallet. You need more USE to lock as collateral.';
+        } else if (sigUsdMatch) {
+          message = 'Insufficient SigUSD in wallet. You need more SigUSD to lock as collateral.';
+        } else if (nanoErgMatch) {
+          message = 'Insufficient ERG in wallet. You need more ERG for collateral and fees.';
+        } else {
+          message = 'Insufficient tokens in wallet. Check your balance and try again.';
+        }
+      }
       setError(message);
     } finally {
       executingRef.current = false;

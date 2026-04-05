@@ -1,15 +1,16 @@
 import Link from "next/link";
 import Image from "next/image";
 import "../landing.css";
-import "./learn.css";
+import "../learn/learn.css";
+import "./how-it-works.css";
 
-export default function LearnLayout({
+export default function HowItWorksLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="landing learn-page">
+    <div className="landing learn-page hiw-page">
       <nav>
         <div className="container">
           <Link href="/" className="nav-logo">
@@ -37,8 +38,8 @@ export default function LearnLayout({
       </nav>
       <main>{children}</main>
       <footer className="learn-footer">
-        Etcha &mdash; Decentralized options on Ergo. All examples use SigUSD
-        denomination. Nothing here is financial advice.
+        Etcha &mdash; Decentralized options on Ergo. The smart contract is the
+        only thing you need to trust.
       </footer>
     </div>
   );

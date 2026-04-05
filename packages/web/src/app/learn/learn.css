@@ -34,8 +34,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 32px;
-  padding-bottom: 20px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--lp-border);
 }
 .learn-page .lesson-arrow {
@@ -73,30 +73,30 @@
 .learn-page .subtitle {
   color: var(--lp-muted);
   font-size: 16px;
-  margin-bottom: 48px;
+  margin-bottom: 20px;
   max-width: 640px;
   line-height: 1.7;
 }
 
 /* SECTIONS */
 .learn-page section {
-  margin-bottom: 64px;
+  margin-bottom: 24px;
 }
 .learn-page .section-label {
   font-family: 'DM Mono', monospace;
   font-size: 11px; color: var(--lp-muted); letter-spacing: 2px;
-  text-transform: uppercase; margin-bottom: 16px;
+  text-transform: uppercase; margin-bottom: 8px;
 }
 .learn-page h2 {
   font-family: 'Instrument Serif', serif;
-  font-size: 26px; font-weight: 400; margin-bottom: 10px;
+  font-size: 26px; font-weight: 400; margin-bottom: 6px;
   color: var(--lp-text);
 }
 .learn-page .section-text {
   color: var(--lp-muted);
   font-size: 15px;
   max-width: 680px;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
   line-height: 1.8;
 }
 
@@ -283,7 +283,7 @@
   border: 1px solid rgba(96,165,250,0.2);
   border-radius: 8px;
   padding: 24px 28px;
-  margin-bottom: 48px;
+  margin-bottom: 20px;
 }
 .learn-page .takeaway .tk-label {
   font-family: 'DM Mono', monospace;
@@ -298,9 +298,9 @@
 /* PAGE NAVIGATION */
 .learn-page .page-nav {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 24px 0;
+  padding: 16px 0;
   border-top: 1px solid var(--lp-border);
-  margin-top: 48px;
+  margin-top: 20px;
 }
 .learn-page .page-nav a {
   color: var(--lp-muted); text-decoration: none; font-size: 14px;

@@ -227,11 +227,13 @@ export default function WritePage({ params }: { params: { asset: string } }) {
     const oracleIdx = info.index;
     const rate = REGISTRY_RATES[oracleIdx] ?? 1_000_000n;
 
-    // Strike price per contract in oracle units
-    // For fractional contracts (e.g. 0.001 Troy Oz), scale strike by contractSize
-    // so on-chain strikePerContract = strikePrice * stablecoinDecimal / ORACLE_DECIMAL is correct
+    // Strike price in oracle units
+    // Physical delivery: scale by contractSize (strike per contract for exercise payment)
+    // Cash settlement: do NOT scale by contractSize (compared directly to oracle spot per unit)
     const contractSizeNum_ = Number(contractSize) || 1;
-    const strikeBigint = safeToBigInt(Number(strike) * contractSizeNum_ * Number(ORACLE_DECIMAL));
+    const strikeBigint = settlNum === 0
+      ? safeToBigInt(Number(strike) * contractSizeNum_ * Number(ORACLE_DECIMAL))  // physical: per-contract
+      : safeToBigInt(Number(strike) * Number(ORACLE_DECIMAL));                     // cash: per-unit (matches oracle)
 
     // Share size: always in oracle units (×10^6)
     // The on-chain contract uses shareSize in oracle units for exercise delivery

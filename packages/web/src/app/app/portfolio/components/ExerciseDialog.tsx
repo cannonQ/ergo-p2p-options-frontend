@@ -119,11 +119,17 @@ export function ExerciseDialog({
         setStatus("Success!");
       }
     } catch (err: any) {
-      const msg = err?.message || String(err);
+      let msg = err?.message || String(err);
       console.error("[ExerciseDialog] Error:", err);
       console.error("[ExerciseDialog] Full message:", msg);
       if (msg.includes("declined") || msg.includes("Refused")) {
         setStatus("Signing declined");
+      } else if (msg.includes("Insufficient inputs")) {
+        if (msg.includes("nanoErgs")) {
+          setStatus("Insufficient ERG in wallet for transaction fees.");
+        } else {
+          setStatus("Insufficient tokens in wallet. Check your balance.");
+        }
       } else {
         setStatus(`Error: ${msg.slice(0, 120)}`);
       }
@@ -184,9 +190,9 @@ export function ExerciseDialog({
               {spotPrice !== undefined && (
                 <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
                   <span className="text-[#8891a5]">Oracle spot:</span>
-                  <span className="text-[#e09a5f] font-mono">${spotPrice.toFixed(2)}</span>
+                  <span className="text-[#e09a5f] font-mono">${spotPrice >= 1 ? spotPrice.toFixed(2) : spotPrice >= 0.01 ? spotPrice.toFixed(4) : spotPrice.toFixed(6)}</span>
                   <span className="text-[#8891a5]">Strike:</span>
-                  <span className="text-[#e8eaf0] font-mono">${strikePrice.toFixed(2)}</span>
+                  <span className="text-[#e8eaf0] font-mono">${strikePrice >= 1 ? strikePrice.toFixed(2) : strikePrice >= 0.01 ? strikePrice.toFixed(4) : strikePrice.toFixed(6)}</span>
                   <span className="text-[#8891a5]">Profit/contract:</span>
                   <span className={`font-mono ${cashProfit > 0 ? "text-[#34d399]" : "text-[#f87171]"}`}>
                     {cashProfit > 0 ? `$${cashProfit.toFixed(stableDecimals)}` : "OTM — no profit"}

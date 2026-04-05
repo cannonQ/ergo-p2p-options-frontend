@@ -136,9 +136,16 @@ function parseReserveBox(box: any, currentHeight: number, exerciseWindow: number
   const shareSize = Number(params[2]);
   const contractSize = shareSize / Number(ORACLE_DECIMAL);
   const maturityHeight = Number(params[3]);
-  const strikePrice = Number(params[4]) / Number(ORACLE_DECIMAL);
-  const oracleIndex = Number(params[7]);
+  // strikePrice per unit:
+  //   Physical: on-chain = strike * contractSize * ORACLE_DECIMAL → divide by both
+  //   Cash: on-chain = strike * ORACLE_DECIMAL → divide by ORACLE_DECIMAL only
   const settlement = Number(params[8]) === 0 ? "physical" as const : "cash" as const;
+  const strikePriceRaw = Number(params[4]) / Number(ORACLE_DECIMAL);
+  const strikePrice = settlement === "physical" && contractSize > 0
+    ? strikePriceRaw / contractSize
+    : strikePriceRaw;
+  const oracleIndex = Number(params[7]);
+  // settlement already declared above for strike calculation
 
   // Classify state
   const hasToken = box.assets && box.assets.length > 0;

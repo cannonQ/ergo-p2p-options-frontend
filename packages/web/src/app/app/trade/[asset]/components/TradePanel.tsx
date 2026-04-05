@@ -278,6 +278,9 @@ export function TradePanel({
             </span>
             <span className="font-bold text-[#e8eaf0]">{assetName}</span>
             <span className="text-[#e09a5f] font-mono">${strike >= 100 ? strike.toFixed(0) : strike >= 1 ? strike.toFixed(2) : strike.toFixed(4)}</span>
+            {cSize !== 1 && (
+              <span className="text-[#8891a5] text-xs">×{cSize >= 1 ? cSize.toFixed(0) : cSize}</span>
+            )}
             <span className="text-[#8891a5] text-sm">Exp: {expiry}</span>
           </div>
           <button
@@ -316,7 +319,7 @@ export function TradePanel({
             </button>
           </div>
 
-          {/* Available / Premium */}
+          {/* Available / Premium / Contract Size */}
           <div className="bg-[#0a0c10] rounded-lg px-4 py-3 space-y-1">
             <div className="flex justify-between text-sm">
               <span className="text-[#8891a5]">Available</span>
@@ -328,6 +331,21 @@ export function TradePanel({
                 {premium > 0 ? `${premium.toFixed(stableDecimals)} ${coin}` : "—"}
               </span>
             </div>
+            {cSize !== 1 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-[#8891a5]">Contract Size</span>
+                <span className="text-[#e8eaf0] font-mono">
+                  {(() => {
+                    const rate = oracleIndex !== undefined ? Number(REGISTRY_RATES[oracleIndex] ?? 0n) : 0;
+                    const rateIsPow10 = rate > 0 && Math.log10(rate) % 1 === 0;
+                    if (rate > 0 && !rateIsPow10) {
+                      return `${Math.ceil(cSize * rate)} ${unit}`;
+                    }
+                    return `${cSize >= 1 ? cSize.toFixed(0) : cSize} ${unit}`;
+                  })()}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Quantity input */}
