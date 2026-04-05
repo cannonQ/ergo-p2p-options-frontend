@@ -31,6 +31,8 @@ export interface ExerciseCashParams {
   spotPrice: bigint;
   /** Buyer's wallet boxes containing option tokens */
   optionTokenBoxes: Box<Amount>[];
+  /** Additional wallet boxes for ERG fees (may overlap with optionTokenBoxes) */
+  paymentBoxes?: Box<Amount>[];
   /** Preserved register values from the reserve box */
   registers: Record<string, string>;
   /** Buyer's change address ErgoTree (hex) */
@@ -130,8 +132,11 @@ export function buildExerciseCashTx(
     return v < minReserve ? minReserve : v;
   })();
 
-  // All inputs
-  const allInputs = [reserveBox, ...optionTokenBoxes];
+  // All inputs — include payment boxes for ERG fees
+  const paymentInputs = (params.paymentBoxes ?? []).filter(
+    (pb: Box<Amount>) => !optionTokenBoxes.some((ob: Box<Amount>) => ob.boxId === pb.boxId)
+  );
+  const allInputs = [reserveBox, ...optionTokenBoxes, ...paymentInputs];
 
   // OUTPUTS[0]: Reserve successor
   const successor = new OutputBuilder(successorValue, reserveBox.ergoTree)

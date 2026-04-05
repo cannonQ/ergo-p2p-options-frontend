@@ -1067,9 +1067,13 @@ export default function PortfolioPage() {
     const optionTokenBoxes = allBoxes.filter((b: any) =>
       b.assets.some((a: any) => a.tokenId === optionTokenId)
     );
+    // Use ALL non-option-token boxes as payment sources, plus any option-token boxes
+    // that also carry ERG or stablecoins. Fleet SDK handles token routing via change.
     const paymentBoxes = allBoxes.filter((b: any) =>
       !b.assets.some((a: any) => a.tokenId === optionTokenId)
     );
+    // Also include option token boxes as payment sources — they may carry ERG needed for fees
+    const allInputBoxes = [...optionTokenBoxes, ...paymentBoxes];
 
     console.log("[Exercise] optionTokenId:", optionTokenId);
     console.log("[Exercise] optionTokenBoxes:", optionTokenBoxes.length, "paymentBoxes:", paymentBoxes.length);
@@ -1165,6 +1169,7 @@ export default function PortfolioPage() {
           params: optionParams,
           spotPrice,
           optionTokenBoxes,
+          paymentBoxes,
           registers,
           changeErgoTree: walletErgoTree,
         },
@@ -1327,7 +1332,8 @@ export default function PortfolioPage() {
                         <td className="py-2 px-4 text-right">
                           {(() => {
                             const size = h.contractSize ?? 1;
-                            const perUnit = h.strikePrice / size;
+                            const perUnit = h.strikePrice; // already per-unit from scanner
+                            const perContract = perUnit * size;
                             return (
                               <div>
                                 <div className="font-mono text-[#e09a5f]">
@@ -1335,7 +1341,7 @@ export default function PortfolioPage() {
                                 </div>
                                 {size !== 1 && (
                                   <div className="text-[10px] text-[#8891a5]">
-                                    {size} × ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(2)} = ${h.strikePrice >= 100 ? h.strikePrice.toFixed(0) : h.strikePrice.toFixed(2)}/contract
+                                    {size} × ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(2)} = ${perContract >= 100 ? perContract.toFixed(0) : perContract.toFixed(2)}/contract
                                   </div>
                                 )}
                               </div>
@@ -1463,7 +1469,8 @@ export default function PortfolioPage() {
                           <td className="py-2 px-4 text-right">
                             {box.strikePrice ? (() => {
                               const size = box.contractSize ?? 1;
-                              const perUnit = box.strikePrice / size;
+                              const perUnit = box.strikePrice; // already per-unit from scanner
+                              const perContract = perUnit * size;
                               return (
                                 <div>
                                   <div className="font-mono text-[#e09a5f]">
@@ -1661,7 +1668,8 @@ export default function PortfolioPage() {
                         <td className="py-2 px-4 text-right">
                           {box.strikePrice ? (() => {
                             const size = box.contractSize ?? 1;
-                            const perUnit = box.strikePrice / size;
+                            const perUnit = box.strikePrice; // already per-unit from scanner
+                              const perContract = perUnit * size;
                             return (
                               <div>
                                 <div className="font-mono text-[#e09a5f]">

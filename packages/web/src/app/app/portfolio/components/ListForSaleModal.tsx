@@ -79,7 +79,8 @@ export function ListForSaleModal({
         const S = spotData.price;
         const size = contractSize ?? 1;
         // strikePrice from R8 is per-contract (strike * contractSize). B-S needs per-unit.
-        const K = strikePrice / size;
+        // strikePrice is already per-unit from scanner/API
+        const K = strikePrice;
 
         // If past maturity, premium = intrinsic value only
         let premium: number;
@@ -191,7 +192,8 @@ export function ListForSaleModal({
           )}
           {strikePrice !== undefined && (() => {
             const size = contractSize ?? 1;
-            const strikePerUnit = strikePrice / size;
+            // strikePrice is already per-unit from scanner/API
+            const strikePerUnit = strikePrice;
             return (
             <div>
               <span className="text-[#64748b]">Strike:</span>{" "}

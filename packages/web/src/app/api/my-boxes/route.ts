@@ -112,7 +112,12 @@ function parseR8Params(r8hex: string): any | null {
       style: values[1],         // 0=european, 1=american
       shareSize: values[2],
       maturityDate: values[3],
-      strikePrice: values[4] / Number(ORACLE_DECIMAL),
+      // Per-unit strike:
+      //   Physical (settlementType=0): on-chain = strike * contractSize * ORACLE_DECIMAL
+      //   Cash (settlementType=1): on-chain = strike * ORACLE_DECIMAL (no contractSize)
+      strikePrice: values[8] === 0 && values[2] > 0
+        ? values[4] / Number(ORACLE_DECIMAL) / (values[2] / Number(ORACLE_DECIMAL))
+        : values[4] / Number(ORACLE_DECIMAL),
       dAppUIMintFee: values[5],
       txFee: values[6],
       oracleIndex: values[7],

@@ -1,11 +1,13 @@
-# Ergo P2P Options Frontend — Status (2026-03-25)
+# Ergo P2P Options Frontend — Status (2026-04-04)
 
 ## Proven on Mainnet
 
 - **Write option** — single Nautilus signature, bot auto-mints + auto-delivers
+- **V5 auto-list** — bot delivers tokens directly to sell order (one signature, option is live) *(2026-04-04)*
 - **Bot auto-mint** — detects DEFINITION boxes, builds + signs + submits mint TX
-- **Bot auto-deliver** — detects MINTED_UNDELIVERED boxes, delivers tokens to writer
-- **List for Sale** — portfolio modal with B-S suggested premium, Nautilus signs sell order TX
+- **Bot auto-deliver** — detects MINTED_UNDELIVERED boxes, delivers tokens to writer or sell order (V5)
+- **Bot auto-close** — detects EXPIRED reserves, returns collateral to writer *(proven 2026-04-02)*
+- **List for Sale** — portfolio modal with B-S suggested premium, protocol fee (1%) display
 - **Buy from sell order** — option chain shows premium + available, TradePanel builds buy TX, Nautilus signs *(2026-03-24)*
 - **Exercise (physical call)** — portfolio Exercise button, fetches registry, builds TX, Nautilus signs, collateral delivered *(2026-03-24)*
 - **Option chain** — shows live OI from on-chain reserves, IV from oracle vol, premium + available from sell orders
@@ -18,9 +20,13 @@
 - **Etcha landing page** — full product page at `/`, dashboard moved to `/app` *(2026-03-24)*
 - **Etcha rebrand** — copper palette, Space Grotesk/DM Mono/Instrument Serif fonts, SVG icon + logo *(2026-03-24)*
 
-## Full Lifecycle Proven (2026-03-24)
+## Full Lifecycle Proven
 
-**Write → Mint → Deliver → List → Buy → Exercise** — all tested end-to-end on mainnet with real wallets.
+**V4 (2026-04-02):** Write → Mint → Deliver → List → Buy → Exercise — rsADA + Gold (DexyGold) proven. See V4-E2E-TEST-PLAN.md.
+
+**V5 (2026-04-04):** Write → Mint → Auto-List → Buy → Exercise — one-signature flow proven. See V5-UPGRADE-PLAN.md.
+
+**Contract versions:** V2 (base) → V3 (burn verification) → V4 (rate-aware mint) → V5 (auto-list). All active in CONTRACT_ADDRESSES.
 
 ## Contract Issues — BLOCKERS BEFORE LAUNCH
 
@@ -45,27 +51,30 @@
 ### Exercise Flow
 - [x] **Exercise button** — ExerciseDialog wired to TX building with status/txId display *(2026-03-24)*
 - [x] **Physical exercise TX** — buyer sends stablecoin, receives underlying from reserve *(2026-03-24)*
-- [ ] **Cash exercise TX** — wired in UI but untested on mainnet (no cash-settled options created yet)
+- [x] **Cash exercise TX** — tested on mainnet with FIRO Cash Call $0.60, USE payout correct *(passed 2026-03-26, alpha test #8)*
 - [x] **Double-exercise vulnerability FIXED** — V3 contract proven on mainnet (Test 13). Backend builders updated. Frontend `.burnTokens()` added to all 3 exercise paths. *(2026-03-25)*
-- [ ] **Post-burn token display** — After V3 exercise, burned tokens have 0 supply on-chain. Portfolio/activity must derive "Exercised" status from TX history (reserve spending chain), NOT wallet token balance. Needs UI testing with a V3-exercised option.
+- [x] **Post-burn token display** — After V3 exercise, burned tokens have 0 supply on-chain. Portfolio/activity must derive "Exercised" status from TX history (reserve spending chain), NOT wallet token balance. Needs UI testing with a V3-exercised option.
 
 ### Close/Refund
-- [ ] **Close expired** — button exists + wired, needs creationHeight fix (same pattern applied to exercise). Untested.
-- [ ] **Reclaim definition** — button exists + wired, untested
+- [x] **Close expired** — bot auto-closes, portfolio button works. Proven on mainnet (V4 reserves auto-closed 2026-04-02).
+- [x] **Reclaim definition** — button works, tested 2026-03-25.
 
 ### Contract Issues — Non-blocking
 - [ ] **FixedPriceSellV2** — stablecoin-based sell contract compiled, sell + buy tested on mainnet *(2026-03-24)*, cancel untested
 - [ ] **BuyTokenRequestV2** — stablecoin bid contract compiled, NOT tested at all
 
 ### UX Polish
-- [x] **Learn pages** — 6 guides converted to Next.js routes at `/learn/*` with Etcha design, clickable SVG diagrams, lesson navigation *(2026-03-24)*
-- [t] Write page auto-list checkbox removed, replaced with note directing to Portfolio for listing *(built 2026-03-25)*
-- [x] **TX status display** — reusable TxStatus component with copy button + ergexplorer.com link, integrated into ExerciseDialog, ListForSaleModal, TradePanel *(2026-03-24)*
+- [x] **Learn pages** — 6 guides at `/learn/*` with Etcha design *(2026-03-24)*
+- [x] **V5 auto-list** — write page checkbox + premium input, step 3 shows "List for Sale" *(2026-04-04)*
+- [x] **TX status display** — TxStatus component across all modals *(2026-03-24)*
+- [x] **ErgoPay** — all 7 TX flows wired for mobile wallet (QR code signing) *(2026-03-29)*
+- [x] **UI polish batch** — Contract Size/Contracts side-by-side, DexyGold token display, strike per-unit + per-contract, protocol fee display, exercise modal backdrop fix, market XAU→gold slug *(2026-04-02)*
 - [ ] Responsive mobile layout not tested
-- [ ] No ErgoPay (mobile QR) support
 
 ### Bot
-- [ ] **Auto-close expired** — built but untested (no options have expired through the full 720-block window yet)
+- [x] **Auto-close expired** — proven on mainnet, V4 reserves auto-closed 2026-04-02
+- [x] **Auto-list delivery** — V5 Mode B proven on mainnet 2026-04-04
+- [x] **Scanner noise fix** — skips boxes without R8 register
 
 ### Deployment
 - [ ] Not deployed to Vercel yet (running localhost only)
@@ -115,13 +124,16 @@
 - [x] **3. Buy from sell order** — Second wallet buys, TxStatus shows, option appears in Active Options *(passed 2026-03-25, required ensureInclusion fix)*
 - [x] **4. Exercise (physical call) via frontend** — Tokens BURNED on explorer, no quantity picker, TxStatus works *(passed 2026-03-25, V3 burn confirmed on-chain)*
 - [x] **5. Cancel sell order** — Cancel from Open Orders, tokens return to wallet *(passed 2026-03-25)*
-- [ ] **6. Close expired** — Wait for expiry, close from Written Options, collateral returned to writer *(bot auto-close proven, frontend close button untested — need expiry wait)*
+- [x] **6. Close expired** — bot auto-close proven 2026-04-02, frontend close button works *(passed)*
 - [x] **7. Reclaim definition** — Cancel a definition before bot mints, ERG returned *(passed 2026-03-25, required 2-output fix for contract refund path)*
 - [x] **8. Cash exercise TX** — Write a cash-settled option (FIRO Call $0.60), exercise it, USE payout correct ($0.079 profit) *(passed 2026-03-26, required R5 stablecoin ID fix + spot price API fix)*
 - [x] **9. Post-burn token display** — After V3 exercise, no ghost positions in Portfolio *(passed 2026-03-25)*
 - [x] **10. Cancel sell order (FixedPriceSellV2)** — USE cancel tested (2026-03-25). SigUSD sell order listed and bought successfully (2026-03-26) *(passed)*
 - [x] **11. Auto-close expired bot** — Bot detects and sweeps expired reserves after 720-block window *(proven 2026-03-25, closed reserve a731be99)*
 - [ ] **12. Vercel deployment** — Deploy with env vars (Supabase anon key, node URLs), verify prod works
+- [x] **13. V4 E2E** — rsADA + Gold full lifecycle on V4 contract *(passed 2026-04-02)*
+- [x] **14. V5 auto-list** — write→mint→auto-list→buy→exercise proven *(passed 2026-04-04)*
+- [x] **15. V5 wallet delivery** — autoList=0 regression test, tokens to wallet *(passed 2026-04-04)*
 
 ### Bugs Found & Fixed During Testing (2026-03-25)
 

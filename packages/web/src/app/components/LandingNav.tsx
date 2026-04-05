@@ -20,6 +20,7 @@ export function LandingNav() {
           <li><a href="#products">Products</a></li>
           <li><a href="#markets">Markets</a></li>
           <li><a href="#how">How It Works</a></li>
+          <li><a href="#how-it-works">Deep Dive</a></li>
           <li><a href="#learn">Learn</a></li>
           <li><a href="#compare">Compare</a></li>
         </ul>
@@ -52,6 +53,7 @@ export function LandingNav() {
             <a href="#products" onClick={() => setMenuOpen(false)}>Products</a>
             <a href="#markets" onClick={() => setMenuOpen(false)}>Markets</a>
             <a href="#how" onClick={() => setMenuOpen(false)}>How It Works</a>
+            <a href="#how-it-works" onClick={() => setMenuOpen(false)}>Deep Dive</a>
             <a href="#learn" onClick={() => setMenuOpen(false)}>Learn</a>
             <a href="#compare" onClick={() => setMenuOpen(false)}>Compare</a>
           </div>
