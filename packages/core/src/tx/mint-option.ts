@@ -90,16 +90,16 @@ export function computeTokenCount(
   }
 
   if (optionType === 1 && settlementType === 0) {
-    // Physical put: stablecoin collateral / strike per contract
+    // Physical put: stablecoin collateral / strike per contract (V7: per-contract via shareSize)
     const collateral = BigInt(definitionBox.assets[0]?.amount ?? 0n);
-    const strikePerContract = strikePrice * stablecoinDecimal / ORACLE_DECIMAL;
+    const strikePerContract = strikePrice * shareSize / ORACLE_DECIMAL * stablecoinDecimal / ORACLE_DECIMAL;
     return collateral / strikePerContract + 1n;
   }
 
   if (settlementType === 1) {
-    // Cash-settled: stablecoin collateral / cap per contract
+    // Cash-settled: stablecoin collateral / cap per contract (V7: per-contract via shareSize)
     const collateral = BigInt(definitionBox.assets[0]?.amount ?? 0n);
-    const capPerContract = collateralCap * stablecoinDecimal / ORACLE_DECIMAL;
+    const capPerContract = collateralCap * shareSize / ORACLE_DECIMAL * stablecoinDecimal / ORACLE_DECIMAL;
     return collateral / capPerContract + 1n;
   }
 

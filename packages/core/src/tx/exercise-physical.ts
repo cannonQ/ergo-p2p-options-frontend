@@ -89,7 +89,7 @@ export function buildExercisePhysicalCallTx(
   // Compute per-contract amounts
   const tokensPerUnit = registry.rates[oracleIndex];
   const tokensPerContract = optParams.shareSize * tokensPerUnit / ORACLE_DECIMAL;
-  const strikePerContract = optParams.strikePrice * optParams.stablecoinDecimal / ORACLE_DECIMAL;
+  const strikePerContract = optParams.strikePrice * optParams.shareSize / ORACLE_DECIMAL * optParams.stablecoinDecimal / ORACLE_DECIMAL;
 
   // Count actual option tokens in buyer inputs (contract uses this, not requested amount)
   const effectiveContracts = countOptionTokens(optionTokenBoxes, optionTokenId);
@@ -203,7 +203,7 @@ export function buildExercisePhysicalPutTx(
   // Compute per-contract amounts
   const tokensPerUnit = registry.rates[oracleIndex];
   const tokensPerContract = optParams.shareSize * tokensPerUnit / ORACLE_DECIMAL;
-  const strikePerContract = optParams.strikePrice * optParams.stablecoinDecimal / ORACLE_DECIMAL;
+  const strikePerContract = optParams.strikePrice * optParams.shareSize / ORACLE_DECIMAL * optParams.stablecoinDecimal / ORACLE_DECIMAL;
 
   // Count actual option tokens
   const effectiveContracts = countOptionTokens(optionTokenBoxes, optionTokenId);

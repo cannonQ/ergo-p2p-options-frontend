@@ -96,13 +96,14 @@ export function ExerciseDialog({
     return { label: "Expired", ok: false };
   })();
 
-  // Cash profit calculation
+  // Cash profit calculation (per-contract, not per-unit)
   const cashProfit = (() => {
     if (settlementType !== "cash" || !spotPrice) return 0;
     const raw = optionType === "call"
       ? Math.max(0, spotPrice - strikePrice)
       : Math.max(0, strikePrice - spotPrice);
-    return collateralCap ? Math.min(raw, collateralCap) : raw;
+    const capped = collateralCap ? Math.min(raw, collateralCap) : raw;
+    return capped * cSize;
   })();
   const isOTM = settlementType === "cash" && cashProfit <= 0;
   const canExercise = windowStatus.ok && !isOTM && !txId;
@@ -119,7 +120,7 @@ export function ExerciseDialog({
         setStatus("Success!");
       }
     } catch (err: any) {
-      let msg = err?.message || String(err);
+      const msg = err?.message || String(err);
       console.error("[ExerciseDialog] Error:", err);
       console.error("[ExerciseDialog] Full message:", msg);
       if (msg.includes("declined") || msg.includes("Refused")) {
