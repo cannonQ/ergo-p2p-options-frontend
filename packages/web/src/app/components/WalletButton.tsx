@@ -6,7 +6,7 @@ import { useWalletStore } from "@/stores/wallet-store";
 import { waitForErgoConnector, type ErgoAPI } from "@/lib/wallet";
 import { useToast } from "./Toast";
 import { QRCodeSVG } from "qrcode.react";
-import { pollErgoPayTxStatus } from "@/lib/ergopay";
+import { pollErgoPayTxStatus, isMobileDevice } from "@/lib/ergopay";
 
 interface DetectedWallet {
   name: string;
@@ -315,7 +315,7 @@ export function WalletButton() {
           <p className="px-3 py-1 text-[10px] text-[#c87941] uppercase tracking-wider font-bold">
             Select Wallet
           </p>
-          {wallets.map((w) => (
+          {!isMobileDevice() && wallets.map((w) => (
             <button
               key={w.id}
               onClick={() => connectToWallet(w.id)}
@@ -324,12 +324,12 @@ export function WalletButton() {
               {w.name}
             </button>
           ))}
-          <div className="border-t border-[#1e2330] mt-1 pt-1">
+          <div className={!isMobileDevice() && wallets.length > 0 ? "border-t border-[#1e2330] mt-1 pt-1" : ""}>
             <button
               onClick={connectViaErgoPay}
               className="w-full text-left px-3 py-2 text-sm text-[#e8eaf0] hover:bg-[#1e2330] transition-colors"
             >
-              Mobile Wallet (ErgoPay)
+              {isMobileDevice() ? "Connect with Wallet App" : "Mobile Wallet (ErgoPay)"}
             </button>
           </div>
         </div>
@@ -359,12 +359,23 @@ export function WalletButton() {
             >&times;</button>
           </div>
           <p style={{ fontSize: "14px", color: "#8891a5", marginBottom: "20px" }}>
-            Scan this QR code with your Ergo mobile wallet (Terminus or Minotaur) to connect.
+            {isMobileDevice()
+              ? "Tap the button below to open your Ergo wallet app."
+              : "Scan this QR code with your Ergo mobile wallet (Terminus or Minotaur) to connect."}
           </p>
           <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
-            <div style={{ background: "white", borderRadius: "12px", padding: "16px" }}>
-              <QRCodeSVG value={ergoPayQr.url} size={220} level="M" />
-            </div>
+            {isMobileDevice() ? (
+              <a
+                href={ergoPayQr.url}
+                style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "12px 24px", borderRadius: "8px", background: "#c87941", color: "white", fontWeight: 500, fontSize: "15px", textDecoration: "none" }}
+              >
+                Open in Wallet
+              </a>
+            ) : (
+              <div style={{ background: "white", borderRadius: "12px", padding: "16px" }}>
+                <QRCodeSVG value={ergoPayQr.url} size={220} level="M" />
+              </div>
+            )}
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#8891a5", fontSize: "14px" }}>
             <div style={{ width: "16px", height: "16px", border: "2px solid #c87941", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
