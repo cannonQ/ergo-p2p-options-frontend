@@ -118,7 +118,8 @@ export function buildExerciseCashTx(
     throw new Error('No option tokens found in input boxes');
   }
 
-  const payoutPerContract = profitPerContract * optParams.stablecoinDecimal / ORACLE_DECIMAL;
+  // V6: scale by shareSize before dividing to avoid truncation for micro-priced assets
+  const payoutPerContract = profitPerContract * optParams.shareSize / ORACLE_DECIMAL * optParams.stablecoinDecimal / ORACLE_DECIMAL;
   const totalPayout = payoutPerContract * effectiveContracts;
 
   // Cap payout to available collateral

@@ -1,4 +1,4 @@
-# Ergo P2P Options Frontend — Status (2026-04-04)
+# Ergo P2P Options Frontend — Status (2026-04-05)
 
 ## Proven on Mainnet
 
@@ -26,7 +26,11 @@
 
 **V5 (2026-04-04):** Write → Mint → Auto-List → Buy → Exercise — one-signature flow proven. See V5-UPGRADE-PLAN.md.
 
-**Contract versions:** V2 (base) → V3 (burn verification) → V4 (rate-aware mint) → V5 (auto-list). All active in CONTRACT_ADDRESSES.
+**V6 (2026-04-05):** Cash exercise truncation fix — BUGGY: fixed exercise but not mint. Superseded by V7.
+
+**V7 (2026-04-05):** Per-contract token fix — all stablecoin conversions use shareSize. Fixes mint token count + exercise strike payment. CKB Put now mints 1 token (not 750). SPX Put now mintable (was failing). See V7-SHARESIZE-FIX-PLAN.md.
+
+**Contract versions:** V2 (base) → V3 (burn verification) → V4 (rate-aware mint) → V5 (auto-list) → V6 (buggy) → V7 (per-contract fix). All active in CONTRACT_ADDRESSES.
 
 ## Contract Issues — BLOCKERS BEFORE LAUNCH
 
