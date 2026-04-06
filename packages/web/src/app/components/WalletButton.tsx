@@ -288,6 +288,8 @@ export function WalletButton() {
     <><div className="relative">
       <button
         onClick={async () => {
+          // On mobile, skip the dropdown and go straight to ErgoPay
+          if (isMobileDevice()) { connectViaErgoPay(); return; }
           if (showMenu) { setShowMenu(false); return; }
           // Detect browser extension wallets
           const available = await waitForErgoConnector(1500);
