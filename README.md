@@ -42,24 +42,12 @@ Monorepo managed with pnpm workspaces.
 ## Key Features
 
 - **One-signature write flow** — writer signs once; the bot handles mint + deliver + auto-list automatically
+- **V7 per-contract tokens** — correct mint and exercise for all contract sizes
 - **V5 auto-list** — option tokens go directly into a FixedPriceSell order on delivery
 - **American and European styles** — American options exercisable any time before expiry; European only at maturity
 - **Black-Scholes premium estimation** — uses on-chain oracle volatility from the companion box
 - **ErgoPay support** — QR code signing for mobile wallets (Ergo Wallet, Terminus)
 - **Multi-buyer exercise** — any wallet holding option tokens can exercise against the reserve
-
----
-
-## Documentation
-
-| Document | Description |
-|----------|-------------|
-| [HOW-ETCHA-WORKS.md](HOW-ETCHA-WORKS.md) | End-to-end explanation of the protocol |
-| [TX-ANATOMY-GUIDE.md](TX-ANATOMY-GUIDE.md) | Input/output structure of every transaction type |
-| [FEE-REVIEW.md](FEE-REVIEW.md) | Fee structure and analysis |
-| [V5-UPGRADE-PLAN.md](V5-UPGRADE-PLAN.md) | Auto-list delivery mode design |
-| [BETA-LAUNCH-CHECKLIST.md](BETA-LAUNCH-CHECKLIST.md) | Pre-launch verification checklist |
-| [BOT-PROTOCOL.md](BOT-PROTOCOL.md) | Scanner daemon behavior and safety guarantees |
 
 ---
 
@@ -69,8 +57,9 @@ Monorepo managed with pnpm workspaces.
 |---------|--------|--------|
 | V2 | Superseded | Core lifecycle — create, mint, deliver, exercise, close |
 | V3 | Superseded | Burn verification to prevent double-exercise |
-| V4 | Proven on mainnet | Non-decimal rate fix for Gold and rsADA |
-| V5 | **Active** | Auto-list delivery — tokens go directly to sell order |
+| V4 | Superseded | Non-decimal rate fix for Gold and rsADA |
+| V5 | Superseded | Auto-list delivery — tokens go directly to sell order |
+| V7 | **Active** | Per-contract token fix — shareSize in mint + exercise |
 
 Contract source and deployment details: [p2p-options-contracts](https://github.com/cannonQ/p2p-options-contracts)
 
