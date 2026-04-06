@@ -559,8 +559,8 @@ export default function LandingPage() {
             <ul className="footer-links">
               <li><a href="/learn/calls-and-puts">Learn</a></li>
               <li><a href="/how-it-works/writing-an-option">How It Works</a></li>
-              <li><a href="https://github.com/cannonQ" target="_blank" rel="noopener noreferrer">GitHub</a></li>
-              <li><a href="https://t.me/eraborea" target="_blank" rel="noopener noreferrer">Telegram</a></li>
+              <li><a href="https://github.com/cannonQ/ergo-p2p-options-frontend" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+              <li><a href="https://t.me/degensworld_official" target="_blank" rel="noopener noreferrer">Telegram</a></li>
             </ul>
             <p className="footer-copy">etcha.io — $ETCH</p>
           </div>
