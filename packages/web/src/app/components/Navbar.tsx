@@ -23,6 +23,7 @@ const ASSET_CATEGORIES = [
       { name: "HNS", slug: "hns" },
       { name: "CKB", slug: "ckb" },
       { name: "ATOM", slug: "atom" },
+      { name: "RON", slug: "ron" },
       { name: "FIRO", slug: "firo" },
     ],
   },

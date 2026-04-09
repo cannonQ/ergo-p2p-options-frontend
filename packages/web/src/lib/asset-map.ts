@@ -27,6 +27,7 @@ export const ASSET_MAP: Record<string, AssetInfo> = {
   hns:    { name: "HNS",     displayName: "Handshake",   index: 5,  pair: "HNS/USD",   unit: "HNS",      category: "crypto" },
   ckb:    { name: "CKB",     displayName: "Nervos",      index: 6,  pair: "CKB/USD",   unit: "CKB",      category: "crypto" },
   atom:   { name: "ATOM",    displayName: "Cosmos",      index: 7,  pair: "ATOM/USD",  unit: "ATOM",     category: "crypto" },
+  ron:    { name: "RON",     displayName: "Ronin",       index: 8,  pair: "RON/USD",   unit: "RON",      category: "crypto" },
   firo:   { name: "FIRO",    displayName: "Firo",        index: 19, pair: "FIRO/USD",  unit: "FIRO",     category: "crypto" },
   // Commodities & Metals
   gold:   { name: "Gold",    displayName: "Gold",        index: 18, pair: "XAU/USD",   unit: "DexyGold", category: "commodity", oracleUnit: "Troy Oz" },

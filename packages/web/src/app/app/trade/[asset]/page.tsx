@@ -23,6 +23,7 @@ const ASSET_MAP: Record<string, { name: string; index: number; pair: string; uni
   hns:     { name: "HNS",     index: 5,  pair: "HNS/USD", unit: "HNS" },
   ckb:     { name: "CKB",     index: 6,  pair: "CKB/USD", unit: "CKB" },
   atom:    { name: "ATOM",    index: 7,  pair: "ATOM/USD", unit: "ATOM" },
+  ron:     { name: "RON",     index: 8,  pair: "RON/USD", unit: "RON" },
   firo:    { name: "FIRO",    index: 19, pair: "FIRO/USD", unit: "FIRO" },
   // Commodities & Metals
   gold:    { name: "Gold",    index: 18, pair: "XAU/USD", unit: "DexyGold" },

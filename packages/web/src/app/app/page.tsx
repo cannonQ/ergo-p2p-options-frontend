@@ -29,6 +29,7 @@ const CATEGORIES = [
       { name: "HNS", slug: "hns", index: 5, badge: undefined },
       { name: "CKB", slug: "ckb", index: 6, badge: undefined },
       { name: "ATOM", slug: "atom", index: 7, badge: undefined },
+      { name: "RON", slug: "ron", index: 8, badge: undefined },
       { name: "FIRO", slug: "firo", index: 19, badge: undefined },
     ],
   },

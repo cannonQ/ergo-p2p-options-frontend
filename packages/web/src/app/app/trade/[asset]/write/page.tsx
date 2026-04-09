@@ -48,6 +48,7 @@ const ASSET_MAP: Record<string, { name: string; index: number; unit: string; ora
   hns: { name: "HNS", index: 5, unit: "HNS" },
   ckb: { name: "CKB", index: 6, unit: "CKB" },
   atom: { name: "ATOM", index: 7, unit: "ATOM" },
+  ron: { name: "RON", index: 8, unit: "RON" },
   firo: { name: "FIRO", index: 19, unit: "FIRO" },
   // Commodities & Metals
   gold: { name: "Gold", index: 18, unit: "DexyGold", oracleUnit: "Troy Oz" },
