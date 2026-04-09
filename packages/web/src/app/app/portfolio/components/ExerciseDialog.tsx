@@ -150,7 +150,7 @@ export function ExerciseDialog({
             </span>{" "}
             ${strikePrice.toFixed(strikePrice >= 100 ? 0 : strikePrice >= 1 ? 2 : 4)} Strike
           </h2>
-          <button onClick={onClose} className="text-[#8891a5] hover:text-[#e8eaf0] text-xl" aria-label="Close exercise dialog">&times;</button>
+          <button onClick={onClose} className="text-[#9da5b8] hover:text-[#e8eaf0] text-xl" aria-label="Close exercise dialog">&times;</button>
         </div>
 
         {/* Exercise window badge */}
@@ -164,7 +164,7 @@ export function ExerciseDialog({
         <div className="space-y-3 text-sm">
           {settlementType === "physical" && optionType === "call" && (
             <div className="space-y-2">
-              <p className="text-[#8891a5]">You will:</p>
+              <p className="text-[#9da5b8]">You will:</p>
               <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 pl-2">
                 <span className="text-[#f87171]">Pay:</span>
                 <span className="text-[#e8eaf0] font-mono">{strikePerContract.toFixed(stableDecimals)} {stablecoin} per contract (strike → writer)</span>
@@ -176,7 +176,7 @@ export function ExerciseDialog({
 
           {settlementType === "physical" && optionType === "put" && (
             <div className="space-y-2">
-              <p className="text-[#8891a5]">You will:</p>
+              <p className="text-[#9da5b8]">You will:</p>
               <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 pl-2">
                 <span className="text-[#f87171]">Send:</span>
                 <span className="text-[#e8eaf0] font-mono">{formatUnderlying(1)} per contract (to writer)</span>
@@ -190,11 +190,11 @@ export function ExerciseDialog({
             <div className="space-y-2">
               {spotPrice !== undefined && (
                 <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-                  <span className="text-[#8891a5]">Oracle spot:</span>
+                  <span className="text-[#9da5b8]">Oracle spot:</span>
                   <span className="text-[#e09a5f] font-mono">${spotPrice >= 1 ? spotPrice.toFixed(2) : spotPrice >= 0.01 ? spotPrice.toFixed(4) : spotPrice.toFixed(6)}</span>
-                  <span className="text-[#8891a5]">Strike:</span>
+                  <span className="text-[#9da5b8]">Strike:</span>
                   <span className="text-[#e8eaf0] font-mono">${strikePrice >= 1 ? strikePrice.toFixed(2) : strikePrice >= 0.01 ? strikePrice.toFixed(4) : strikePrice.toFixed(6)}</span>
-                  <span className="text-[#8891a5]">Profit/contract:</span>
+                  <span className="text-[#9da5b8]">Profit/contract:</span>
                   <span className={`font-mono ${cashProfit > 0 ? "text-[#34d399]" : "text-[#f87171]"}`}>
                     {cashProfit > 0 ? `$${cashProfit.toFixed(stableDecimals)}` : "OTM — no profit"}
                   </span>
@@ -214,11 +214,11 @@ export function ExerciseDialog({
           {settlementType === "physical" && optionType === "call" && (
             <>
               <div className="flex justify-between">
-                <span className="text-[#8891a5]">Total payment:</span>
+                <span className="text-[#9da5b8]">Total payment:</span>
                 <span className="text-[#e8eaf0] font-mono">{(strikePerContract * exerciseQty).toFixed(stableDecimals)} {stablecoin}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#8891a5]">Total received:</span>
+                <span className="text-[#9da5b8]">Total received:</span>
                 <span className="text-[#34d399] font-mono">{formatUnderlying(exerciseQty)}</span>
               </div>
             </>
@@ -226,24 +226,24 @@ export function ExerciseDialog({
           {settlementType === "physical" && optionType === "put" && (
             <>
               <div className="flex justify-between">
-                <span className="text-[#8891a5]">Total sent:</span>
+                <span className="text-[#9da5b8]">Total sent:</span>
                 <span className="text-[#e8eaf0] font-mono">{formatUnderlying(exerciseQty)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#8891a5]">Total received:</span>
+                <span className="text-[#9da5b8]">Total received:</span>
                 <span className="text-[#34d399] font-mono">{(strikePerContract * exerciseQty).toFixed(stableDecimals)} {stablecoin}</span>
               </div>
             </>
           )}
           {settlementType === "cash" && cashProfit > 0 && (
             <div className="flex justify-between">
-              <span className="text-[#8891a5]">Total payout:</span>
+              <span className="text-[#9da5b8]">Total payout:</span>
               <span className="text-[#34d399] font-mono">{(cashProfit * exerciseQty).toFixed(stableDecimals)} {stablecoin}</span>
             </div>
           )}
           <div className="flex justify-between pt-1 border-t border-[#1e2330]/50">
-            <span className="text-[#8891a5]">Network fee:</span>
-            <span className="text-[#8891a5] font-mono">0.0022 ERG</span>
+            <span className="text-[#9da5b8]">Network fee:</span>
+            <span className="text-[#9da5b8] font-mono">0.0022 ERG</span>
           </div>
         </div>
 
@@ -283,7 +283,7 @@ export function ExerciseDialog({
           </button>
           <button
             onClick={onClose}
-            className="px-6 py-3 bg-[#1e2330] text-[#8891a5] rounded-lg hover:text-[#e8eaf0] transition-colors"
+            className="px-6 py-3 bg-[#1e2330] text-[#9da5b8] rounded-lg hover:text-[#e8eaf0] transition-colors"
           >
             {txId ? "Close" : "Cancel"}
           </button>

@@ -125,12 +125,12 @@ export function AssetCard({
         </div>
       )}
 
-      <div className="text-sm text-[#8891a5]">
+      <div className="text-sm text-[#9da5b8]">
         {optionCount} option{optionCount !== 1 ? "s" : ""}
       </div>
 
       {(openInterest !== undefined || ivRank !== undefined) && (
-        <div className="text-xs text-[#8891a5] mt-1">
+        <div className="text-xs text-[#9da5b8] mt-1">
           {openInterest !== undefined && (
             <span>OI: {openInterest.toLocaleString()} USE</span>
           )}

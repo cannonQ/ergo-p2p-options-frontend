@@ -12,6 +12,7 @@ import {
   type SettlementType,
 } from "@ergo-options/core";
 import { fetchHeight, checkMempoolTx } from "@/lib/api";
+import { useWalletStore } from "@/stores/wallet-store";
 import { adaptTxForErgoPay } from "@/lib/ergopay-adapter";
 import { requestErgoPayTx } from "@/lib/ergopay";
 import type { PollResponse } from "@/app/api/poll/[boxId]/route";
@@ -307,6 +308,9 @@ export function useWriteOptionErgoPay(): WriteOptionErgoPayResult {
         setStep(3);
         await waitForState(txId, contractAddress, ["DELIVERED"], abortController.signal);
         setStep(4);
+
+        // Refresh wallet balance after successful write
+        useWalletStore.getState().refreshBalance();
       } catch (err: any) {
         setError(err?.message || String(err));
       } finally {

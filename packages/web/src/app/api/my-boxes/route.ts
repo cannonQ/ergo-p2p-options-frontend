@@ -11,7 +11,7 @@ import {
   ORACLE_DECIMAL,
 } from "@ergo-options/core";
 
-const NODE_URL = process.env.ERGO_NODE_URL || "http://96.255.150.220:9053";
+import { NODE_URL, fetchCurrentHeight } from "@/lib/node";
 
 // Sigma type prefix for Coll[Byte]: 0x0e
 // R7 format: 0e20 + 32-byte hex (box ID)
@@ -181,7 +181,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const currentHeight = await fetchHeight();
+    const currentHeight = await fetchCurrentHeight();
 
     // Scan all contract addresses for unspent boxes
     const allBoxes: any[] = [];
@@ -274,13 +274,3 @@ export async function GET(request: Request) {
   }
 }
 
-async function fetchHeight(): Promise<number> {
-  try {
-    const res = await fetch(`${NODE_URL}/info`);
-    if (!res.ok) return 0;
-    const info = await res.json();
-    return info.fullHeight ?? 0;
-  } catch {
-    return 0;
-  }
-}

@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 
-const NODE_URL = process.env.ERGO_NODE_URL || "http://96.255.150.220:9053";
+import { NODE_URL } from "@/lib/node";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const tokenId = searchParams.get("tokenId");
 
-  if (!tokenId) {
-    return NextResponse.json({ error: "tokenId parameter required" }, { status: 400 });
+  if (!tokenId || !/^[0-9a-fA-F]{64}$/.test(tokenId)) {
+    return NextResponse.json({ error: "Invalid tokenId" }, { status: 400 });
   }
 
   try {

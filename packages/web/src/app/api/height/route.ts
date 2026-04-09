@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-const NODE_URL = process.env.ERGO_NODE_URL || 'http://96.255.150.220:9053';
+import { NODE_URL } from "@/lib/node";
 
 export async function GET() {
   try {

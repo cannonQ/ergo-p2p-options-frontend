@@ -39,12 +39,10 @@ export async function POST(
     const req = getRequest(requestId);
     if (!req) {
       // Request not found or expired — still return 200 (wallet expects success)
-      console.log(`ErgoPay callback ${requestId}: not found (expired?)`);
       return NextResponse.json({ ok: true });
     }
 
     markSigned(requestId, txId);
-    console.log(`ErgoPay callback ${requestId}: signed TX ${txId}`);
 
     return NextResponse.json({ ok: true });
   } catch (error: any) {

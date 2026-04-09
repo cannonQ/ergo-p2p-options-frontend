@@ -1,14 +1,19 @@
 import { NextResponse } from 'next/server';
 
-const NODE_URL = process.env.ERGO_NODE_URL || 'http://96.255.150.220:9053';
+import { NODE_URL } from "@/lib/node";
 
 export async function GET(
   request: Request,
   { params }: { params: { txId: string } }
 ) {
+  const txId = params.txId;
+  if (!/^[0-9a-fA-F]{64}$/.test(txId)) {
+    return NextResponse.json({ error: "Invalid txId" }, { status: 400 });
+  }
+
   try {
     const res = await fetch(
-      `${NODE_URL}/transactions/unconfirmed/byTransactionId/${params.txId}`,
+      `${NODE_URL}/transactions/unconfirmed/byTransactionId/${txId}`,
     );
 
     if (res.status === 404) {

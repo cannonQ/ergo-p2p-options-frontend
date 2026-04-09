@@ -17,6 +17,7 @@ import {
   getWalletUtxos,
   getChangeAddress,
 } from "@/lib/wallet";
+import { useWalletStore } from "@/stores/wallet-store";
 import { fetchHeight, submitTransaction, checkMempoolTx } from "@/lib/api";
 import type { PollResponse } from "@/app/api/poll/[boxId]/route";
 
@@ -147,7 +148,7 @@ async function addressToErgoTree(address: string): Promise<string> {
  * Falls back to fetching from the node API.
  */
 async function getErgoTreeFromWallet(api: any): Promise<string> {
-  const utxos = await getWalletUtxos(api);
+  const utxos = await getWalletUtxos(api!);
   if (utxos.length > 0) {
     return utxos[0].ergoTree;
   }
@@ -329,7 +330,7 @@ export function useWriteOption(): WriteOptionResult {
       };
 
       // Get wallet UTXOs via Nautilus
-      const rawUtxos = await getWalletUtxos(api);
+      const rawUtxos = await getWalletUtxos(api!);
       const fleetBoxes = rawUtxos.map(nautilusBoxToFleet);
 
       // Build unsigned create TX
@@ -343,7 +344,7 @@ export function useWriteOption(): WriteOptionResult {
       const createEip12 = unsignedCreateTx.toEIP12Object();
 
       // Sign via Nautilus (this is the ONLY wallet signature)
-      const signedCreateTx = await signTx(api, createEip12);
+      const signedCreateTx = await signTx(api!, createEip12);
 
       // Submit via API route
       const createTxId = await submitTransaction(signedCreateTx);
@@ -400,6 +401,9 @@ export function useWriteOption(): WriteOptionResult {
       // User can list for sale from the Portfolio page
       // ---------------------------------------------------------------
       setStep(4);
+
+      // Refresh wallet balance after successful write
+      useWalletStore.getState().refreshBalance();
     } catch (err: any) {
       let message = err?.message || err?.info || String(err);
       // Translate Fleet SDK InsufficientInputs to human-readable

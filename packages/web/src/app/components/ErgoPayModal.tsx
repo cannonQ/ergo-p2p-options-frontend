@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useFocusTrap } from "@/lib/hooks/useFocusTrap";
 import { createPortal } from "react-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { pollErgoPayTxStatus, isMobileDevice, type ErgoPayTxStatus } from "@/lib/ergopay";
@@ -30,6 +31,7 @@ export function ErgoPayModal({
   const [txId, setTxId] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isMobile = isMobileDevice();
+  const dialogRef = useFocusTrap<HTMLDivElement>(open);
 
   useEffect(() => {
     if (!open || !requestId) return;
@@ -72,6 +74,7 @@ export function ErgoPayModal({
     <div style={{ position: "fixed", inset: 0, zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)" }} onClick={onClose} aria-hidden="true" />
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Sign with mobile wallet"
@@ -86,7 +89,7 @@ export function ErgoPayModal({
           </h2>
           <button
             onClick={onClose}
-            className="text-[#8891a5] hover:text-[#e8eaf0] text-xl"
+            className="text-[#9da5b8] hover:text-[#e8eaf0] text-xl"
             aria-label="Close"
           >
             &times;
@@ -94,7 +97,7 @@ export function ErgoPayModal({
         </div>
 
         {/* Message */}
-        <p className="text-sm text-[#8891a5]">{message}</p>
+        <p className="text-sm text-[#9da5b8]">{message}</p>
 
         <div className="flex flex-col items-center gap-4">
           {/* Waiting state */}
@@ -118,12 +121,12 @@ export function ErgoPayModal({
               )}
 
               {/* Waiting spinner */}
-              <div className="flex items-center gap-2 text-[#8891a5] text-sm">
+              <div className="flex items-center gap-2 text-[#9da5b8] text-sm">
                 <div className="w-4 h-4 border-2 border-[#c87941] border-t-transparent rounded-full animate-spin" />
                 <span>Waiting for wallet to sign...</span>
               </div>
 
-              <p className="text-xs text-[#505870] text-center">
+              <p className="text-xs text-[#7a82a0] text-center">
                 {isMobile
                   ? "Tap the button above to open your Ergo wallet app."
                   : "Scan this QR code with your Ergo mobile wallet (Terminus or Minotaur)."}
@@ -143,7 +146,7 @@ export function ErgoPayModal({
                   href={`https://ergexplorer.com/transactions#${txId}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-[#8891a5] hover:text-[#c87941] font-mono transition-colors"
+                  className="text-xs text-[#9da5b8] hover:text-[#c87941] font-mono transition-colors"
                 >
                   {txId.slice(0, 12)}...{txId.slice(-8)}
                 </a>
@@ -158,7 +161,7 @@ export function ErgoPayModal({
                 <span className="text-[#f87171] text-2xl">&#10007;</span>
               </div>
               <p className="text-sm text-[#f87171] font-semibold">Request expired</p>
-              <p className="text-xs text-[#8891a5] text-center">
+              <p className="text-xs text-[#9da5b8] text-center">
                 The signing request was not completed in time. Please try again.
               </p>
             </div>
@@ -168,7 +171,7 @@ export function ErgoPayModal({
         {/* Close button */}
         <button
           onClick={onClose}
-          className="w-full py-2 text-sm text-[#8891a5] hover:text-[#e8eaf0] border border-[#1e2330] rounded-lg transition-colors"
+          className="w-full py-2 text-sm text-[#9da5b8] hover:text-[#e8eaf0] border border-[#1e2330] rounded-lg transition-colors"
         >
           {state === "waiting" ? "Cancel" : "Close"}
         </button>

@@ -11,29 +11,29 @@ export const metadata: Metadata = { title: "Strategy Wizard" };
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const NODE_URL = process.env.ERGO_NODE_URL || "http://96.255.150.220:9053";
-
-async function fetchCurrentHeight(): Promise<number> {
-  try {
-    const res = await fetch(`${NODE_URL}/info`, { cache: "no-store" });
-    if (res.ok) {
-      const info = await res.json();
-      return info.fullHeight ?? 0;
-    }
-  } catch { /* ignore */ }
-  return 0;
-}
+import { fetchCurrentHeight } from "@/lib/node";
 
 export default async function WizardPage() {
   // Single parallel fetch — fetchVols() fetches companion box once for all indices
-  const [spotPrices, volByIndex, priceData, reserves, sellOrders, currentHeight] = await Promise.all([
-    fetchSpotPrices(),
-    fetchVols().catch(() => new Map<number, number>()),
-    fetchAllAssetPriceData().catch(() => new Map()),
-    scanReserves().catch(() => []),
-    scanSellOrders().catch(() => []),
-    fetchCurrentHeight(),
-  ]);
+  let spotPrices = new Map<number, number>();
+  let volByIndex = new Map<number, number>();
+  let priceData = new Map<number, any>();
+  let reserves: any[] = [];
+  let sellOrders: any[] = [];
+  let currentHeight = 0;
+  let nodeError = false;
+  try {
+    [spotPrices, volByIndex, priceData, reserves, sellOrders, currentHeight] = await Promise.all([
+      fetchSpotPrices(),
+      fetchVols().catch(() => new Map<number, number>()),
+      fetchAllAssetPriceData().catch(() => new Map()),
+      scanReserves().catch(() => []),
+      scanSellOrders().catch(() => []),
+      fetchCurrentHeight(),
+    ]);
+  } catch {
+    nodeError = true;
+  }
 
   // Build wizard asset list with live data
   const assets: WizardAsset[] = [];
@@ -61,6 +61,12 @@ export default async function WizardPage() {
   }
 
   return (
+    <>
+    {nodeError && (
+      <div className="bg-[#f87171]/10 border border-[#f87171]/30 rounded-lg px-4 py-3 mb-6 text-sm text-[#f87171]">
+        Unable to reach Ergo node — data may be unavailable. Try refreshing.
+      </div>
+    )}
     <WizardClient
       assets={assets}
       spotPrices={spotPricesRecord}
@@ -69,5 +75,6 @@ export default async function WizardPage() {
       sellOrders={sellOrders}
       currentHeight={currentHeight}
     />
+    </>
   );
 }

@@ -138,9 +138,9 @@ export function OptionChain({
   sellOrders = [],
   tokenToReserve = {},
 }: OptionChainProps) {
-  const [selectedExpiry, setSelectedExpiry] = useState<string>("all");
   const [settlement, setSettlement] = useState<"all" | "physical" | "cash">(hasPhysical ? "all" : "cash");
   const [selectedOption, setSelectedOption] = useState<SelectedOption | null>(null);
+  const [mobileSide, setMobileSide] = useState<"call" | "put">("call");
 
   const baseVol = oracleVol ? oracleVolToDecimal(oracleVol) : undefined;
 
@@ -251,8 +251,6 @@ export function OptionChain({
     return Math.max(1, ...rows.map((r) => Math.max(r.callVolume, r.putVolume)));
   }, [rows]);
 
-  const expiries: string[] = [];
-
   const handleRowClick = (row: ChainRow, type: "call" | "put") => {
     const orders = type === "call" ? row.callSellOrders : row.putSellOrders;
     const cheapestOrder = orders.length > 0 ? orders[0] : undefined;
@@ -278,18 +276,18 @@ export function OptionChain({
       {/* Header bar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-4 text-sm">
-          <span className="text-[#8891a5]">Spot:</span>
+          <span className="text-[#9da5b8]">Spot:</span>
           <span className="text-[#e09a5f] font-mono text-lg">
             {spotPrice && spotPrice > 0
               ? formatStrike(spotPrice)
               : "Unavailable"}
           </span>
           {spotPrice && spotPrice > 0 && (
-            <span className="text-[#8891a5]/60 text-xs">via oracle</span>
+            <span className="text-[#9da5b8]/60 text-xs">via oracle</span>
           )}
           {baseVol !== undefined && (
             <>
-              <span className="text-[#8891a5] ml-2">RV:</span>
+              <span className="text-[#9da5b8] ml-2">RV:</span>
               <span className="text-[#a78bfa] font-mono">
                 {(baseVol * 100).toFixed(1)}%
               </span>
@@ -311,8 +309,8 @@ export function OptionChain({
                 settlement === s
                   ? "bg-[#c87941] text-white"
                   : disabled
-                  ? "bg-[#1e2330]/50 text-[#8891a5]/30 cursor-not-allowed"
-                  : "bg-[#1e2330] text-[#8891a5] hover:text-[#e8eaf0]"
+                  ? "bg-[#1e2330]/50 text-[#9da5b8]/30 cursor-not-allowed"
+                  : "bg-[#1e2330] text-[#9da5b8] hover:text-[#e8eaf0]"
               }`}
             >
               {s === "all" ? "All" : s === "physical" ? "Physical" : "Cash"}
@@ -321,35 +319,35 @@ export function OptionChain({
         })}
       </div>
 
-      {/* Expiry Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
+      {/* Mobile side toggle */}
+      <div className="flex gap-2 md:hidden">
         <button
-          onClick={() => setSelectedExpiry("all")}
-          className={`px-3 py-1 text-sm rounded-lg whitespace-nowrap transition-colors ${
-            selectedExpiry === "all"
-              ? "bg-[#c87941] text-white"
-              : "bg-[#1e2330] text-[#8891a5] hover:text-[#e8eaf0]"
+          onClick={() => setMobileSide("call")}
+          className={`flex-1 py-2 text-sm rounded-lg font-semibold transition-colors ${
+            mobileSide === "call"
+              ? "bg-[#34d399]/20 text-[#34d399]"
+              : "bg-[#1e2330] text-[#9da5b8]"
           }`}
         >
-          All Expiries
+          Calls
         </button>
-        {expiries.map((exp) => (
-          <button
-            key={exp}
-            onClick={() => setSelectedExpiry(exp)}
-            className={`px-3 py-1 text-sm rounded-lg whitespace-nowrap transition-colors ${
-              selectedExpiry === exp
-                ? "bg-[#c87941] text-white"
-                : "bg-[#1e2330] text-[#8891a5] hover:text-[#e8eaf0]"
-            }`}
-          >
-            {exp}
-          </button>
-        ))}
+        <button
+          onClick={() => setMobileSide("put")}
+          className={`flex-1 py-2 text-sm rounded-lg font-semibold transition-colors ${
+            mobileSide === "put"
+              ? "bg-[#f87171]/20 text-[#f87171]"
+              : "bg-[#1e2330] text-[#9da5b8]"
+          }`}
+        >
+          Puts
+        </button>
       </div>
 
       {/* Chain Table */}
       {rows.length > 0 ? (
+        <>
+        {/* Desktop table */}
+        <div className="hidden md:block">
         <div className="overflow-x-auto bg-[#12151c] border border-[#1e2330] rounded-lg">
           <table className="w-full text-sm">
             <thead>
@@ -406,19 +404,19 @@ export function OptionChain({
                     {/* Call side */}
                     <td
                       className={`py-2 px-2 font-mono cursor-pointer hover:bg-[#34d399]/10 transition-colors ${
-                        row.callPremium ? "text-[#e09a5f]" : "text-[#8891a5]/40"
+                        row.callPremium ? "text-[#e09a5f]" : "text-[#9da5b8]/40"
                       } ${isITMCall ? "bg-[#34d399]/5" : ""}`}
                       onClick={() => handleRowClick(row, "call")}
                     >
                       {row.callPremium?.toFixed(4) ?? "—"}
                     </td>
-                    <td className={`py-2 px-2 text-right ${row.callAvail > 0 ? "text-[#8891a5]" : "text-[#8891a5]/30"} ${isITMCall ? "bg-[#34d399]/5" : ""}`}>
+                    <td className={`py-2 px-2 text-right ${row.callAvail > 0 ? "text-[#9da5b8]" : "text-[#9da5b8]/30"} ${isITMCall ? "bg-[#34d399]/5" : ""}`}>
                       {row.callAvail}
                     </td>
-                    <td className={`py-2 px-2 text-right ${row.callOI > 0 ? "text-[#8891a5]" : "text-[#8891a5]/30"} ${isITMCall ? "bg-[#34d399]/5" : ""}`}>
+                    <td className={`py-2 px-2 text-right ${row.callOI > 0 ? "text-[#9da5b8]" : "text-[#9da5b8]/30"} ${isITMCall ? "bg-[#34d399]/5" : ""}`}>
                       {row.callOI}
                     </td>
-                    <td className={`py-2 px-2 text-right ${row.callIV ? "text-[#a78bfa]" : "text-[#8891a5]/30"} ${isITMCall ? "bg-[#34d399]/5" : ""}`}>
+                    <td className={`py-2 px-2 text-right ${row.callIV ? "text-[#a78bfa]" : "text-[#9da5b8]/30"} ${isITMCall ? "bg-[#34d399]/5" : ""}`}>
                       {row.callIV ? `${row.callIV}%` : "—"}
                     </td>
                     {/* Strike */}
@@ -430,24 +428,24 @@ export function OptionChain({
                       {(() => {
                         const res = reserves.find(r => r.strikePrice === row.strike);
                         if (res?.contractSize && res.contractSize !== 1) {
-                          return <div className="text-[9px] text-[#8891a5] font-normal">×{res.contractSize >= 1 ? res.contractSize.toFixed(0) : res.contractSize} {assetUnit}</div>;
+                          return <div className="text-[9px] text-[#9da5b8] font-normal">×{res.contractSize >= 1 ? res.contractSize.toFixed(0) : res.contractSize} {assetUnit}</div>;
                         }
                         return null;
                       })()}
                     </td>
                     {/* Put side */}
-                    <td className={`py-2 px-2 text-left ${row.putIV ? "text-[#a78bfa]" : "text-[#8891a5]/30"} ${isITMPut ? "bg-[#f87171]/5" : ""}`}>
+                    <td className={`py-2 px-2 text-left ${row.putIV ? "text-[#a78bfa]" : "text-[#9da5b8]/30"} ${isITMPut ? "bg-[#f87171]/5" : ""}`}>
                       {row.putIV ? `${row.putIV}%` : "—"}
                     </td>
-                    <td className={`py-2 px-2 text-right ${row.putOI > 0 ? "text-[#8891a5]" : "text-[#8891a5]/30"} ${isITMPut ? "bg-[#f87171]/5" : ""}`}>
+                    <td className={`py-2 px-2 text-right ${row.putOI > 0 ? "text-[#9da5b8]" : "text-[#9da5b8]/30"} ${isITMPut ? "bg-[#f87171]/5" : ""}`}>
                       {row.putOI}
                     </td>
-                    <td className={`py-2 px-2 text-right ${row.putAvail > 0 ? "text-[#8891a5]" : "text-[#8891a5]/30"} ${isITMPut ? "bg-[#f87171]/5" : ""}`}>
+                    <td className={`py-2 px-2 text-right ${row.putAvail > 0 ? "text-[#9da5b8]" : "text-[#9da5b8]/30"} ${isITMPut ? "bg-[#f87171]/5" : ""}`}>
                       {row.putAvail}
                     </td>
                     <td
                       className={`py-2 px-2 font-mono cursor-pointer hover:bg-[#f87171]/10 transition-colors ${
-                        row.putPremium ? "text-[#e09a5f]" : "text-[#8891a5]/40"
+                        row.putPremium ? "text-[#e09a5f]" : "text-[#9da5b8]/40"
                       } ${isITMPut ? "bg-[#f87171]/5" : ""}`}
                       onClick={() => handleRowClick(row, "put")}
                     >
@@ -464,7 +462,7 @@ export function OptionChain({
           </table>
 
           {/* Footer */}
-          <div className="flex items-center justify-between px-4 py-3 border-t border-[#1e2330] text-sm text-[#8891a5]">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-[#1e2330] text-sm text-[#9da5b8]">
             <span>Click any row to trade</span>
             <span className="text-xs">
               {(() => {
@@ -479,10 +477,59 @@ export function OptionChain({
             </span>
           </div>
         </div>
+        </div>
+
+        {/* Mobile cards */}
+        <div className="md:hidden space-y-2">
+          {rows.map((row, i) => {
+            const isATM = spotPrice !== undefined && spotPrice > 0 &&
+              Math.abs(row.strike - spotPrice) === Math.min(
+                ...rows.map((r) => Math.abs(r.strike - (spotPrice ?? 0)))
+              );
+            const side = mobileSide;
+            const premium = side === "call" ? row.callPremium : row.putPremium;
+            const avail = side === "call" ? row.callAvail : row.putAvail;
+            const oi = side === "call" ? row.callOI : row.putOI;
+            const iv = side === "call" ? row.callIV : row.putIV;
+            const isITM = spotPrice !== undefined && (
+              side === "call" ? row.strike < spotPrice : row.strike > spotPrice
+            );
+
+            return (
+              <div
+                key={i}
+                onClick={() => handleRowClick(row, side)}
+                className={`bg-[#12151c] border rounded-lg px-4 py-3 cursor-pointer transition-colors hover:bg-[#1e2330]/50 ${
+                  isATM ? "border-[#c87941]/50" : "border-[#1e2330]"
+                } ${isITM ? (side === "call" ? "border-l-2 border-l-[#34d399]" : "border-l-2 border-l-[#f87171]") : ""}`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className={`font-mono font-bold ${isATM ? "text-[#c87941]" : "text-[#e8eaf0]"}`}>
+                    {formatStrike(row.strike)}
+                    {isATM && <span className="ml-1 text-[10px] text-[#c87941]">ATM</span>}
+                  </span>
+                  <span className={`font-mono ${premium ? "text-[#e09a5f]" : "text-[#9da5b8]/40"}`}>
+                    {premium?.toFixed(4) ?? "—"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-4 text-xs text-[#9da5b8]">
+                  <span>Avail: {avail}</span>
+                  <span>OI: {oi}</span>
+                  {iv && <span className="text-[#a78bfa]">IV: {iv}%</span>}
+                </div>
+              </div>
+            );
+          })}
+          {/* Mobile footer */}
+          <div className="text-center text-sm text-[#9da5b8] py-2">
+            Tap any card to trade
+          </div>
+        </div>
+        </>
       ) : (
         <div className="text-center py-16 bg-[#12151c] border border-[#1e2330] rounded-lg">
-          <p className="text-[#8891a5] mb-2">Oracle price unavailable for {assetName}</p>
-          <p className="text-sm text-[#8891a5]/70">
+          <p className="text-[#9da5b8] mb-2">Oracle price unavailable for {assetName}</p>
+          <p className="text-sm text-[#9da5b8]/70">
             Cannot generate option chain without a spot price
           </p>
         </div>

@@ -11,13 +11,17 @@ import { storeRequest, cleanupRequests } from "@/lib/ergopay";
 
 export async function POST() {
   try {
+    const host = process.env.ERGOPAY_PUBLIC_HOST || process.env.VERCEL_URL;
+    if (!host) {
+      return NextResponse.json({ error: "ERGOPAY_PUBLIC_HOST not configured" }, { status: 500 });
+    }
+
     cleanupRequests();
 
     const sessionId = crypto.randomUUID().replace(/-/g, "").slice(0, 32).toUpperCase();
     storeRequest(sessionId);
 
     // The wallet replaces #P2PK_ADDRESS# with the real address
-    const host = process.env.ERGOPAY_PUBLIC_HOST || process.env.VERCEL_URL || "192.168.110.231:3005";
     const ergoPayUrl = `ergopay://${host}/api/ergopay/connect/${sessionId}/#P2PK_ADDRESS#`;
 
     return NextResponse.json({

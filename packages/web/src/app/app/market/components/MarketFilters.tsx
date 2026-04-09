@@ -3,14 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ParsedReserve } from "@/lib/reserve-scanner";
-
-const ASSET_SLUG: Record<string, string> = {
-  ETH: "eth", BTC: "btc", BNB: "bnb", DOGE: "doge", ADA: "ada", ERG: "erg",
-  HNS: "hns", CKB: "ckb", ATOM: "atom", FIRO: "firo",
-  Gold: "gold", XAU: "gold", Silver: "silver", XAG: "silver", Copper: "copper", XCU: "copper",
-  Brent: "brent", BRENT: "brent", WTI: "wti", NatGas: "natgas", NGAS: "natgas",
-  LITHIUM: "natgas", "S&P 500": "spx", SPX: "spx", DJI: "dji",
-};
+import { ASSET_SLUG } from "@/lib/asset-map";
 
 interface MarketFiltersProps {
   reserves: ParsedReserve[];
@@ -75,7 +68,7 @@ export function MarketFilters({ reserves, spotPrices, currentHeight }: MarketFil
   return (
     <>
       {/* Current height */}
-      <div className="text-xs text-[#8891a5]">
+      <div className="text-xs text-[#9da5b8]">
         Chain height: <span className="font-mono text-[#e8eaf0]">{currentHeight.toLocaleString()}</span>
       </div>
 
@@ -110,7 +103,7 @@ export function MarketFilters({ reserves, spotPrices, currentHeight }: MarketFil
             <option key={b.label} value={b.label}>{b.label}</option>
           ))}
         </select>
-        <label className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#8891a5] cursor-pointer">
+        <label className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#9da5b8] cursor-pointer">
           <input
             type="checkbox"
             checked={itmOnly}
@@ -122,17 +115,17 @@ export function MarketFilters({ reserves, spotPrices, currentHeight }: MarketFil
       </div>
 
       {/* Table */}
-      <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-hidden">
+      <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[#1e2330]">
-              <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Asset</th>
-              <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Type</th>
-              <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Strike</th>
-              <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Spot</th>
-              <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Expiry</th>
-              <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Settlement</th>
-              <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Style</th>
+              <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">Asset</th>
+              <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">Type</th>
+              <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Strike</th>
+              <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Spot</th>
+              <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Expiry</th>
+              <th className="text-left py-3 px-4 text-[#9da5b8] font-medium hidden md:table-cell">Settlement</th>
+              <th className="text-left py-3 px-4 text-[#9da5b8] font-medium hidden md:table-cell">Style</th>
             </tr>
           </thead>
           <tbody>
@@ -164,7 +157,7 @@ export function MarketFilters({ reserves, spotPrices, currentHeight }: MarketFil
                     <td className="py-2 px-4 text-right font-mono text-[#e09a5f]">
                       ${r.strikePrice >= 100 ? r.strikePrice.toFixed(0) : r.strikePrice.toFixed(r.strikePrice >= 1 ? 2 : 4)}
                     </td>
-                    <td className="py-2 px-4 text-right font-mono text-[#8891a5]">
+                    <td className="py-2 px-4 text-right font-mono text-[#9da5b8]">
                       {spot !== undefined ? `$${spot >= 100 ? spot.toFixed(0) : spot.toFixed(spot >= 1 ? 2 : 4)}` : "—"}
                     </td>
                     <td className="py-2 px-4 text-right">
@@ -185,19 +178,19 @@ export function MarketFilters({ reserves, spotPrices, currentHeight }: MarketFil
                         ) : (
                           <div className="font-mono text-[#f87171]">Expired</div>
                         )}
-                        <div className="text-[#8891a5]">
+                        <div className="text-[#9da5b8]">
                           blk {r.maturityHeight.toLocaleString()}
                         </div>
                       </div>
                     </td>
-                    <td className="py-2 px-4 text-[#8891a5] capitalize">{r.settlement}</td>
-                    <td className="py-2 px-4 text-[#8891a5] capitalize">{r.style}</td>
+                    <td className="py-2 px-4 text-[#9da5b8] capitalize hidden md:table-cell">{r.settlement}</td>
+                    <td className="py-2 px-4 text-[#9da5b8] capitalize hidden md:table-cell">{r.style}</td>
                   </tr>
                 );
               })
             ) : (
               <tr>
-                <td colSpan={7} className="text-center py-12 text-[#8891a5]">
+                <td colSpan={7} className="text-center py-12 text-[#9da5b8]">
                   {reserves.length === 0
                     ? "No options currently listed. Be the first to write one."
                     : "No options match your filters."}

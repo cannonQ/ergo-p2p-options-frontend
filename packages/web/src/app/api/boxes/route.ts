@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const NODE_URL = process.env.ERGO_NODE_URL || 'http://96.255.150.220:9053';
+import { NODE_URL } from "@/lib/node";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

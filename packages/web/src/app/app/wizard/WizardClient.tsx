@@ -152,10 +152,12 @@ export function WizardClient({
 
   function handleAssetContinue() {
     setStep(3);
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   }
 
   function handleParamsContinue() {
     setStep(4);
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
     if (isBuy && selectedAsset && strike && selectedExpiry) {
       setChecking(true);
       setMarketResult(null);
@@ -250,7 +252,12 @@ export function WizardClient({
           assets={assets}
           selectedAsset={selectedAsset}
           direction={direction}
-          onAssetSelect={setSelectedAsset}
+          onAssetSelect={(asset) => {
+            setSelectedAsset(asset);
+            setTimeout(() => {
+              document.getElementById("wizard-direction")?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 50);
+          }}
           onDirectionSelect={setDirection}
           onContinue={handleAssetContinue}
         />

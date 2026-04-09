@@ -111,6 +111,12 @@ export function TradePanel({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
+  // Lock body scroll while panel is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
   // ═══════════════════════════════════════════════════════════════
   // BUY TX FLOW
   // ═══════════════════════════════════════════════════════════════
@@ -147,7 +153,7 @@ export function TradePanel({
         walletErgoTree = buyerBoxes[0]?.ergoTree || "";
       } else {
         const { getWalletUtxos } = await import("@/lib/wallet");
-        const rawUtxos = await getWalletUtxos(api);
+        const rawUtxos = await getWalletUtxos(api!);
         buyerBoxes = rawUtxos.map(nautilusBoxToFleet);
         walletErgoTree = rawUtxos[0]?.ergoTree;
       }
@@ -232,7 +238,7 @@ export function TradePanel({
       } else {
         setStatus("Sign in wallet...");
         const { signTx } = await import("@/lib/wallet");
-        const signedTx = await signTx(api, eip12Tx);
+        const signedTx = await signTx(api!, eip12Tx);
 
         // 9. Submit
         setStatus("Submitting...");
@@ -241,15 +247,16 @@ export function TradePanel({
 
         setTxId(submittedTxId);
         setStatus("Success!");
-        console.log("Buy TX submitted:", submittedTxId);
       }
     } catch (err: any) {
       const msg = err?.message || String(err);
       console.error("Buy TX failed:", err);
       if (msg.includes("declined") || msg.includes("Refused")) {
         setStatus("Signing declined");
+      } else if (err instanceof TypeError || (msg && (msg.includes("Cannot read prop") || msg.includes("undefined") || msg.includes("null")))) {
+        setStatus("Wallet disconnected — please reconnect and try again");
       } else {
-        setStatus(`Error: ${msg.slice(0, 60)}`);
+        setStatus(`Error: ${msg.slice(0, 160)}`);
       }
     }
   }, [sellOrder, connected, api, qty, available]);
@@ -279,13 +286,13 @@ export function TradePanel({
             <span className="font-bold text-[#e8eaf0]">{assetName}</span>
             <span className="text-[#e09a5f] font-mono">${strike >= 100 ? strike.toFixed(0) : strike >= 1 ? strike.toFixed(2) : strike.toFixed(4)}</span>
             {cSize !== 1 && (
-              <span className="text-[#8891a5] text-xs">×{cSize >= 1 ? cSize.toFixed(0) : cSize}</span>
+              <span className="text-[#9da5b8] text-xs">×{cSize >= 1 ? cSize.toFixed(0) : cSize}</span>
             )}
-            <span className="text-[#8891a5] text-sm">Exp: {expiry}</span>
+            <span className="text-[#9da5b8] text-sm">Exp: {expiry}</span>
           </div>
           <button
             onClick={onClose}
-            className="text-[#8891a5] hover:text-[#e8eaf0] text-xl leading-none px-2"
+            className="text-[#9da5b8] hover:text-[#e8eaf0] text-xl leading-none px-2"
             aria-label="Close trade panel"
           >
             x
@@ -301,7 +308,7 @@ export function TradePanel({
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
                 side === "buy"
                   ? "bg-[#c87941] text-white"
-                  : "bg-[#1e2330] text-[#8891a5] hover:text-[#e8eaf0]"
+                  : "bg-[#1e2330] text-[#9da5b8] hover:text-[#e8eaf0]"
               }`}
             >
               Buy
@@ -312,135 +319,136 @@ export function TradePanel({
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
                 side === "sell"
                   ? "bg-[#c87941] text-white"
-                  : "bg-[#1e2330] text-[#8891a5] hover:text-[#e8eaf0]"
+                  : "bg-[#1e2330] text-[#9da5b8] hover:text-[#e8eaf0]"
               }`}
             >
               Sell
             </button>
           </div>
 
-          {/* Available / Premium / Contract Size */}
-          <div className="bg-[#0a0c10] rounded-lg px-4 py-3 space-y-1">
-            <div className="flex justify-between text-sm">
-              <span className="text-[#8891a5]">Available</span>
-              <span className="text-[#e8eaf0] font-mono">{available} contracts</span>
+          {side === "sell" ? (
+            <div className="text-center py-8 text-[#9da5b8]">
+              <p className="text-lg font-semibold mb-2">Sell Orders — Coming Soon</p>
+              <p className="text-sm mb-4">Direct sell orders from the trade panel are not yet available.</p>
+              <p className="text-sm">To sell options you already hold, go to<br /><a href="/app/portfolio" className="text-[#c87941] hover:underline">Portfolio → List for Sale</a></p>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-[#8891a5]">Premium</span>
-              <span className="text-[#e09a5f] font-mono">
-                {premium > 0 ? `${premium.toFixed(stableDecimals)} ${coin}` : "—"}
-              </span>
-            </div>
-            {cSize !== 1 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-[#8891a5]">Contract Size</span>
-                <span className="text-[#e8eaf0] font-mono">
-                  {(() => {
-                    const rate = oracleIndex !== undefined ? Number(REGISTRY_RATES[oracleIndex] ?? 0n) : 0;
-                    const rateIsPow10 = rate > 0 && Math.log10(rate) % 1 === 0;
-                    if (rate > 0 && !rateIsPow10) {
-                      return `${Math.ceil(cSize * rate)} ${unit}`;
-                    }
-                    return `${cSize >= 1 ? cSize.toFixed(0) : cSize} ${unit}`;
-                  })()}
+          ) : (
+            <>
+              {/* Available / Premium / Contract Size */}
+              <div className="bg-[#0a0c10] rounded-lg px-4 py-3 space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#9da5b8]">Available</span>
+                  <span className="text-[#e8eaf0] font-mono">{available} contracts</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#9da5b8]">Premium</span>
+                  <span className="text-[#e09a5f] font-mono">
+                    {premium > 0 ? `${premium.toFixed(stableDecimals)} ${coin}` : "—"}
+                  </span>
+                </div>
+                {cSize !== 1 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#9da5b8]">Contract Size</span>
+                    <span className="text-[#e8eaf0] font-mono">
+                      {(() => {
+                        const rate = oracleIndex !== undefined ? Number(REGISTRY_RATES[oracleIndex] ?? 0n) : 0;
+                        const rateIsPow10 = rate > 0 && Math.log10(rate) % 1 === 0;
+                        if (rate > 0 && !rateIsPow10) {
+                          return `${Math.ceil(cSize * rate)} ${unit}`;
+                        }
+                        return `${cSize >= 1 ? cSize.toFixed(0) : cSize} ${unit}`;
+                      })()}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Quantity input */}
+              <div>
+                <label className="text-sm text-[#9da5b8] block mb-1">Quantity</label>
+                <input
+                  type="number"
+                  min="1"
+                  max={available}
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  className="w-full bg-[#0a0c10] border border-[#1e2330] rounded-lg px-4 py-2 text-[#e8eaf0] font-mono text-lg focus:border-[#c87941] focus:outline-none transition-colors"
+                />
+              </div>
+
+              {/* Total */}
+              <div className="flex justify-between items-center px-1">
+                <span className="text-[#9da5b8] text-sm">Total</span>
+                <span className="text-[#e09a5f] font-mono text-xl font-bold">
+                  {total > 0 ? `${total.toFixed(stableDecimals)} ${coin}` : "—"}
                 </span>
               </div>
-            )}
-          </div>
 
-          {/* Quantity input */}
-          <div>
-            <label className="text-sm text-[#8891a5] block mb-1">Quantity</label>
-            <input
-              type="number"
-              min="1"
-              max={available}
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              className="w-full bg-[#0a0c10] border border-[#1e2330] rounded-lg px-4 py-2 text-[#e8eaf0] font-mono text-lg focus:border-[#c87941] focus:outline-none transition-colors"
-            />
-          </div>
-
-          {/* Total */}
-          <div className="flex justify-between items-center px-1">
-            <span className="text-[#8891a5] text-sm">Total</span>
-            <span className="text-[#e09a5f] font-mono text-xl font-bold">
-              {total > 0 ? `${total.toFixed(stableDecimals)} ${coin}` : "—"}
-            </span>
-          </div>
-
-          {/* Exercise info */}
-          <div className="border border-[#1e2330] rounded-lg px-4 py-3 space-y-2">
-            <div className="text-sm text-[#8891a5] font-medium border-b border-[#1e2330] pb-1 mb-1">
-              If Exercised
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-[#8891a5]">You receive</span>
-              <span className="text-[#34d399] font-mono">
-                {exerciseReceive}
-                {isCall && exerciseReceiveUsd > 0 && <span className="text-[#8891a5] ml-1">(~${exerciseReceiveUsd.toFixed(2)})</span>}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-[#8891a5]">You pay</span>
-              <span className="text-[#f87171] font-mono">{exercisePay}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-[#8891a5]">Breakeven</span>
-              <span className="text-[#e8eaf0] font-mono">
-                ${breakeven >= 100 ? breakeven.toFixed(0) : breakeven.toFixed(4)}/{assetName}
-              </span>
-            </div>
-          </div>
-
-          {/* Slippage & Stablecoin (read-only for buy) */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm text-[#8891a5] block mb-1">Slippage</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={slippage}
-                  onChange={(e) => setSlippage(e.target.value)}
-                  className="w-full bg-[#0a0c10] border border-[#1e2330] rounded-lg px-3 py-2 text-[#e8eaf0] font-mono text-sm focus:border-[#c87941] focus:outline-none"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8891a5] text-sm">%</span>
+              {/* Exercise info */}
+              <div className="border border-[#1e2330] rounded-lg px-4 py-3 space-y-2">
+                <div className="text-sm text-[#9da5b8] font-medium border-b border-[#1e2330] pb-1 mb-1">
+                  If Exercised
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#9da5b8]">You receive</span>
+                  <span className="text-[#34d399] font-mono">
+                    {exerciseReceive}
+                    {isCall && exerciseReceiveUsd > 0 && <span className="text-[#9da5b8] ml-1">(~${exerciseReceiveUsd.toFixed(2)})</span>}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#9da5b8]">You pay</span>
+                  <span className="text-[#f87171] font-mono">{exercisePay}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#9da5b8]">Breakeven</span>
+                  <span className="text-[#e8eaf0] font-mono">
+                    ${breakeven >= 100 ? breakeven.toFixed(0) : breakeven.toFixed(4)}/{assetName}
+                  </span>
+                </div>
               </div>
-            </div>
-            <div>
-              <label className="text-sm text-[#8891a5] block mb-1">Stablecoin</label>
-              <div className="w-full bg-[#0a0c10] border border-[#1e2330] rounded-lg px-3 py-2 text-[#8891a5] text-sm">
-                {coin} {sellOrder ? "(fixed by order)" : ""}
-              </div>
-            </div>
-          </div>
 
-          {/* Confirm button */}
-          {side === "buy" ? (
-            <button
-              disabled={!canBuy || !!txId || status === "Submitting..." || status === "Sign in wallet..." || status === "Building transaction..."}
-              onClick={handleConfirmBuy}
-              className={`w-full py-3 rounded-lg font-bold text-white transition-colors ${
-                canBuy && !txId
-                  ? "bg-[#c87941] hover:bg-[#e09a5f] cursor-pointer"
-                  : "bg-[#c87941]/30 cursor-not-allowed"
-              }`}
-            >
-              {!connected
-                ? "Connect Wallet"
-                : !sellOrder
-                ? "No Orders Available"
-                : txId
-                ? "Purchased!"
-                : "Confirm Purchase"}
-            </button>
-          ) : (
-            <button
-              disabled
-              className="w-full py-3 rounded-lg font-bold text-white bg-[#c87941]/30 cursor-not-allowed"
-            >
-              Sell (Coming Soon)
-            </button>
+              {/* Slippage & Stablecoin (read-only for buy) */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm text-[#9da5b8] block mb-1">Slippage</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={slippage}
+                      onChange={(e) => setSlippage(e.target.value)}
+                      className="w-full bg-[#0a0c10] border border-[#1e2330] rounded-lg px-3 py-2 text-[#e8eaf0] font-mono text-sm focus:border-[#c87941] focus:outline-none"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9da5b8] text-sm">%</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-[#9da5b8] block mb-1">Stablecoin</label>
+                  <div className="w-full bg-[#0a0c10] border border-[#1e2330] rounded-lg px-3 py-2 text-[#9da5b8] text-sm">
+                    {coin} {sellOrder ? "(fixed by order)" : ""}
+                  </div>
+                </div>
+              </div>
+
+              {/* Confirm button */}
+              <button
+                disabled={!canBuy || !!txId || status === "Submitting..." || status === "Sign in wallet..." || status === "Building transaction..."}
+                onClick={handleConfirmBuy}
+                className={`w-full py-3 rounded-lg font-bold text-white transition-colors ${
+                  canBuy && !txId
+                    ? "bg-[#c87941] hover:bg-[#e09a5f] cursor-pointer"
+                    : "bg-[#c87941]/30 cursor-not-allowed"
+                }`}
+              >
+                {!connected
+                  ? "Connect Wallet"
+                  : !sellOrder
+                  ? "No Orders Available"
+                  : txId
+                  ? "Purchased!"
+                  : "Confirm Purchase"}
+              </button>
+            </>
           )}
 
           {/* Status / TX ID */}
@@ -464,10 +472,12 @@ export function TradePanel({
           )}
 
           {/* Spot price footer */}
-          <div className="text-center text-xs text-[#8891a5]">
-            Spot: ${spotPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
-            {" "} | Oracle feed
-          </div>
+          {side !== "sell" && (
+            <div className="text-center text-xs text-[#9da5b8]">
+              Spot: ${spotPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+              {" "} | Oracle feed
+            </div>
+          )}
         </div>
       </div>
     </>

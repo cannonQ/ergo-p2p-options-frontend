@@ -27,6 +27,7 @@ import { TxStatus } from "@/app/components/TxStatus";
 import { ErgoPayModal } from "@/app/components/ErgoPayModal";
 import { fetchHeight } from "@/lib/api";
 import { useToast } from "@/app/components/Toast";
+import { PriceChart } from "@/app/components/PriceChart";
 import { useWalletStore } from "@/stores/wallet-store";
 
 /** Safe Number→BigInt: guards against Infinity, NaN, and precision loss beyond 2^53 */
@@ -89,7 +90,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
     info && !hasPhysicalDelivery(info.index) ? "cash" : "physical"
   );
   const [strike, setStrike] = useState("");
-  const [numContracts, setNumContracts] = useState("10");
+  const [numContracts, setNumContracts] = useState("1");
   const [stablecoin, setStablecoin] = useState<"USE" | "SigUSD">("USE");
   const [expiryInput, setExpiryInput] = useState("7");
   const [expiryUnit, setExpiryUnit] = useState<"days" | "blocks">("days");
@@ -135,6 +136,8 @@ export default function WritePage({ params }: { params: { asset: string } }) {
   // Fetch oracle data client-side (spot price + volatility)
   const [spotPrice, setSpotPrice] = useState(0);
   const [oracleVol, setOracleVol] = useState(5500); // bps, default fallback
+  const [oracleLoading, setOracleLoading] = useState(true);
+  const [priceHistory, setPriceHistory] = useState<{price: number; timestamp: string}[]>([]);
 
   useEffect(() => {
     if (!info) return;
@@ -169,6 +172,12 @@ export default function WritePage({ params }: { params: { asset: string } }) {
         }
         if (data.vol) setOracleVol(data.vol);
       })
+      .catch(() => {})
+      .finally(() => setOracleLoading(false));
+    // Fetch 7-day price history for chart
+    fetch(`/api/price-history?index=${info.index}`)
+      .then(r => r.ok ? r.json() : { data: [] })
+      .then(json => setPriceHistory(json.data || []))
       .catch(() => {});
   }, [info]);
 
@@ -234,8 +243,6 @@ export default function WritePage({ params }: { params: { asset: string } }) {
       toast(`Maturity height ${expiryHeight} is not in the future (current: ${currentHeight}). Check your expiry input.`);
       return;
     }
-    console.log(`[Write] currentHeight=${currentHeight}, expiryBlocks=${expiryBlocks}, maturityHeight=${expiryHeight}`);
-
     // Convert UI strings to on-chain types
     const optTypeNum: OptionTypeNum = optionType === "call" ? 0 : 1;
     const styleNum: OptionStyleNum = style === "european" ? 0 : 1;
@@ -347,7 +354,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
   ]);
 
   if (!info) {
-    return <div className="text-center py-20 text-[#8891a5]">Asset not found</div>;
+    return <div className="text-center py-20 text-[#9da5b8]">Asset not found</div>;
   }
 
   // Summary calculations
@@ -369,12 +376,22 @@ export default function WritePage({ params }: { params: { asset: string } }) {
         <h1 className="text-xl font-bold mt-2">Write an Option on {info.name}</h1>
       </div>
 
+      {/* 7-day price chart */}
+      <PriceChart
+        data={priceHistory}
+        assetName={info.name}
+        strikePrice={strike ? parseFloat(strike) : undefined}
+        change7d={priceHistory.length >= 2
+          ? ((priceHistory[priceHistory.length - 1].price - priceHistory[0].price) / priceHistory[0].price) * 100
+          : undefined}
+      />
+
       {(isErgoPay ? ergoPay.step <= 1 : step === 0) ? (
         <div className="bg-[#12151c] border border-[#1e2330] rounded-lg p-6 space-y-5">
           {/* Row 1: Type + Style */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm text-[#8891a5] mb-2">
+              <label className="block text-sm text-[#9da5b8] mb-2">
                 Type
                 <Tooltip text="Call: You profit when the price goes UP. You lock the underlying asset and buyers pay the strike price to claim it. Put: You profit when the price goes DOWN. You lock stablecoin and buyers deliver the underlying asset to claim it." />
               </label>
@@ -386,7 +403,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                         ? t === "call"
                           ? "bg-[#34d399]/20 text-[#34d399] border border-[#34d399]/30"
                           : "bg-[#f87171]/20 text-[#f87171] border border-[#f87171]/30"
-                        : "bg-[#1e2330] text-[#8891a5] hover:text-[#e8eaf0]"
+                        : "bg-[#1e2330] text-[#9da5b8] hover:text-[#e8eaf0]"
                     }`}>
                     {t.charAt(0).toUpperCase() + t.slice(1)}
                   </button>
@@ -394,7 +411,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
               </div>
             </div>
             <div>
-              <label className="block text-sm text-[#8891a5] mb-2">
+              <label className="block text-sm text-[#9da5b8] mb-2">
                 Style
                 <Tooltip text={style === "european"
                   ? "European: Buyer can only exercise during the ~24h window after maturity. Better for writers — price spikes during the term don't matter."
@@ -407,7 +424,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                     className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       style === s
                         ? "bg-[#c87941]/20 text-[#c87941] border border-[#c87941]/30"
-                        : "bg-[#1e2330] text-[#8891a5] hover:text-[#e8eaf0]"
+                        : "bg-[#1e2330] text-[#9da5b8] hover:text-[#e8eaf0]"
                     }`}>
                     {s.charAt(0).toUpperCase() + s.slice(1)}
                   </button>
@@ -418,7 +435,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
 
           {/* Settlement */}
           <div>
-            <label className="block text-sm text-[#8891a5] mb-2">Settlement</label>
+            <label className="block text-sm text-[#9da5b8] mb-2">Settlement</label>
             <div className="flex gap-2">
               {(["physical", "cash"] as const).map((s) => {
                 const disabled = s === "physical" && !hasPhysicalDelivery(info.index);
@@ -430,8 +447,8 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                       settlement === s
                         ? "bg-[#c87941]/20 text-[#c87941] border border-[#c87941]/30"
                         : disabled
-                        ? "bg-[#1e2330]/50 text-[#8891a5]/40 cursor-not-allowed"
-                        : "bg-[#1e2330] text-[#8891a5] hover:text-[#e8eaf0]"
+                        ? "bg-[#1e2330]/50 text-[#9da5b8]/40 cursor-not-allowed"
+                        : "bg-[#1e2330] text-[#9da5b8] hover:text-[#e8eaf0]"
                     }`}>
                     {s.charAt(0).toUpperCase() + s.slice(1)}
                     {disabled && " (N/A)"}
@@ -442,11 +459,13 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           </div>
 
           {/* Row 2: Strike + Expiry */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm text-[#8891a5] mb-2">
+              <label className="block text-sm text-[#9da5b8] mb-2">
                 Strike Price (USD)
-                {spotPrice > 0 && (
+                {oracleLoading ? (
+                  <span className="ml-2 text-sm text-[#9da5b8] animate-pulse">Loading oracle data...</span>
+                ) : spotPrice > 0 ? (
                   <button
                     type="button"
                     onClick={() => {
@@ -458,7 +477,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                   >
                     Current: ${spotPrice.toFixed(spotPrice >= 100 ? 2 : 4)}
                   </button>
-                )}
+                ) : null}
               </label>
               <input type="number" value={strike} onChange={(e) => setStrike(e.target.value)}
                 placeholder="0.00"
@@ -471,7 +490,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                 className="w-full bg-[#0a0c10] border border-[#1e2330] rounded-lg px-4 py-2 text-[#e8eaf0] font-mono focus:border-[#c87941] focus:outline-none" />
             </div>
             <div>
-              <label className="block text-sm text-[#8891a5] mb-2">Expiry</label>
+              <label className="block text-sm text-[#9da5b8] mb-2">Expiry</label>
               <div className="flex gap-2 items-center">
                 <input type="number" value={expiryInput} onChange={(e) => setExpiryInput(e.target.value)}
                   min="1" step={expiryUnit === "days" ? "1" : "10"}
@@ -479,16 +498,16 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                 <div className="flex bg-[#0a0c10] border border-[#1e2330] rounded-lg overflow-hidden">
                   <button type="button"
                     onClick={() => { setExpiryUnit("days"); setExpiryInput("7"); }}
-                    className={`px-3 py-2 text-xs font-medium transition-colors ${expiryUnit === "days" ? "bg-[#c87941] text-white" : "text-[#8891a5] hover:text-[#e8eaf0]"}`}>
+                    className={`px-3 py-2 text-xs font-medium transition-colors ${expiryUnit === "days" ? "bg-[#c87941] text-white" : "text-[#9da5b8] hover:text-[#e8eaf0]"}`}>
                     Days
                   </button>
                   <button type="button"
                     onClick={() => { setExpiryUnit("blocks"); setExpiryInput("720"); }}
-                    className={`px-3 py-2 text-xs font-medium transition-colors ${expiryUnit === "blocks" ? "bg-[#c87941] text-white" : "text-[#8891a5] hover:text-[#e8eaf0]"}`}>
+                    className={`px-3 py-2 text-xs font-medium transition-colors ${expiryUnit === "blocks" ? "bg-[#c87941] text-white" : "text-[#9da5b8] hover:text-[#e8eaf0]"}`}>
                     Blocks
                   </button>
                 </div>
-                <span className="text-xs text-[#8891a5]">
+                <span className="text-xs text-[#9da5b8]">
                   {expiryUnit === "days" ? `${expiryBlocks} blocks` : `~${(expiryBlocks / BLOCKS_PER_DAY).toFixed(1)} days`}
                 </span>
               </div>
@@ -496,9 +515,9 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           </div>
 
           {/* Contract Size + Number of Contracts — side by side */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-[#8891a5] mb-2">
+              <label className="block text-sm text-[#9da5b8] mb-2">
                 Contract Size ({optionType === "call" && settlement === "physical" ? (info.oracleUnit ?? info.unit) : "USD equivalent"})
               </label>
               <div className="flex items-center gap-2">
@@ -512,19 +531,19 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                     return mag.toString();
                   })()}
                   className="w-full bg-[#0a0c10] border border-[#1e2330] rounded-lg px-4 py-2 text-[#e8eaf0] font-mono focus:border-[#c87941] focus:outline-none" />
-                <span className="text-xs text-[#8891a5] whitespace-nowrap">
+                <span className="text-xs text-[#9da5b8] whitespace-nowrap">
                   {optionType === "call" && settlement === "physical" ? (info.oracleUnit ?? info.unit) : "USD"}
                 </span>
               </div>
               {cSize > 0 && spotPrice > 0 && (
-                <p className="mt-1 text-xs text-[#8891a5]">
+                <p className="mt-1 text-xs text-[#9da5b8]">
                   1 contract = <span className="text-[#e8eaf0] font-semibold">{contractSize} {info.oracleUnit ?? info.unit}</span>
                   {" "}(~<span className="text-[#e09a5f]">${contractUsdValue.toFixed(2)}</span>)
                 </p>
               )}
             </div>
             <div>
-              <label className="block text-sm text-[#8891a5] mb-2">
+              <label className="block text-sm text-[#9da5b8] mb-2">
                 Number of Contracts
               </label>
               <input type="number" value={numContracts} onChange={(e) => setNumContracts(e.target.value)}
@@ -546,7 +565,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                 <h3 className="text-sm font-semibold text-[#e8eaf0] mb-2">Collateral Required</h3>
                 <div className="text-sm space-y-1">
                   <div className="flex justify-between">
-                    <span className="text-[#8891a5]">{contracts} contracts × {contractSize} {displayUnit}</span>
+                    <span className="text-[#9da5b8]">{contracts} contracts × {contractSize} {displayUnit}</span>
                     {hasTokenUnit ? (
                       <span className="text-[#e8eaf0] font-mono font-semibold">
                         {tokenCount} {info.unit}
@@ -559,13 +578,13 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                   </div>
                   {hasTokenUnit && (
                     <div className="flex justify-between">
-                      <span className="text-[#8891a5]">{collateral.toFixed(collateral >= 1 ? 4 : 6)} {info.oracleUnit}</span>
-                      <span className="text-[#8891a5] text-xs">({rate} {info.unit} per {info.oracleUnit})</span>
+                      <span className="text-[#9da5b8]">{collateral.toFixed(collateral >= 1 ? 4 : 6)} {info.oracleUnit}</span>
+                      <span className="text-[#9da5b8] text-xs">({rate} {info.unit} per {info.oracleUnit})</span>
                     </div>
                   )}
                   {spotPrice > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-[#8891a5]">USD value</span>
+                      <span className="text-[#9da5b8]">USD value</span>
                       <span className="text-[#e09a5f] font-mono">~${(collateral * (isPhysicalCall ? spotPrice : 1)).toFixed(2)}</span>
                     </div>
                   )}
@@ -575,36 +594,36 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           })()}
 
           {/* Stablecoin + Est. Premium — side by side */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-[#8891a5] mb-2">Stablecoin for Strike Payment</label>
+              <label className="block text-sm text-[#9da5b8] mb-2">Stablecoin for Strike Payment</label>
               <div className="flex gap-2">
                 {(["USE", "SigUSD"] as const).map((s) => (
                   <button key={s} onClick={() => setStablecoin(s)}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       stablecoin === s
                         ? "bg-[#e09a5f]/20 text-[#e09a5f] border border-[#e09a5f]/30"
-                        : "bg-[#1e2330] text-[#8891a5] hover:text-[#e8eaf0]"
+                        : "bg-[#1e2330] text-[#9da5b8] hover:text-[#e8eaf0]"
                     }`}>
                     {s} (${s === "USE" ? "1.000" : "1.00"})
                   </button>
                 ))}
               </div>
               {strike && (
-                <p className="mt-1 text-xs text-[#8891a5]">
+                <p className="mt-1 text-xs text-[#9da5b8]">
                   Strike payment per contract: {strikeUsdPerContract.toFixed(stablecoin === "USE" ? 3 : 2)} {stablecoin}
                 </p>
               )}
             </div>
             <div>
-              <label className="block text-sm text-[#8891a5] mb-2">Est. Premium (Black-Scholes)</label>
+              <label className="block text-sm text-[#9da5b8] mb-2">Est. Premium (Black-Scholes)</label>
               {suggestedPremium > 0 ? (
                 <p className="py-2 text-[#e09a5f] font-mono text-lg">
-                  {suggestedPremium.toFixed(suggestedPremium < 0.01 ? 6 : 3)} <span className="text-sm text-[#8891a5]">{stablecoin}/contract</span>
-                  <span className="ml-2 text-xs text-[#8891a5]">(σ={(oracleVolToDecimal(oracleVol) * 100).toFixed(1)}%)</span>
+                  {suggestedPremium.toFixed(suggestedPremium < 0.01 ? 6 : 3)} <span className="text-sm text-[#9da5b8]">{stablecoin}/contract</span>
+                  <span className="ml-2 text-xs text-[#9da5b8]">(σ={(oracleVolToDecimal(oracleVol) * 100).toFixed(1)}%)</span>
                 </p>
               ) : (
-                <p className="py-2 text-xs text-[#8891a5]">
+                <p className="py-2 text-xs text-[#9da5b8]">
                   {spotPrice <= 0 ? "Waiting for oracle price..." : "—"}
                 </p>
               )}
@@ -624,7 +643,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
             </label>
             {autoList && (
               <div>
-                <label className="block text-xs text-[#8891a5] mb-1">
+                <label className="block text-xs text-[#9da5b8] mb-1">
                   Premium per token ({stablecoin})
                   {suggestedPremium > 0 && (
                     <button
@@ -645,13 +664,13 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                   min="0"
                   className="w-full bg-[#12151c] border border-[#1e2330] rounded-lg px-3 py-2 text-[#e09a5f] font-mono focus:border-[#c87941] focus:outline-none"
                 />
-                <p className="mt-1 text-xs text-[#8891a5]">
+                <p className="mt-1 text-xs text-[#9da5b8]">
                   Your tokens will be listed at this price immediately after minting. You can cancel anytime from Portfolio.
                 </p>
               </div>
             )}
             {!autoList && (
-              <p className="text-xs text-[#8891a5]">
+              <p className="text-xs text-[#9da5b8]">
                 Tokens will be delivered to your wallet. List for sale manually from Portfolio.
               </p>
             )}
@@ -662,7 +681,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
             <div className="p-4 bg-[#0a0c10] rounded-lg border border-[#1e2330] space-y-2">
               <h3 className="text-sm font-semibold text-[#e8eaf0] mb-3">Summary</h3>
               <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-                <span className="text-[#8891a5]">Lock:</span>
+                <span className="text-[#9da5b8]">Lock:</span>
                 <span className="text-[#e8eaf0] font-mono">
                   {(() => {
                     const isPhysicalCall = optionType === "call" && settlement === "physical";
@@ -675,14 +694,14 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                     return <>{collateral.toFixed(collateral >= 1 ? 4 : 6)} {isPhysicalCall ? (info.oracleUnit ?? info.unit) : stablecoin}</>;
                   })()}
                   {info.index !== ERG_ORACLE_INDEX && (
-                    <span className="text-[#8891a5]"> + {ergDeposit.toFixed(4)} ERG (fees)</span>
+                    <span className="text-[#9da5b8]"> + {ergDeposit.toFixed(4)} ERG (fees)</span>
                   )}
                 </span>
 
-                <span className="text-[#8891a5]">Receive:</span>
+                <span className="text-[#9da5b8]">Receive:</span>
                 <span className="text-[#e8eaf0] font-mono">{contracts} option tokens</span>
 
-                <span className="text-[#8891a5]">If all exercised:</span>
+                <span className="text-[#9da5b8]">If all exercised:</span>
                 {settlement === "physical" ? (
                   <span className="text-[#34d399] font-mono">
                     you receive {totalStrikeUsd.toFixed(stablecoin === "USE" ? 3 : 2)} {stablecoin}
@@ -693,14 +712,14 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                   </span>
                 )}
 
-                <span className="text-[#8891a5]">If expired:</span>
+                <span className="text-[#9da5b8]">If expired:</span>
                 <span className="text-[#e8eaf0] font-mono">you keep all {optionType === "call" && settlement === "physical" ? info.unit : stablecoin}</span>
               </div>
             </div>
           )}
 
           {!autoList && (
-            <p className="text-xs text-[#8891a5]">
+            <p className="text-xs text-[#9da5b8]">
               After minting, list your option for sale from the Portfolio page.
             </p>
           )}
@@ -708,11 +727,11 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           {/* Submit */}
           <button
             onClick={handleWrite}
-            className="w-full py-3 bg-[#c87941] text-white rounded-lg font-medium hover:bg-[#2563eb] transition-colors disabled:opacity-50"
-            disabled={!strike || contracts <= 0 || cSize <= 0 || activeStep > 0}>
+            className="w-full py-3 bg-[#c87941] text-white rounded-lg font-medium hover:bg-[#e09a5f] transition-colors disabled:opacity-50"
+            disabled={oracleLoading || !strike || contracts <= 0 || cSize <= 0 || activeStep > 0}>
             {activeStep > 0 ? "Submitting..." : isErgoPay ? "Sign with Mobile Wallet" : "Lock Collateral & Mint"}
           </button>
-          <p className="text-xs text-[#8891a5] text-center">
+          <p className="text-xs text-[#9da5b8] text-center">
             {isErgoPay
               ? "A QR code will appear for you to scan with your Ergo wallet app."
               : "You sign once. Our open-source bots handle the rest in ~3-6 blocks."}
@@ -775,13 +794,13 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                 step > s.num ? "bg-[#34d399] text-white"
                   : step === s.num && !writeError ? "bg-[#c87941] text-white animate-pulse"
                   : step === s.num && writeError ? "bg-[#f87171] text-white"
-                  : "bg-[#1e2330] text-[#8891a5]"
+                  : "bg-[#1e2330] text-[#9da5b8]"
               }`}>
                 {step > s.num ? "\u2713" : s.num}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className={step >= s.num ? "text-[#e8eaf0]" : "text-[#8891a5]"}>
+                  <span className={step >= s.num ? "text-[#e8eaf0]" : "text-[#9da5b8]"}>
                     {s.label}
                   </span>
                   {!s.isUserAction && step >= s.num && step <= s.num && (
@@ -790,7 +809,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-[#8891a5]">{s.desc}</p>
+                <p className="text-xs text-[#9da5b8]">{s.desc}</p>
                 {s.num === 1 && txIds.create && (
                   <div className="mt-0.5">
                     <TxStatus status="" txId={txIds.create} />
@@ -822,7 +841,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           )}
 
           {step < 4 && step >= 2 && !writeError && (
-            <p className="text-xs text-[#8891a5] mt-2">
+            <p className="text-xs text-[#9da5b8] mt-2">
               You can safely wait. The bot handles minting and delivery automatically.
             </p>
           )}
@@ -842,7 +861,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                 {writeError ? "Back to Form" : "Write Another"}
               </button>
               {writeError && step < 4 && (
-                <p className="self-center text-xs text-[#8891a5]">
+                <p className="self-center text-xs text-[#9da5b8]">
                   Check your portfolio for stuck boxes before retrying.
                 </p>
               )}

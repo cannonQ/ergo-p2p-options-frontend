@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Space_Grotesk, DM_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -11,6 +13,27 @@ const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
   variable: "--font-geist-mono",
   weight: "100 900",
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-space-grotesk",
+  display: "swap",
+});
+
+const dmMono = DM_Mono({
+  weight: ["400", "500"],
+  subsets: ["latin"],
+  variable: "--font-dm-mono",
+  display: "swap",
+});
+
+const instrumentSerif = Instrument_Serif({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-instrument-serif",
+  display: "swap",
+  style: "italic",
 });
 
 export const metadata: Metadata = {
@@ -26,18 +49,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" style={{ scrollBehavior: "smooth" }}>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#0a0c10] text-[#e8eaf0] min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${dmMono.variable} ${instrumentSerif.variable} antialiased bg-[#0a0c10] text-[#e8eaf0] min-h-screen`}
       >
-        {children}
+        <ErrorBoundary>{children}</ErrorBoundary>
       </body>
     </html>
   );
