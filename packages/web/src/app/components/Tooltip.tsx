@@ -10,13 +10,13 @@ export function Tooltip({ text }: TooltipProps) {
   const [show, setShow] = useState(false);
 
   return (
-    <span className="relative inline-block ml-1">
+    <span className="relative inline-flex items-center justify-center ml-1 min-w-[44px] min-h-[44px]">
       <button
         type="button"
         onMouseEnter={() => setShow(true)}
         onMouseLeave={() => setShow(false)}
         onClick={() => setShow(!show)}
-        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#1e2330] text-[#8891a5] text-[10px] font-bold hover:bg-[#334155] hover:text-[#e8eaf0] transition-colors cursor-help"
+        className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#1e2330] text-[#9da5b8] text-[10px] font-bold hover:bg-[#334155] hover:text-[#e8eaf0] transition-colors cursor-help p-2"
         aria-label="More information"
         aria-expanded={show}
       >

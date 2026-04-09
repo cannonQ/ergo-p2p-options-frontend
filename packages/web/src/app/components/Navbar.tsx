@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { WalletButton } from "./WalletButton";
 
@@ -9,12 +10,12 @@ const ASSET_CATEGORIES = [
   {
     label: "CRYPTO — PHYSICAL DELIVERY",
     assets: [
+      { name: "ERG", slug: "erg", badge: "Native" },
       { name: "ETH", slug: "eth", badge: "rsETH" },
       { name: "BTC", slug: "btc", badge: "rsBTC" },
       { name: "BNB", slug: "bnb", badge: "rsBNB" },
       { name: "DOGE", slug: "doge", badge: "rsDOGE" },
       { name: "ADA", slug: "ada", badge: "rsADA" },
-      { name: "ERG", slug: "erg", badge: "Native" },
     ],
   },
   {
@@ -51,6 +52,7 @@ const ASSET_CATEGORIES = [
 const ALL_ASSETS = ASSET_CATEGORIES.flatMap((cat) => cat.assets);
 
 export function Navbar() {
+  const pathname = usePathname();
   const [tradeOpen, setTradeOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [focusIdx, setFocusIdx] = useState(-1);
@@ -122,10 +124,11 @@ export function Navbar() {
                   setFocusIdx(0);
                 }
               }}
-              className="text-[#8891a5] hover:text-[#e8eaf0] transition-colors flex items-center gap-1 font-mono text-sm"
+              className={`${pathname.startsWith("/app/trade") ? "text-[#e8eaf0]" : "text-[#9da5b8]"} hover:text-[#e8eaf0] transition-colors flex items-center gap-1 font-mono text-sm`}
               aria-label="Trade menu"
               aria-haspopup="menu"
               aria-expanded={tradeOpen}
+              {...(pathname.startsWith("/app/trade") ? { "aria-current": "page" as const } : {})}
             >
               Trade
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -173,19 +176,19 @@ export function Navbar() {
             )}
           </div>
 
-          <Link href="/app" className="text-[#8891a5] hover:text-[#e8eaf0] transition-colors font-mono text-sm">
+          <Link href="/app" className={`${pathname === "/app" ? "text-[#e8eaf0] border-b-2 border-[#c87941] pb-0.5" : "text-[#9da5b8]"} hover:text-[#e8eaf0] transition-colors font-mono text-sm`} {...(pathname === "/app" ? { "aria-current": "page" as const } : {})}>
             Dashboard
           </Link>
 
-          <Link href="/app/market" className="text-[#8891a5] hover:text-[#e8eaf0] transition-colors font-mono text-sm">
+          <Link href="/app/market" className={`${pathname.startsWith("/app/market") ? "text-[#e8eaf0] border-b-2 border-[#c87941] pb-0.5" : "text-[#9da5b8]"} hover:text-[#e8eaf0] transition-colors font-mono text-sm`} {...(pathname.startsWith("/app/market") ? { "aria-current": "page" as const } : {})}>
             Market
           </Link>
 
-          <Link href="/app/portfolio" className="text-[#8891a5] hover:text-[#e8eaf0] transition-colors font-mono text-sm">
+          <Link href="/app/portfolio" className={`${pathname.startsWith("/app/portfolio") ? "text-[#e8eaf0] border-b-2 border-[#c87941] pb-0.5" : "text-[#9da5b8]"} hover:text-[#e8eaf0] transition-colors font-mono text-sm`} {...(pathname.startsWith("/app/portfolio") ? { "aria-current": "page" as const } : {})}>
             Portfolio
           </Link>
 
-          <Link href="/app/wizard" className="text-[#c87941] hover:text-[#e09a5f] transition-colors font-mono text-sm">
+          <Link href="/app/wizard" className={`${pathname.startsWith("/app/wizard") ? "text-[#e09a5f] border-b-2 border-[#c87941] pb-0.5" : "text-[#c87941]"} hover:text-[#e09a5f] transition-colors font-mono text-sm`} {...(pathname.startsWith("/app/wizard") ? { "aria-current": "page" as const } : {})}>
             Wizard
           </Link>
 
@@ -197,7 +200,7 @@ export function Navbar() {
           <WalletButton />
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="text-[#8891a5] hover:text-[#e8eaf0] p-1"
+            className="text-[#9da5b8] hover:text-[#e8eaf0] p-2.5"
             aria-label="Open navigation menu"
             aria-expanded={mobileOpen}
           >
@@ -217,29 +220,33 @@ export function Navbar() {
         <div className="md:hidden border-t border-[#1e2330] bg-[#0a0c10] px-4 py-4 space-y-3">
           <Link
             href="/app"
-            className="block text-[#8891a5] hover:text-[#e8eaf0] font-mono text-sm py-2"
+            className={`block ${pathname === "/app" ? "text-[#e8eaf0] border-l-2 border-[#c87941] pl-2" : "text-[#9da5b8]"} hover:text-[#e8eaf0] font-mono text-sm py-2`}
             onClick={() => setMobileOpen(false)}
+            {...(pathname === "/app" ? { "aria-current": "page" as const } : {})}
           >
             Dashboard
           </Link>
           <Link
             href="/app/market"
-            className="block text-[#8891a5] hover:text-[#e8eaf0] font-mono text-sm py-2"
+            className={`block ${pathname.startsWith("/app/market") ? "text-[#e8eaf0] border-l-2 border-[#c87941] pl-2" : "text-[#9da5b8]"} hover:text-[#e8eaf0] font-mono text-sm py-2`}
             onClick={() => setMobileOpen(false)}
+            {...(pathname.startsWith("/app/market") ? { "aria-current": "page" as const } : {})}
           >
             Market
           </Link>
           <Link
             href="/app/portfolio"
-            className="block text-[#8891a5] hover:text-[#e8eaf0] font-mono text-sm py-2"
+            className={`block ${pathname.startsWith("/app/portfolio") ? "text-[#e8eaf0] border-l-2 border-[#c87941] pl-2" : "text-[#9da5b8]"} hover:text-[#e8eaf0] font-mono text-sm py-2`}
             onClick={() => setMobileOpen(false)}
+            {...(pathname.startsWith("/app/portfolio") ? { "aria-current": "page" as const } : {})}
           >
             Portfolio
           </Link>
           <Link
             href="/app/wizard"
-            className="block text-[#c87941] hover:text-[#e09a5f] font-mono text-sm py-2"
+            className={`block ${pathname.startsWith("/app/wizard") ? "text-[#e09a5f] border-l-2 border-[#c87941] pl-2" : "text-[#c87941]"} hover:text-[#e09a5f] font-mono text-sm py-2`}
             onClick={() => setMobileOpen(false)}
+            {...(pathname.startsWith("/app/wizard") ? { "aria-current": "page" as const } : {})}
           >
             Wizard
           </Link>
@@ -251,7 +258,7 @@ export function Navbar() {
                   <Link
                     key={asset.slug}
                     href={`/app/trade/${asset.slug}`}
-                    className="text-xs text-[#e8eaf0] hover:text-[#c87941] font-mono py-1"
+                    className="text-xs text-[#e8eaf0] hover:text-[#c87941] font-mono py-2.5"
                     onClick={() => setMobileOpen(false)}
                   >
                     {asset.name}

@@ -7,16 +7,21 @@
  * (e.g. BTC at 67,952,600,000 micro-dollars overflows 32-bit integers).
  */
 
-export const NODE_URL = process.env.ERGO_NODE_URL || "http://96.255.150.220:9053";
+import { NODE_URL } from "./node";
+export { NODE_URL };  // re-export for existing consumers
 export const COMPANION_NFT_ID = "3182674f07dbb98d696d38eda53e63eb3bf5fe570f71dee85eb954d6cf903bba";
 export const ORACLE_DECIMAL = 1_000_000;
 
 /**
- * Fetch spot prices from the companion box R8 register.
- * Returns a Map of oracle index -> USD price (human-readable).
+ * Fetch the companion box once and parse both R8 (prices) and R5 (vol) registers.
+ * All other functions delegate to this to avoid duplicate network requests.
  */
-export async function fetchSpotPrices(): Promise<Map<number, number>> {
+export async function fetchCompanionBox(): Promise<{
+  prices: Map<number, number>;
+  vols: Map<number, number>;
+}> {
   const prices = new Map<number, number>();
+  const vols = new Map<number, number>();
 
   try {
     const res = await fetch(
@@ -24,27 +29,49 @@ export async function fetchSpotPrices(): Promise<Map<number, number>> {
       { next: { revalidate: 60 } }
     );
 
-    if (!res.ok) return prices;
+    if (!res.ok) return { prices, vols };
     const boxes = await res.json();
-    if (!boxes || boxes.length === 0) return prices;
+    if (!boxes || boxes.length === 0) return { prices, vols };
 
     const box = boxes[0];
-    const r8hex = box.additionalRegisters?.R8;
-    if (!r8hex) return prices;
 
-    const bytes = hexToBytes(r8hex);
-    const parsed = parseCollLong(bytes);
-    if (parsed) {
-      for (let i = 0; i < parsed.length && i < 21; i++) {
-        if (parsed[i] > 0n) {
-          prices.set(i, Number(parsed[i]) / ORACLE_DECIMAL);
+    // Parse R8 -> spot prices
+    const r8hex = box.additionalRegisters?.R8;
+    if (r8hex) {
+      const parsed = parseCollLong(hexToBytes(r8hex));
+      if (parsed) {
+        for (let i = 0; i < parsed.length && i < 21; i++) {
+          if (parsed[i] > 0n) {
+            prices.set(i, Number(parsed[i]) / ORACLE_DECIMAL);
+          }
+        }
+      }
+    }
+
+    // Parse R5 -> volatility (bps)
+    const r5hex = box.additionalRegisters?.R5;
+    if (r5hex) {
+      const parsed = parseCollLong(hexToBytes(r5hex));
+      if (parsed) {
+        for (let i = 0; i < parsed.length && i < 21; i++) {
+          const val = Number(parsed[i]);
+          if (val > 0) vols.set(i, val);
         }
       }
     }
   } catch (err) {
-    console.error("Failed to fetch oracle prices:", err);
+    console.error("Failed to fetch companion box:", err);
   }
 
+  return { prices, vols };
+}
+
+/**
+ * Fetch spot prices from the companion box R8 register.
+ * Returns a Map of oracle index -> USD price (human-readable).
+ */
+export async function fetchSpotPrices(): Promise<Map<number, number>> {
+  const { prices } = await fetchCompanionBox();
   return prices;
 }
 
@@ -53,40 +80,16 @@ export async function fetchSpotPrices(): Promise<Map<number, number>> {
  * Returns the USD price or undefined if not available.
  */
 export async function fetchSpotPriceByIndex(index: number): Promise<number | undefined> {
-  const prices = await fetchSpotPrices();
+  const { prices } = await fetchCompanionBox();
   return prices.get(index);
 }
 
 /**
  * Fetch realized volatility for ALL oracle indices from companion box R5.
- * Returns Map of oracle index -> bps. Single fetch, same as fetchSpotPrices pattern.
+ * Returns Map of oracle index -> bps.
  */
 export async function fetchVols(): Promise<Map<number, number>> {
-  const vols = new Map<number, number>();
-  try {
-    const res = await fetch(
-      `${NODE_URL}/blockchain/box/unspent/byTokenId/${COMPANION_NFT_ID}?offset=0&limit=1`,
-      { next: { revalidate: 60 } }
-    );
-    if (!res.ok) return vols;
-    const boxes = await res.json();
-    if (!boxes || boxes.length === 0) return vols;
-
-    const box = boxes[0];
-    const r5hex = box.additionalRegisters?.R5;
-    if (!r5hex) return vols;
-
-    const bytes = hexToBytes(r5hex);
-    const parsed = parseCollLong(bytes);
-    if (parsed) {
-      for (let i = 0; i < parsed.length && i < 21; i++) {
-        const val = Number(parsed[i]);
-        if (val > 0) vols.set(i, val);
-      }
-    }
-  } catch (err) {
-    console.error("Failed to fetch oracle vols:", err);
-  }
+  const { vols } = await fetchCompanionBox();
   return vols;
 }
 
@@ -96,30 +99,25 @@ export async function fetchVols(): Promise<Map<number, number>> {
  * Returns bps or undefined if not available.
  */
 export async function fetchVolByIndex(index: number): Promise<number | undefined> {
-  try {
-    const res = await fetch(
-      `${NODE_URL}/blockchain/box/unspent/byTokenId/${COMPANION_NFT_ID}?offset=0&limit=1`,
-      { next: { revalidate: 60 } }
-    );
+  const { vols } = await fetchCompanionBox();
+  return vols.get(index);
+}
 
-    if (!res.ok) return undefined;
-    const boxes = await res.json();
-    if (!boxes || boxes.length === 0) return undefined;
-
-    const box = boxes[0];
-    const r5hex = box.additionalRegisters?.R5;
-    if (!r5hex) return undefined;
-
-    const bytes = hexToBytes(r5hex);
-    const parsed = parseCollLong(bytes);
-    if (!parsed || index >= parsed.length) return undefined;
-
-    const val = Number(parsed[index]);
-    return val > 0 ? val : undefined;
-  } catch (err) {
-    console.error("Failed to fetch oracle volatility:", err);
-    return undefined;
-  }
+/**
+ * Fetch both spot price and volatility for a single oracle index in one request.
+ * Returns { spotPrice, vol } where vol is in basis points.
+ * Callers (e.g. trade page) can use this instead of separate
+ * fetchSpotPriceByIndex + fetchVolByIndex calls.
+ */
+export async function fetchOracleData(index: number): Promise<{
+  spotPrice: number | undefined;
+  vol: number | undefined;
+}> {
+  const { prices, vols } = await fetchCompanionBox();
+  return {
+    spotPrice: prices.get(index),
+    vol: vols.get(index),
+  };
 }
 
 export function hexToBytes(hex: string): Uint8Array {

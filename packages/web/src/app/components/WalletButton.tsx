@@ -200,13 +200,13 @@ export function WalletButton() {
           onClick={() => setShowMenu(!showMenu)}
           className="flex items-center gap-2 px-3 py-1.5 bg-[#1e2330] text-[#e8eaf0] rounded-lg text-sm font-mono hover:bg-[#334155] transition-colors"
         >
-          <span className="text-xs text-[#8891a5] hidden sm:inline">
+          <span className="text-xs text-[#9da5b8] hidden sm:inline">
             {useWalletStore.getState().ergBalance
               ? `${(Number(useWalletStore.getState().ergBalance) / 1e9).toFixed(2)} ERG`
               : ""}
           </span>
           <span>{address.slice(0, 6)}...{address.slice(-4)}</span>
-          <svg className="w-3 h-3 text-[#8891a5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-3 h-3 text-[#9da5b8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
@@ -218,7 +218,7 @@ export function WalletButton() {
           >
             {/* Connected address (full, copyable) */}
             <div className="px-3 py-2 border-b border-[#1e2330]">
-              <p className="text-[10px] text-[#8891a5] uppercase tracking-wider mb-1">Connected</p>
+              <p className="text-[10px] text-[#9da5b8] uppercase tracking-wider mb-1">Connected</p>
               <p
                 className="text-xs font-mono text-[#e8eaf0] cursor-pointer hover:text-[#c87941] truncate"
                 onClick={() => {
@@ -233,7 +233,7 @@ export function WalletButton() {
 
             {/* Balance */}
             <div className="px-3 py-2 border-b border-[#1e2330]">
-              <p className="text-xs text-[#8891a5]">
+              <p className="text-xs text-[#9da5b8]">
                 Balance: <span className="text-[#e09a5f] font-mono">
                   {useWalletStore.getState().ergBalance
                     ? `${(Number(useWalletStore.getState().ergBalance) / 1e9).toFixed(4)} ERG`
@@ -245,7 +245,7 @@ export function WalletButton() {
             {/* Switch wallet */}
             {wallets.length > 1 && (
               <div className="border-b border-[#1e2330]">
-                <p className="px-3 py-1 text-[10px] text-[#8891a5] uppercase tracking-wider">Switch Wallet</p>
+                <p className="px-3 py-1 text-[10px] text-[#9da5b8] uppercase tracking-wider">Switch Wallet</p>
                 {wallets.map((w) => (
                   <button
                     key={w.id}
@@ -304,7 +304,7 @@ export function WalletButton() {
           }
           setShowMenu(true);
         }}
-        className="px-2.5 py-1 md:px-4 md:py-1.5 bg-[#c87941] text-white rounded-lg text-xs md:text-sm font-medium hover:bg-[#2563eb] transition-colors"
+        className="px-2.5 py-1 md:px-4 md:py-1.5 bg-[#c87941] text-white rounded-lg text-xs md:text-sm font-medium hover:bg-[#e09a5f] transition-colors"
       >
         Connect Wallet
       </button>
@@ -341,7 +341,7 @@ export function WalletButton() {
 
     {/* ErgoPay QR connect modal — portaled to document.body */}
     {ergoPayQr && typeof document !== "undefined" && createPortal(
-      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div role="dialog" aria-modal="true" aria-label="Scan QR code to connect wallet" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.75)" }} onClick={() => {
           if (ergoPayPollRef.current) clearInterval(ergoPayPollRef.current);
           setErgoPayQr(null);

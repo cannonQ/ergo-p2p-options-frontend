@@ -55,55 +55,42 @@ export function StatsBar() {
 
   return (
     <div className="hidden md:block bg-[#0a0c10] border-b border-[#1e2330]">
-      <div className="max-w-7xl mx-auto px-4 py-3 grid grid-cols-4 gap-4">
-        {/* 24h Volume */}
-        <div>
-          <div className="text-[#505870] text-[11px] font-mono uppercase tracking-[1.5px] mb-1">
-            24h Volume
-          </div>
-          <div className="text-[#e8eaf0] text-lg font-mono font-bold">
-            {"\u2014"}
-          </div>
-          <div className="text-[#8891a5] text-xs">
-            coming soon
-          </div>
-        </div>
-
+      <div className="max-w-7xl mx-auto px-4 py-3 grid grid-cols-3 gap-4">
         {/* Open Interest */}
         <div>
-          <div className="text-[#505870] text-[11px] font-mono uppercase tracking-[1.5px] mb-1">
+          <div className="text-[#7a82a0] text-[11px] font-mono uppercase tracking-[1.5px] mb-1">
             Open Interest
           </div>
           <div className="text-[#e8eaf0] text-lg font-mono font-bold">
             {loading ? <Skeleton className="h-6 w-24 inline-block" /> : formatERG(stats.openInterestErg)}
           </div>
-          <div className="text-[#8891a5] text-xs">
+          <div className="text-[#9da5b8] text-xs">
             across {stats.activeContracts} contract{stats.activeContracts !== 1 ? "s" : ""}
           </div>
         </div>
 
         {/* Active Contracts */}
         <div>
-          <div className="text-[#505870] text-[11px] font-mono uppercase tracking-[1.5px] mb-1">
+          <div className="text-[#7a82a0] text-[11px] font-mono uppercase tracking-[1.5px] mb-1">
             Active Contracts
           </div>
           <div className="text-[#e8eaf0] text-lg font-mono font-bold">
             {loading ? <Skeleton className="h-6 w-12 inline-block" /> : stats.activeContracts}
           </div>
-          <div className="text-[#8891a5] text-xs">
+          <div className="text-[#9da5b8] text-xs">
             {stats.callCount} call{stats.callCount !== 1 ? "s" : ""} / {stats.putCount} put{stats.putCount !== 1 ? "s" : ""}
           </div>
         </div>
 
         {/* Block Height */}
         <div>
-          <div className="text-[#505870] text-[11px] font-mono uppercase tracking-[1.5px] mb-1">
+          <div className="text-[#7a82a0] text-[11px] font-mono uppercase tracking-[1.5px] mb-1">
             Block Height
           </div>
           <div className="text-[#e8eaf0] text-lg font-mono font-bold">
             {loading ? <Skeleton className="h-6 w-28 inline-block" /> : (stats.currentHeight?.toLocaleString() ?? "\u2014")}
           </div>
-          <div className="text-[#8891a5] text-xs">
+          <div className="text-[#9da5b8] text-xs">
             ~2 min/block
           </div>
         </div>

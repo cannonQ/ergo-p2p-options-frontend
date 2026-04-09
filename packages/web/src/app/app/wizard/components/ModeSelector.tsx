@@ -22,8 +22,8 @@ function Tag({ children, color = "#c87941" }: { children: React.ReactNode; color
 export function ModeSelector({ onSelect }: ModeSelectorProps) {
   return (
     <div>
-      <div className="text-center pt-6 mb-8">
-        <div className="text-[38px] font-extrabold leading-tight tracking-tight mb-3">
+      <div className="text-center pt-2 mb-4">
+        <div className="text-[32px] sm:text-[38px] font-extrabold leading-tight tracking-tight mb-2">
           What do you<br />
           <span className="text-etcha-copper">want to do?</span>
         </div>
@@ -37,13 +37,13 @@ export function ModeSelector({ onSelect }: ModeSelectorProps) {
         {/* Buy */}
         <button
           onClick={() => onSelect("buy")}
-          className="w-full text-left rounded-xl bg-etcha-surface border border-[#6366f133] p-5 hover:border-etcha-copper transition-colors cursor-pointer"
+          className="w-full text-left rounded-xl bg-etcha-surface border border-[#6366f133] p-3 sm:p-5 hover:border-etcha-copper transition-colors cursor-pointer"
         >
-          <div className="flex items-start gap-3.5">
-            <span className="text-[32px] leading-none mt-0.5">&#x1F3AF;</span>
+          <div className="flex items-start gap-3">
+            <span className="text-[28px] sm:text-[32px] leading-none mt-0.5">&#x1F3AF;</span>
             <div>
-              <div className="font-bold text-[17px] mb-1">Buy an option</div>
-              <div className="text-[13px] text-etcha-text-dim leading-relaxed mb-2.5">
+              <div className="font-bold text-[16px] sm:text-[17px] mb-0.5">Buy an option</div>
+              <div className="text-[12px] sm:text-[13px] text-etcha-text-dim leading-relaxed mb-2">
                 You have a view — ADA is going up, BTC is going down. Buy a call
                 or put and profit if you&apos;re right. Your max loss is the premium
                 you pay. Nothing more.
@@ -60,13 +60,13 @@ export function ModeSelector({ onSelect }: ModeSelectorProps) {
         {/* Write */}
         <button
           onClick={() => onSelect("write")}
-          className="w-full text-left rounded-xl bg-etcha-surface border border-[#c8794133] p-5 hover:border-etcha-copper transition-colors cursor-pointer"
+          className="w-full text-left rounded-xl bg-etcha-surface border border-[#c8794133] p-3 sm:p-5 hover:border-etcha-copper transition-colors cursor-pointer"
         >
-          <div className="flex items-start gap-3.5">
-            <span className="text-[32px] leading-none mt-0.5">&#x1F4B0;</span>
+          <div className="flex items-start gap-3">
+            <span className="text-[28px] sm:text-[32px] leading-none mt-0.5">&#x1F4B0;</span>
             <div>
-              <div className="font-bold text-[17px] mb-1">Write &amp; collect premium</div>
-              <div className="text-[13px] text-etcha-text-dim leading-relaxed mb-2.5">
+              <div className="font-bold text-[16px] sm:text-[17px] mb-0.5">Write &amp; collect premium</div>
+              <div className="text-[12px] sm:text-[13px] text-etcha-text-dim leading-relaxed mb-2">
                 Think the market is going sideways or moving slowly? Lock
                 collateral, mint the contract, and collect premium upfront.
                 You&apos;re the house — someone pays you to take the other side.

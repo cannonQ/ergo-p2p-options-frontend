@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { ErgoAPI } from '@/lib/wallet';
 
 interface TokenBalance {
   tokenId: string;
@@ -13,7 +14,7 @@ interface WalletState {
   address: string | null;
   ergBalance: string;
   tokenBalances: TokenBalance[];
-  api: any | null;  // ErgoAPI from EIP-12
+  api: ErgoAPI | null;
   walletType: WalletType;
 
   // Actions
@@ -21,12 +22,13 @@ interface WalletState {
   setAddress: (address: string | null) => void;
   setErgBalance: (balance: string) => void;
   setTokenBalances: (balances: TokenBalance[]) => void;
-  setApi: (api: any) => void;
+  setApi: (api: ErgoAPI | null) => void;
   setWalletType: (type: WalletType) => void;
   disconnect: () => void;
+  refreshBalance: () => Promise<void>;
 }
 
-export const useWalletStore = create<WalletState>((set) => ({
+export const useWalletStore = create<WalletState>((set, get) => ({
   connected: false,
   address: null,
   ergBalance: '0',
@@ -48,4 +50,14 @@ export const useWalletStore = create<WalletState>((set) => ({
     api: null,
     walletType: null,
   }),
+  refreshBalance: async () => {
+    const state = get();
+    if (!state.connected || !state.api) return;
+    try {
+      const balance = await state.api.get_balance();
+      set({ ergBalance: typeof balance === "string" ? balance : String(balance) });
+    } catch {
+      // Silently fail — balance will refresh on next action
+    }
+  },
 }));

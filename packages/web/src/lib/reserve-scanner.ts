@@ -158,7 +158,9 @@ function parseReserveBox(box: any, currentHeight: number, exerciseWindow: number
     state = "DEFINITION";
   } else if (tokenQty > 1n) {
     state = "MINTED_UNDELIVERED";
-  } else if (currentHeight > maturityHeight + exerciseWindow) {
+  } else if (currentHeight > 0 && currentHeight > maturityHeight + exerciseWindow) {
+    // Guard: skip expiry check when height=0 (node unreachable) to avoid
+    // misclassifying expired options as active RESERVE
     state = "EXPIRED";
   } else {
     state = "RESERVE";

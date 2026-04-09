@@ -48,15 +48,17 @@ export function LandingNav() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="landing-mobile-menu">
-          <div className="container">
-            <a href="#products" onClick={() => setMenuOpen(false)}>Products</a>
-            <a href="#markets" onClick={() => setMenuOpen(false)}>Markets</a>
-            <a href="#how" onClick={() => setMenuOpen(false)}>How It Works</a>
-            <a href="#how-it-works" onClick={() => setMenuOpen(false)}>Deep Dive</a>
-            <a href="#learn" onClick={() => setMenuOpen(false)}>Learn</a>
-            <a href="#compare" onClick={() => setMenuOpen(false)}>Compare</a>
-          </div>
+        <div className="landing-mobile-menu" style={{
+          display: "flex",
+          flexDirection: "column",
+          padding: "12px 24px 20px",
+        }}>
+          <a href="#products" onClick={() => setMenuOpen(false)}>Products</a>
+          <a href="#markets" onClick={() => setMenuOpen(false)}>Markets</a>
+          <a href="#how" onClick={() => setMenuOpen(false)}>How It Works</a>
+          <a href="#how-it-works" onClick={() => setMenuOpen(false)}>Deep Dive</a>
+          <a href="#learn" onClick={() => setMenuOpen(false)}>Learn</a>
+          <a href="#compare" onClick={() => setMenuOpen(false)}>Compare</a>
         </div>
       )}
     </nav>

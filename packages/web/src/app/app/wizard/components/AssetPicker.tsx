@@ -107,7 +107,7 @@ export function AssetPicker({
       {/* Direction — only shown after asset selected */}
       {selectedAsset && (
         <>
-          <div className="text-[11px] text-etcha-text-secondary font-mono mb-2">
+          <div id="wizard-direction" className="text-[11px] text-etcha-text-secondary font-mono mb-2">
             {selectedAsset.name} is at{" "}
             <span className="text-etcha-text-primary font-mono">{fmt(spot)}</span>.{" "}
             {isBuy ? "Where do you think it's headed?" : "Which side do you want to write?"}

@@ -82,23 +82,23 @@ function PaginatedSection({
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold">
           {title}
-          {total > 0 && <span className="ml-2 text-sm font-normal text-[#8891a5]">({total})</span>}
+          {total > 0 && <span className="ml-2 text-sm font-normal text-[#9da5b8]">({total})</span>}
         </h2>
         {totalPages > 1 && (
           <div className="flex items-center gap-2 text-sm">
             <button
               onClick={() => setPage(Math.max(0, page - 1))}
               disabled={page === 0}
-              className="px-2 py-1 bg-[#1e2330] rounded text-[#8891a5] hover:text-[#e8eaf0] disabled:opacity-30"
+              className="px-2 py-1 bg-[#1e2330] rounded text-[#9da5b8] hover:text-[#e8eaf0] disabled:opacity-30"
               aria-label="Previous page"
             >
               &larr;
             </button>
-            <span className="text-[#8891a5]">{page + 1}/{totalPages}</span>
+            <span className="text-[#9da5b8]">{page + 1}/{totalPages}</span>
             <button
               onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
               disabled={page >= totalPages - 1}
-              className="px-2 py-1 bg-[#1e2330] rounded text-[#8891a5] hover:text-[#e8eaf0] disabled:opacity-30"
+              className="px-2 py-1 bg-[#1e2330] rounded text-[#9da5b8] hover:text-[#e8eaf0] disabled:opacity-30"
               aria-label="Next page"
             >
               &rarr;
@@ -277,6 +277,8 @@ export default function PortfolioPage() {
     requestId: string;
     message: string;
     onSigned: (txId: string) => void;
+    onClose?: () => void;
+    onExpired?: () => void;
   } | null>(null);
 
   // Error state for failed data loading
@@ -302,7 +304,7 @@ export default function PortfolioPage() {
         const { boxes } = await boxRes.json();
         utxos = boxes || [];
       } else {
-        utxos = await api.get_utxos();
+        utxos = await api!.get_utxos();
       }
       if (!utxos || utxos.length === 0) { setLoading(false); return; }
 
@@ -471,7 +473,7 @@ export default function PortfolioPage() {
   // ═══════════════════════════════════════════════════════════════
 
   const handleListForSaleClick = useCallback(async (box: ContractBox) => {
-    if (!api) return;
+    if (!api && walletType !== "ergopay") return;
 
     // The option token ID = the definition box ID (stored in R7 of the reserve box).
     // The reserve box has boxId but the token ID is the *creation* box ID.
@@ -494,14 +496,27 @@ export default function PortfolioPage() {
       const optionTokenId = r7hex.slice(4); // 32 bytes hex
 
       // Find how many of this token the user holds
-      const utxos = await api.get_utxos();
       let walletTokenBalance = 0n;
-      if (utxos) {
-        for (const utxo of utxos) {
-          if (utxo.assets) {
-            for (const asset of utxo.assets) {
+      if (walletType === "ergopay" && walletAddr) {
+        const walletBoxes = await fetchWalletBoxes(walletAddr);
+        for (const b of walletBoxes) {
+          if (b.assets) {
+            for (const asset of b.assets) {
               if (asset.tokenId === optionTokenId) {
                 walletTokenBalance += BigInt(asset.amount);
+              }
+            }
+          }
+        }
+      } else {
+        const utxos = await api!.get_utxos();
+        if (utxos) {
+          for (const utxo of utxos) {
+            if (utxo.assets) {
+              for (const asset of utxo.assets) {
+                if (asset.tokenId === optionTokenId) {
+                  walletTokenBalance += BigInt(asset.amount);
+                }
               }
             }
           }
@@ -532,7 +547,7 @@ export default function PortfolioPage() {
     } catch (err: any) {
       toast(`Error: ${err.message}`);
     }
-  }, [api]);
+  }, [api, walletType, walletAddr]);
 
   const handleListForSaleSubmit = useCallback(async (params: {
     stablecoin: "USE" | "SigUSD";
@@ -566,7 +581,7 @@ export default function PortfolioPage() {
       fleetBoxes = await fetchWalletBoxes(walletAddr);
       walletErgoTree = fleetBoxes[0]?.ergoTree || "";
     } else {
-      const rawUtxos = await getWalletUtxos(api);
+      const rawUtxos = await getWalletUtxos(api!);
       fleetBoxes = rawUtxos.map(nautilusBoxToFleet);
       walletErgoTree = rawUtxos[0].ergoTree;
     }
@@ -626,14 +641,21 @@ export default function PortfolioPage() {
             setTimeout(() => loadTokens(), 5000);
             resolve(txId);
           },
+          onClose: () => {
+            setErgoPayModal(null);
+            reject(new Error("cancelled"));
+          },
+          onExpired: () => {
+            setErgoPayModal(null);
+            reject(new Error("cancelled"));
+          },
         });
       });
     }
 
-    const signedTx = await signTx(api, eip12Tx);
+    const signedTx = await signTx(api!, eip12Tx);
     const txId = await submitTransaction(signedTx);
 
-    console.log("Sell order TX submitted:", txId);
     setTimeout(() => loadTokens(), 5000);
 
     return txId;
@@ -661,7 +683,7 @@ export default function PortfolioPage() {
         const walletBoxes = await fetchWalletBoxes(walletAddr);
         walletErgoTree = walletBoxes[0]?.ergoTree || "";
       } else {
-        const rawUtxos = await getWalletUtxos(api);
+        const rawUtxos = await getWalletUtxos(api!);
         walletErgoTree = rawUtxos[0].ergoTree;
       }
 
@@ -716,14 +738,11 @@ export default function PortfolioPage() {
         });
       } else {
         setActionStatus((prev) => ({ ...prev, [box.boxId]: "Sign in wallet..." }));
-        console.log("[Reclaim] EIP-12 TX:", JSON.stringify(eip12Tx, (_, v) => typeof v === 'bigint' ? v.toString() : v).slice(0, 500));
-        const signedTx = await signTx(api, eip12Tx);
+        const signedTx = await signTx(api!, eip12Tx);
         const txId = await submitTransaction(signedTx);
 
         setActionStatus((prev) => ({ ...prev, [box.boxId]: `Submitted: ${txId.slice(0, 8)}...` }));
         setContractBoxes((prev) => prev.filter((b) => b.boxId !== box.boxId));
-        console.log("Reclaim TX submitted:", txId);
-
         setTimeout(() => {
           setActionStatus((prev) => {
             const next = { ...prev };
@@ -829,12 +848,11 @@ export default function PortfolioPage() {
         });
       } else {
         setActionStatus((prev) => ({ ...prev, [box.boxId]: "Sign in wallet..." }));
-        const signedTx = await signTx(api, eip12Tx);
+        const signedTx = await signTx(api!, eip12Tx);
         const txId = await submitTransaction(signedTx);
 
         setContractBoxes((prev) => prev.filter((b) => b.boxId !== box.boxId));
         setSuccessBanner({ message: "Option closed — collateral returned to your wallet", txId });
-        console.log("Close TX submitted:", txId);
         loadTokens();
       }
     } catch (err: any) {
@@ -874,7 +892,7 @@ export default function PortfolioPage() {
         fleetWalletBoxes = await fetchWalletBoxes(walletAddr);
         walletErgoTree = fleetWalletBoxes[0]?.ergoTree || "";
       } else {
-        const rawUtxos = await getWalletUtxos(api);
+        const rawUtxos = await getWalletUtxos(api!);
         fleetWalletBoxes = rawUtxos.map(nautilusBoxToFleet);
         walletErgoTree = rawUtxos[0].ergoTree;
       }
@@ -908,13 +926,12 @@ export default function PortfolioPage() {
         });
       } else {
         setActionStatus((prev) => ({ ...prev, [order.boxId]: "Sign in wallet..." }));
-        const signedTx = await signTx(api, eip12Tx);
+        const signedTx = await signTx(api!, eip12Tx);
         const txId = await submitTransaction(signedTx);
 
         setOpenOrders((prev) => prev.filter((o) => o.boxId !== order.boxId));
         setSuccessBanner({ message: "Sell order cancelled — tokens returned to your wallet", txId });
         toast(`Sell order cancelled — TX: ${txId.slice(0, 12)}...`);
-        console.log("Cancel sell order TX submitted:", txId);
         loadTokens();
       }
     } catch (err: any) {
@@ -952,7 +969,7 @@ export default function PortfolioPage() {
       const optionTokenId = r7hex.slice(4);
 
       // Count option tokens in wallet
-      const utxos = await api.get_utxos();
+      const utxos = await api!.get_utxos();
       let walletTokenBalance = 0n;
       if (utxos) {
         for (const utxo of utxos) {
@@ -1014,19 +1031,14 @@ export default function PortfolioPage() {
     if (!api || !exerciseModalBox) throw new Error("Wallet not connected");
 
     const box = exerciseModalBox;
-    console.log("[Exercise] Starting for box:", box.boxId, "settlement:", box.settlement, "type:", box.optionType);
-
     // 1. Fetch reserve box from node
     const nodeBox = await fetchBoxById(box.boxId);
-    console.log("[Exercise] Reserve box fetched, value:", nodeBox.value, "tokens:", nodeBox.assets?.length);
     const reserveBox = nodeBoxToFleet(nodeBox);
     const regs = nodeBox.additionalRegisters;
 
     // 2. Parse R8 (OptionParams)
     const r8Params = parseCollLong(hexToBytesOracle(regs.R8));
     if (!r8Params || r8Params.length < 11) throw new Error("Invalid R8 params");
-
-    console.log("[Exercise] R8 params:", r8Params.map(String));
 
     const optionParams = {
       optionType: Number(r8Params[0]) as 0 | 1,
@@ -1060,7 +1072,7 @@ export default function PortfolioPage() {
     if (walletType === "ergopay" && walletAddr) {
       allBoxes = await fetchWalletBoxes(walletAddr);
     } else {
-      const rawUtxos = await getWalletUtxos(api);
+      const rawUtxos = await getWalletUtxos(api!);
       allBoxes = rawUtxos.map(nautilusBoxToFleet);
     }
 
@@ -1074,9 +1086,6 @@ export default function PortfolioPage() {
     );
     // Also include option token boxes as payment sources — they may carry ERG needed for fees
     const allInputBoxes = [...optionTokenBoxes, ...paymentBoxes];
-
-    console.log("[Exercise] optionTokenId:", optionTokenId);
-    console.log("[Exercise] optionTokenBoxes:", optionTokenBoxes.length, "paymentBoxes:", paymentBoxes.length);
 
     // Guard: verify buyer actually has option tokens (may be stale wallet cache)
     if (optionTokenBoxes.length === 0) {
@@ -1096,8 +1105,6 @@ export default function PortfolioPage() {
       const ch = Number(b.creationHeight ?? 0);
       if (ch > height) height = ch;
     }
-
-    console.log("[Exercise] height:", height, "maturityDate:", optionParams.maturityDate.toString(), "settlementType:", optionParams.settlementType);
 
     let unsignedTx: any;
 
@@ -1178,12 +1185,9 @@ export default function PortfolioPage() {
     }
 
     // Sign and submit
-    console.log("[Exercise] TX built successfully, converting to EIP-12...");
     const eip12Tx = unsignedTx.toEIP12Object();
-    console.log("[Exercise] EIP-12 TX:", JSON.stringify(eip12Tx, (_, v) => typeof v === 'bigint' ? v.toString() : v).slice(0, 500));
 
     if (walletType === "ergopay" && walletAddr) {
-      console.log("[Exercise] Preparing ErgoPay signing...");
       const { ergoPayUrl, requestId } = await prepareErgoPayTx(
         eip12Tx, walletAddr, `Etcha: Exercise ${box.name}`,
       );
@@ -1193,7 +1197,6 @@ export default function PortfolioPage() {
           message: `Exercise: ${box.name}`,
           onSigned: (txId) => {
             setErgoPayModal(null);
-            console.log("[Exercise] ErgoPay TX signed:", txId);
             setTimeout(() => loadTokens(), 5000);
             resolve(txId);
           },
@@ -1201,13 +1204,10 @@ export default function PortfolioPage() {
       });
     }
 
-    console.log("[Exercise] Requesting Nautilus signature...");
-    const signedTx = await signTx(api, eip12Tx);
-    console.log("[Exercise] Signed, submitting...");
+    const signedTx = await signTx(api!, eip12Tx);
 
     const txId = await submitTransaction(signedTx);
 
-    console.log("[Exercise] TX submitted:", txId);
     // Delay refresh to let the dialog show success state first.
     // Don't clear exerciseModalBox — the dialog persists until user closes it.
     setTimeout(() => {
@@ -1224,8 +1224,8 @@ export default function PortfolioPage() {
     return (
       <div className="text-center py-20">
         <h1 className="text-xl font-bold mb-2">Portfolio</h1>
-        <p className="text-[#8891a5] mb-4">Connect your wallet to view positions</p>
-        <p className="text-sm text-[#8891a5]/60">
+        <p className="text-[#9da5b8] mb-4">Connect your wallet to view positions</p>
+        <p className="text-sm text-[#9da5b8]/60">
           Click &quot;Connect Wallet&quot; in the top right to get started
         </p>
       </div>
@@ -1245,7 +1245,7 @@ export default function PortfolioPage() {
         <button
           onClick={loadTokens}
           disabled={loading}
-          className="px-3 py-1.5 bg-[#1e2330] text-[#8891a5] rounded-lg text-sm hover:text-[#e8eaf0] transition-colors disabled:opacity-50"
+          className="px-3 py-1.5 bg-[#1e2330] text-[#9da5b8] rounded-lg text-sm hover:text-[#e8eaf0] transition-colors disabled:opacity-50"
         >
           {loading ? "Loading..." : "Refresh"}
         </button>
@@ -1259,7 +1259,7 @@ export default function PortfolioPage() {
             href={`https://ergexplorer.com/transactions#${successBanner.txId}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-[#8891a5] hover:text-[#4ade80] transition-colors ml-4 whitespace-nowrap"
+            className="text-xs text-[#9da5b8] hover:text-[#4ade80] transition-colors ml-4 whitespace-nowrap"
           >
             {successBanner.txId.slice(0, 12)}...
           </a>
@@ -1272,7 +1272,7 @@ export default function PortfolioPage() {
           <span className="text-sm text-[#f87171]">{loadError}</span>
           <button
             onClick={loadTokens}
-            className="text-xs text-[#8891a5] hover:text-[#f87171] transition-colors ml-4 whitespace-nowrap"
+            className="text-xs text-[#9da5b8] hover:text-[#f87171] transition-colors ml-4 whitespace-nowrap"
           >
             Retry
           </button>
@@ -1283,12 +1283,12 @@ export default function PortfolioPage() {
       {ergoPayModal && (
         <ErgoPayModal
           open={!!ergoPayModal}
-          onClose={() => setErgoPayModal(null)}
+          onClose={() => { if (ergoPayModal.onClose) ergoPayModal.onClose(); else setErgoPayModal(null); }}
           ergoPayUrl={ergoPayModal.url}
           requestId={ergoPayModal.requestId}
           message={ergoPayModal.message}
           onSigned={ergoPayModal.onSigned}
-          onExpired={() => setErgoPayModal(null)}
+          onExpired={() => { if (ergoPayModal.onExpired) ergoPayModal.onExpired(); else setErgoPayModal(null); }}
         />
       )}
 
@@ -1298,16 +1298,18 @@ export default function PortfolioPage() {
           const pageHoldings = holdings.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
           return (
             <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-x-auto">
+              {/* Desktop table */}
+              <div className="hidden md:block">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[#1e2330]">
-                    <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Asset</th>
-                    <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Type</th>
-                    <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Strike</th>
-                    <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Expiry</th>
-                    <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Qty</th>
-                    <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Status</th>
-                    <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Action</th>
+                    <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">Asset</th>
+                    <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">Type</th>
+                    <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Strike</th>
+                    <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Expiry</th>
+                    <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Qty</th>
+                    <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Status</th>
+                    <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1327,7 +1329,7 @@ export default function PortfolioPage() {
                           }`}>
                             {h.optionType === "call" ? "Call" : "Put"}
                           </span>
-                          <span className="text-xs ml-1 text-[#8891a5]">{h.settlement}</span>
+                          <span className="text-xs ml-1 text-[#9da5b8]">{h.settlement}</span>
                         </td>
                         <td className="py-2 px-4 text-right">
                           {(() => {
@@ -1340,7 +1342,7 @@ export default function PortfolioPage() {
                                   ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(4)}
                                 </div>
                                 {size !== 1 && (
-                                  <div className="text-[10px] text-[#8891a5]">
+                                  <div className="text-[10px] text-[#9da5b8]">
                                     {size} × ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(2)} = ${perContract >= 100 ? perContract.toFixed(0) : perContract.toFixed(2)}/contract
                                   </div>
                                 )}
@@ -1365,7 +1367,7 @@ export default function PortfolioPage() {
                             <span className="text-xs text-[#34d399] font-semibold">Exercisable</span>
                           )}
                           {!isExercisable && !isExpired && (
-                            <span className="text-xs text-[#8891a5]">Active</span>
+                            <span className="text-xs text-[#9da5b8]">Active</span>
                           )}
                           {isExpired && (
                             <span className="text-xs text-[#f87171]">Expired</span>
@@ -1415,13 +1417,98 @@ export default function PortfolioPage() {
                     );
                   }) : (
                     <tr>
-                      <td colSpan={7} className="text-center py-8 text-[#8891a5]">
+                      <td colSpan={7} className="text-center py-8 text-[#9da5b8]">
                         {loading ? <table className="w-full"><tbody><SkeletonRow cols={7} /><SkeletonRow cols={7} /></tbody></table> : "No active option positions"}
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
+              </div>
+
+              {/* Mobile cards */}
+              <div className="md:hidden">
+                {pageHoldings.length > 0 ? pageHoldings.map((h) => {
+                  const blocksToExpiry = h.maturityHeight - currentHeight;
+                  const isExercisable = h.style === "american"
+                    ? currentHeight <= h.maturityHeight + exerciseWindow
+                    : currentHeight >= h.maturityHeight && currentHeight <= h.maturityHeight + exerciseWindow;
+                  const isExpired = currentHeight > h.maturityHeight + exerciseWindow;
+                  const perUnit = h.strikePrice;
+
+                  return (
+                    <div key={h.optionTokenId} className="border-b border-[#1e2330]/50 px-4 py-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[#e8eaf0] font-medium">{h.assetName}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded ${
+                            h.optionType === "call" ? "bg-[#34d399]/20 text-[#34d399]" : "bg-[#f87171]/20 text-[#f87171]"
+                          }`}>
+                            {h.optionType === "call" ? "Call" : "Put"}
+                          </span>
+                        </div>
+                        <span className="font-mono text-[#e09a5f]">
+                          ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(4)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-[#9da5b8] mb-2">
+                        <span>
+                          {isExpired ? (
+                            <span className="text-[#f87171]">Expired</span>
+                          ) : blocksToExpiry > 0 ? (
+                            <span className="text-[#e8eaf0]">{formatBlocksToTime(blocksToExpiry)}</span>
+                          ) : (
+                            <span className="text-[#e09a5f]">Exercise window</span>
+                          )}
+                        </span>
+                        <span className="font-mono">Qty: {h.quantity.toString()}</span>
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        {isExercisable && (
+                          <button
+                            onClick={() => handleExerciseClick({
+                              boxId: h.reserveBoxId,
+                              state: "RESERVE",
+                              name: h.name,
+                              value: 0,
+                              optionType: h.optionType,
+                              style: h.style,
+                              settlement: h.settlement,
+                              strikePrice: h.strikePrice,
+                              maturityDate: h.maturityHeight,
+                              oracleIndex: h.oracleIndex,
+                            })}
+                            className="min-h-[44px] text-sm px-4 py-2 bg-[#34d399]/20 text-[#34d399] rounded-lg hover:bg-[#34d399]/30"
+                          >
+                            Exercise
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleListForSaleClick({
+                            boxId: h.reserveBoxId,
+                            state: "RESERVE",
+                            name: h.name,
+                            value: 0,
+                            optionType: h.optionType,
+                            style: h.style,
+                            settlement: h.settlement,
+                            strikePrice: h.strikePrice,
+                            maturityDate: h.maturityHeight,
+                            oracleIndex: h.oracleIndex,
+                          })}
+                          className="min-h-[44px] text-sm px-4 py-2 bg-[#c87941]/20 text-[#c87941] rounded-lg hover:bg-[#c87941]/30"
+                        >
+                          List
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }) : (
+                  <div className="text-center py-8 text-[#9da5b8]">
+                    {loading ? <table className="w-full"><tbody><SkeletonRow cols={3} /><SkeletonRow cols={3} /></tbody></table> : "No active option positions"}
+                  </div>
+                )}
+              </div>
             </div>
           );
         }}
@@ -1434,17 +1521,20 @@ export default function PortfolioPage() {
           return (
             <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-x-auto">
               {pageItems.length > 0 ? (
+                <>
+                {/* Desktop table */}
+                <div className="hidden md:block">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-[#1e2330]">
-                      <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Name</th>
-                      <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Type</th>
-                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Strike</th>
-                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Expiry</th>
-                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Qty</th>
-                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Value Locked</th>
-                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Status</th>
-                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Action</th>
+                      <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">Name</th>
+                      <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">Type</th>
+                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Strike</th>
+                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Expiry</th>
+                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Qty</th>
+                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Value Locked</th>
+                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Status</th>
+                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1464,7 +1554,7 @@ export default function PortfolioPage() {
                             }`}>
                               {box.optionType === "call" ? "Call" : "Put"}
                             </span>
-                            <span className="text-xs ml-1 text-[#8891a5]">{box.settlement}</span>
+                            <span className="text-xs ml-1 text-[#9da5b8]">{box.settlement}</span>
                           </td>
                           <td className="py-2 px-4 text-right">
                             {box.strikePrice ? (() => {
@@ -1477,7 +1567,7 @@ export default function PortfolioPage() {
                                     ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(4)}
                                   </div>
                                   {size !== 1 && (
-                                    <div className="text-[10px] text-[#8891a5]">
+                                    <div className="text-[10px] text-[#9da5b8]">
                                       {size} × ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(2)} = ${box.strikePrice >= 100 ? box.strikePrice.toFixed(0) : box.strikePrice.toFixed(2)}/contract
                                     </div>
                                   )}
@@ -1499,7 +1589,7 @@ export default function PortfolioPage() {
                           <td className="py-2 px-4 text-right font-mono text-[#e8eaf0]">
                             {walletBal > 0n ? walletBal.toString() : box.tokenCount ?? "\u2014"}
                           </td>
-                          <td className="py-2 px-4 text-right font-mono text-[#8891a5]">
+                          <td className="py-2 px-4 text-right font-mono text-[#9da5b8]">
                             {formatCollateral(box)}
                           </td>
                           <td className="py-2 px-4 text-right">
@@ -1517,12 +1607,12 @@ export default function PortfolioPage() {
                           </td>
                           <td className="py-2 px-4 text-right">
                             {actionStatus[box.boxId] ? (
-                              <span className="text-xs text-[#8891a5]">{actionStatus[box.boxId]}</span>
+                              <span className="text-xs text-[#9da5b8]">{actionStatus[box.boxId]}</span>
                             ) : (
                               <>
                                 {box.state === "RESERVE" && (() => {
                                   if (isFullyExercised) {
-                                    return <span className="text-xs text-[#8891a5]">Closeable after expiry</span>;
+                                    return <span className="text-xs text-[#9da5b8]">Closeable after expiry</span>;
                                   }
                                   return walletBal > 0n ? (
                                     <button
@@ -1532,7 +1622,7 @@ export default function PortfolioPage() {
                                       List for Sale
                                     </button>
                                   ) : (
-                                    <span className="text-xs text-[#8891a5]">No tokens</span>
+                                    <span className="text-xs text-[#9da5b8]">No tokens</span>
                                   );
                                 })()}
                                 {box.state === "EXPIRED" && (
@@ -1551,8 +1641,89 @@ export default function PortfolioPage() {
                     })}
                   </tbody>
                 </table>
+                </div>
+
+                {/* Mobile cards */}
+                <div className="md:hidden">
+                  {pageItems.map((box) => {
+                    const isExpired = box.state === "EXPIRED";
+                    const blocksToExpiry = (box.maturityDate ?? 0) - currentHeight;
+                    const blocksToClose = (box.maturityDate ?? 0) + exerciseWindow - currentHeight;
+                    const optTokenId = reserveBoxIdToTokenId.get(box.boxId);
+                    const walletBal = optTokenId ? (walletTokenMap.get(optTokenId) ?? 0n) : 0n;
+                    const isFullyExercised = box.state === "RESERVE" && !box.tokenCount && walletBal === 0n;
+                    const perUnit = box.strikePrice;
+
+                    return (
+                      <div key={box.boxId} className="border-b border-[#1e2330]/50 px-4 py-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#e8eaf0] font-medium text-sm">{box.name}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded ${
+                              box.optionType === "call" ? "bg-[#34d399]/20 text-[#34d399]" : "bg-[#f87171]/20 text-[#f87171]"
+                            }`}>
+                              {box.optionType === "call" ? "Call" : "Put"}
+                            </span>
+                          </div>
+                          {perUnit ? (
+                            <span className="font-mono text-[#e09a5f]">
+                              ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(4)}
+                            </span>
+                          ) : <span className="text-[#9da5b8]">{"\u2014"}</span>}
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-[#9da5b8] mb-2">
+                          <span>
+                            {isExpired ? (
+                              <span className="text-[#f87171]">Expired</span>
+                            ) : blocksToExpiry <= 0 && blocksToClose > 0 ? (
+                              <span className="text-[#e09a5f]">Exercise window</span>
+                            ) : blocksToExpiry > 0 ? (
+                              <span className="text-[#e8eaf0]">{formatBlocksToTime(blocksToExpiry)}</span>
+                            ) : (
+                              <span className="text-[#e09a5f]">Exercise window</span>
+                            )}
+                          </span>
+                          <span>
+                            {isExpired ? (
+                              <span className="text-xs px-2 py-0.5 rounded bg-[#f87171]/20 text-[#f87171]">Expired</span>
+                            ) : isFullyExercised ? (
+                              <span className="text-xs px-2 py-0.5 rounded bg-[#e09a5f]/20 text-[#e09a5f]">Exercised</span>
+                            ) : (
+                              <span className="text-xs px-2 py-0.5 rounded bg-[#34d399]/20 text-[#34d399]">Active</span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          {actionStatus[box.boxId] ? (
+                            <span className="text-xs text-[#9da5b8]">{actionStatus[box.boxId]}</span>
+                          ) : (
+                            <>
+                              {box.state === "RESERVE" && !isFullyExercised && walletBal > 0n && (
+                                <button
+                                  onClick={() => handleListForSaleClick(box)}
+                                  className="min-h-[44px] text-sm px-4 py-2 bg-[#c87941]/20 text-[#c87941] rounded-lg hover:bg-[#c87941]/30"
+                                >
+                                  List for Sale
+                                </button>
+                              )}
+                              {box.state === "EXPIRED" && (
+                                <button
+                                  onClick={() => handleClose(box)}
+                                  className="min-h-[44px] text-sm px-4 py-2 bg-[#f87171]/20 text-[#f87171] rounded-lg hover:bg-[#f87171]/30"
+                                >
+                                  Close
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                </>
               ) : (
-                <div className="p-8 text-center text-[#8891a5]">
+                <div className="p-8 text-center text-[#9da5b8]">
                   {loading ? <table className="w-full"><tbody><SkeletonRow cols={8} /><SkeletonRow cols={8} /></tbody></table> : "No written options"}
                 </div>
               )}
@@ -1571,11 +1742,11 @@ export default function PortfolioPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-[#1e2330]">
-                      <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Option Token</th>
-                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Premium</th>
-                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Qty</th>
-                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Payment</th>
-                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Action</th>
+                      <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">Option Token</th>
+                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Premium</th>
+                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Qty</th>
+                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Payment</th>
+                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1605,7 +1776,7 @@ export default function PortfolioPage() {
                           </td>
                           <td className="py-2 px-4 text-right">
                             {actionStatus[order.boxId] ? (
-                              <span className="text-xs text-[#8891a5]">{actionStatus[order.boxId]}</span>
+                              <span className="text-xs text-[#9da5b8]">{actionStatus[order.boxId]}</span>
                             ) : (
                               <button
                                 onClick={() => handleCancelSellOrder(order)}
@@ -1621,7 +1792,7 @@ export default function PortfolioPage() {
                   </tbody>
                 </table>
               ) : (
-                <div className="p-8 text-center text-[#8891a5]">
+                <div className="p-8 text-center text-[#9da5b8]">
                   {loading ? <table className="w-full"><tbody><SkeletonRow cols={5} /><SkeletonRow cols={5} /></tbody></table> : "No open sell orders"}
                 </div>
               )}
@@ -1640,12 +1811,12 @@ export default function PortfolioPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-[#1e2330]">
-                      <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Name</th>
-                      <th className="text-left py-3 px-4 text-[#8891a5] font-medium">State</th>
-                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Strike</th>
-                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Expiry</th>
-                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Value Locked</th>
-                      <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Action</th>
+                      <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">Name</th>
+                      <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">State</th>
+                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Strike</th>
+                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Expiry</th>
+                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Value Locked</th>
+                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1676,7 +1847,7 @@ export default function PortfolioPage() {
                                   ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(4)}
                                 </div>
                                 {size !== 1 && (
-                                  <div className="text-[10px] text-[#8891a5]">
+                                  <div className="text-[10px] text-[#9da5b8]">
                                     {size} × ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(2)} = ${box.strikePrice >= 100 ? box.strikePrice.toFixed(0) : box.strikePrice.toFixed(2)}/contract
                                   </div>
                                 )}
@@ -1697,7 +1868,7 @@ export default function PortfolioPage() {
 
                             return (
                               <div className="text-xs space-y-0.5">
-                                <div className="font-mono text-[#8891a5]">
+                                <div className="font-mono text-[#9da5b8]">
                                   Block {box.maturityDate.toLocaleString()}
                                 </div>
                                 {isExpired ? (
@@ -1718,12 +1889,12 @@ export default function PortfolioPage() {
                             );
                           })() : "\u2014"}
                         </td>
-                        <td className="py-2 px-4 text-right font-mono text-[#8891a5]">
+                        <td className="py-2 px-4 text-right font-mono text-[#9da5b8]">
                           {formatCollateral(box)}
                         </td>
                         <td className="py-2 px-4 text-right">
                           {actionStatus[box.boxId] ? (
-                            <span className="text-xs text-[#8891a5]">{actionStatus[box.boxId]}</span>
+                            <span className="text-xs text-[#9da5b8]">{actionStatus[box.boxId]}</span>
                           ) : (
                             <>
                               {box.state === "DEFINITION" && (
@@ -1769,7 +1940,7 @@ export default function PortfolioPage() {
                   </tbody>
                 </table>
               ) : (
-                <div className="p-8 text-center text-[#8891a5]">
+                <div className="p-8 text-center text-[#9da5b8]">
                   {loading ? "Scanning contract..." : "No boxes found at contract address"}
                 </div>
               )}
@@ -1792,9 +1963,9 @@ export default function PortfolioPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[#1e2330]">
-                    <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Asset</th>
-                    <th className="text-left py-3 px-4 text-[#8891a5] font-medium">Token ID</th>
-                    <th className="text-right py-3 px-4 text-[#8891a5] font-medium">Balance</th>
+                    <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">Asset</th>
+                    <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">Token ID</th>
+                    <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Balance</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1803,8 +1974,17 @@ export default function PortfolioPage() {
                       <td className="py-2 px-4 text-[#e8eaf0] font-medium">
                         {t.name}
                       </td>
-                      <td className="py-2 px-4 font-mono text-xs text-[#8891a5]">
-                        {t.isNative ? "native" : `${t.tokenId.slice(0, 12)}...${t.tokenId.slice(-6)}`}
+                      <td className="py-2 px-4 font-mono text-xs text-[#9da5b8]">
+                        {t.isNative ? "native" : (
+                          <a
+                            href={`https://ergexplorer.com/token#${t.tokenId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:text-[#c87941] transition-colors"
+                          >
+                            {t.tokenId.slice(0, 8)}...{t.tokenId.slice(-4)}
+                          </a>
+                        )}
                       </td>
                       <td className="py-2 px-4 text-right font-mono text-[#e09a5f]">
                         {t.displayAmount}
@@ -1812,7 +1992,7 @@ export default function PortfolioPage() {
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={3} className="text-center py-8 text-[#8891a5]">
+                      <td colSpan={3} className="text-center py-8 text-[#9da5b8]">
                         {loading ? "Loading..." : "No relevant tokens found"}
                       </td>
                     </tr>

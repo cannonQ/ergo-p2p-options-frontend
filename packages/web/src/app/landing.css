@@ -90,7 +90,7 @@
 /* HERO */
 .landing .hero {
   min-height: 100vh; display: flex; align-items: center;
-  padding-top: 80px; position: relative; overflow: hidden;
+  padding-top: 80px; padding-bottom: 48px; position: relative; overflow: hidden;
 }
 .landing .hero-bg {
   position: absolute; inset: 0;
@@ -194,7 +194,7 @@
 }
 
 /* TWO PRODUCTS */
-.landing .products-section { border-top: 1px solid var(--border); }
+.landing .products-section { border-top: 1px solid var(--border); padding-top: 48px; }
 
 .landing .products-grid {
   display: grid;

@@ -7,7 +7,7 @@
 import { NextResponse } from "next/server";
 
 const ERGOPAY_SERVICE = "https://ergopay.duckdns.org";
-const NODE_URL = process.env.ERGO_NODE_URL || "http://96.255.150.220:9053";
+import { NODE_URL } from "@/lib/node";
 
 /** Convert ErgoTree hex to base58 Ergo address via node API */
 async function ergoTreeToAddress(ergoTree: string): Promise<string> {
@@ -37,8 +37,6 @@ export async function POST(request: Request) {
         }
       }
     }
-
-    console.log("[ErgoPay Reduce] Sending to service:", JSON.stringify(body, null, 2).slice(0, 2000));
 
     const res = await fetch(`${ERGOPAY_SERVICE}/api/v1/reducedTx`, {
       method: "POST",

@@ -147,7 +147,13 @@ export function ListForSaleModal({
       setTxId(id);
       setSuccess("Sell order submitted!");
     } catch (err: any) {
-      setError(err?.message || String(err));
+      const errMsg = err?.message || String(err);
+      if (errMsg === "cancelled") {
+        // ErgoPay modal was closed or expired — not a real error
+        setError(null);
+      } else {
+        setError(errMsg);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -155,13 +161,13 @@ export function ListForSaleModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="list-sale-title" className="bg-[#0f172a] border border-[#1e2330] rounded-xl w-full max-w-md mx-4 p-6 space-y-5">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="list-sale-title" className="bg-[#12151c] border border-[#1e2330] rounded-xl w-full max-w-md mx-4 p-6 space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h2 id="list-sale-title" className="text-lg font-semibold text-[#e8eaf0]">List for Sale</h2>
           <button
             onClick={onClose}
-            className="text-[#8891a5] hover:text-[#e8eaf0] text-xl leading-none"
+            className="text-[#9da5b8] hover:text-[#e8eaf0] text-xl leading-none"
             aria-label="Close list for sale dialog"
           >
             &times;
@@ -169,7 +175,7 @@ export function ListForSaleModal({
         </div>
 
         {/* Option info */}
-        <div className="text-sm text-[#8891a5] space-y-1">
+        <div className="text-sm text-[#9da5b8] space-y-1">
           <div>
             <span className="text-[#64748b]">Option:</span>{" "}
             <span className="text-[#e8eaf0]">{optionName}</span>
@@ -199,7 +205,7 @@ export function ListForSaleModal({
               <span className="text-[#64748b]">Strike:</span>{" "}
               <span className="text-[#e8eaf0] font-mono">${strikePerUnit.toFixed(4)}</span>
               {size !== 1 && (
-                <span className="text-[#8891a5] text-xs ml-1">(${strikePrice.toFixed(size >= 100 ? 0 : 4)}/contract)</span>
+                <span className="text-[#9da5b8] text-xs ml-1">(${strikePrice.toFixed(size >= 100 ? 0 : 4)}/contract)</span>
               )}
               {spotPrice !== null && (
                 <span className={`ml-2 text-xs ${
@@ -226,7 +232,7 @@ export function ListForSaleModal({
                 <div>
                   <span className="text-[#64748b]">Each token:</span>{" "}
                   <span className="text-[#e8eaf0] font-mono">{tokenCount} {unitName}</span>
-                  <span className="text-[#8891a5] ml-1">(~${(contractSize * spotPrice).toFixed(2)})</span>
+                  <span className="text-[#9da5b8] ml-1">(~${(contractSize * spotPrice).toFixed(2)})</span>
                 </div>
               );
             }
@@ -234,7 +240,7 @@ export function ListForSaleModal({
               <div>
                 <span className="text-[#64748b]">Each token:</span>{" "}
                 <span className="text-[#e8eaf0] font-mono">{contractSize} {unitName}</span>
-                <span className="text-[#8891a5] ml-1">(~${(contractSize * spotPrice).toFixed(2)})</span>
+                <span className="text-[#9da5b8] ml-1">(~${(contractSize * spotPrice).toFixed(2)})</span>
               </div>
             );
           })()}
@@ -248,14 +254,14 @@ export function ListForSaleModal({
 
         {/* Stablecoin selector */}
         <div>
-          <label className="block text-sm text-[#8891a5] mb-1.5">Payment Currency</label>
+          <label className="block text-sm text-[#9da5b8] mb-1.5">Payment Currency</label>
           <div className="flex gap-2">
             <button
               onClick={() => setStablecoin("USE")}
               className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
                 stablecoin === "USE"
                   ? "bg-[#c87941]/20 border-[#c87941] text-[#c87941]"
-                  : "bg-[#1e2330] border-[#1e2330] text-[#8891a5] hover:border-[#334155]"
+                  : "bg-[#1e2330] border-[#1e2330] text-[#9da5b8] hover:border-[#1e2330]"
               }`}
             >
               USE (Dexy USD)
@@ -265,7 +271,7 @@ export function ListForSaleModal({
               className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
                 stablecoin === "SigUSD"
                   ? "bg-[#c87941]/20 border-[#c87941] text-[#c87941]"
-                  : "bg-[#1e2330] border-[#1e2330] text-[#8891a5] hover:border-[#334155]"
+                  : "bg-[#1e2330] border-[#1e2330] text-[#9da5b8] hover:border-[#1e2330]"
               }`}
             >
               SigUSD
@@ -275,7 +281,7 @@ export function ListForSaleModal({
 
         {/* Premium per token */}
         <div>
-          <label className="flex items-center justify-between text-sm text-[#8891a5] mb-1.5">
+          <label className="flex items-center justify-between text-sm text-[#9da5b8] mb-1.5">
             <span>Premium per Token ({unitName})</span>
             {suggestedPremium !== null && suggestedPremium > 0 && (
               <button
@@ -299,13 +305,13 @@ export function ListForSaleModal({
             value={premiumInput}
             onChange={(e) => setPremiumInput(e.target.value)}
             placeholder={suggestedPremium ? suggestedPremium.toFixed(6) : `e.g. 0.${decimals === 3 ? "050" : "05"}`}
-            className="w-full px-3 py-2 bg-[#1e2330] border border-[#334155] rounded-lg text-[#e8eaf0] text-sm focus:outline-none focus:border-[#c87941]"
+            className="w-full px-3 py-2 bg-[#1e2330] border border-[#1e2330] rounded-lg text-[#e8eaf0] text-sm focus:outline-none focus:border-[#c87941]"
           />
         </div>
 
         {/* Token amount */}
         <div>
-          <label className="block text-sm text-[#8891a5] mb-1.5">
+          <label className="block text-sm text-[#9da5b8] mb-1.5">
             Tokens to List
           </label>
           <div className="flex gap-2">
@@ -315,11 +321,11 @@ export function ListForSaleModal({
               max={maxTokens.toString()}
               value={tokenAmountInput}
               onChange={(e) => setTokenAmountInput(e.target.value)}
-              className="flex-1 px-3 py-2 bg-[#1e2330] border border-[#334155] rounded-lg text-[#e8eaf0] text-sm focus:outline-none focus:border-[#c87941]"
+              className="flex-1 px-3 py-2 bg-[#1e2330] border border-[#1e2330] rounded-lg text-[#e8eaf0] text-sm focus:outline-none focus:border-[#c87941]"
             />
             <button
               onClick={() => setTokenAmountInput(maxTokens.toString())}
-              className="px-3 py-2 bg-[#1e2330] border border-[#334155] rounded-lg text-[#8891a5] text-xs hover:text-[#e8eaf0]"
+              className="px-3 py-2 bg-[#1e2330] border border-[#1e2330] rounded-lg text-[#9da5b8] text-xs hover:text-[#e8eaf0]"
             >
               Max
             </button>
@@ -332,20 +338,20 @@ export function ListForSaleModal({
           const feeAmount = totalPremium * 0.01;
           const sellerReceives = totalPremium - feeAmount;
           return (
-            <div className="bg-[#1e2330]/50 border border-[#334155] rounded-lg p-3 text-sm space-y-1">
-              <div className="flex justify-between text-[#8891a5]">
+            <div className="bg-[#1e2330]/50 border border-[#1e2330] rounded-lg p-3 text-sm space-y-1">
+              <div className="flex justify-between text-[#9da5b8]">
                 <span>Total premium (if fully filled)</span>
                 <span className="text-[#e09a5f] font-mono">
                   {totalPremium.toFixed(decimals)} {stablecoin}
                 </span>
               </div>
-              <div className="flex justify-between text-[#8891a5]">
+              <div className="flex justify-between text-[#9da5b8]">
                 <span>Protocol fee (1%)</span>
                 <span className="text-[#64748b] font-mono">
                   −{feeAmount.toFixed(feeAmount < 0.01 ? 4 : decimals)} {stablecoin}
                 </span>
               </div>
-              <div className="flex justify-between text-[#8891a5] border-t border-[#334155] pt-1 mt-1">
+              <div className="flex justify-between text-[#9da5b8] border-t border-[#1e2330] pt-1 mt-1">
                 <span>You receive</span>
                 <span className="text-[#34d399] font-mono">
                   {sellerReceives.toFixed(decimals)} {stablecoin}
@@ -369,14 +375,14 @@ export function ListForSaleModal({
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 bg-[#1e2330] text-[#8891a5] rounded-lg text-sm hover:text-[#e8eaf0] transition-colors"
+            className="flex-1 py-2.5 bg-[#1e2330] text-[#9da5b8] rounded-lg text-sm hover:text-[#e8eaf0] transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={!isValid || submitting}
-            className="flex-1 py-2.5 bg-[#c87941] text-white rounded-lg text-sm font-medium hover:bg-[#2563eb] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex-1 py-2.5 bg-[#c87941] text-white rounded-lg text-sm font-medium hover:bg-[#e09a5f] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {submitting ? "Signing..." : "List for Sale"}
           </button>

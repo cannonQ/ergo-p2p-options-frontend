@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const NODE_URL = process.env.ERGO_NODE_URL || 'http://96.255.150.220:9053';
+import { NODE_URL } from "@/lib/node";
 const COMPANION_NFT_ID = '3182674f07dbb98d696d38eda53e63eb3bf5fe570f71dee85eb954d6cf903bba';
 const REGISTRY_NFT_ID = 'ea7b36e294b1a954a80752eac288711728e5b91b0b3c0596548c755665050b88';
 

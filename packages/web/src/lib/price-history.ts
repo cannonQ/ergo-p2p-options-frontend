@@ -63,6 +63,10 @@ export async function fetchAllAssetPriceData(): Promise<Map<number, AssetPriceDa
 
   const result = new Map<number, AssetPriceData>();
 
+  if (!supabase) {
+    return result;
+  }
+
   try {
     // Fetch last ~200 refresh events (covers ~24h at 6-block epochs, ~12min each)
     const { data: events, error } = await supabase
@@ -150,4 +154,54 @@ export async function fetchAllAssetPriceData(): Promise<Map<number, AssetPriceDa
 export async function fetchAssetPriceData(index: number): Promise<AssetPriceData | undefined> {
   const all = await fetchAllAssetPriceData();
   return all.get(index);
+}
+
+/**
+ * Fetch 7-day price history for a single oracle feed.
+ * Returns chronological array of { price, timestamp } points.
+ */
+export async function fetchPriceHistory7d(index: number): Promise<PriceHistoryPoint[]> {
+  if (!supabase) return [];
+
+  try {
+    const { data: events, error } = await supabase
+      .from("oracle_events")
+      .select("epoch, medians, created_at")
+      .eq("event_type", "refresh")
+      .order("epoch", { ascending: false })
+      .limit(840); // ~7 days at 12min epochs
+
+    if (error || !events || events.length === 0) return [];
+
+    const tickers = INDEX_TO_TICKERS[index];
+    if (!tickers) return [];
+
+    const points: PriceHistoryPoint[] = [];
+    for (const event of events) {
+      const medians = event.medians as Record<string, number> | null;
+      if (!medians) continue;
+
+      let rawPrice: number | undefined;
+      for (const ticker of tickers) {
+        if (medians[ticker] !== undefined && medians[ticker] > 0) {
+          rawPrice = medians[ticker];
+          break;
+        }
+      }
+      if (rawPrice === undefined || rawPrice <= 0) continue;
+
+      points.push({
+        price: rawPrice / PRICE_SCALE,
+        epoch: event.epoch,
+        timestamp: event.created_at,
+      });
+    }
+
+    // Reverse to chronological order and downsample to ~168 points (1 per hour)
+    points.reverse();
+    const step = Math.max(1, Math.floor(points.length / 168));
+    return points.filter((_, i) => i % step === 0);
+  } catch {
+    return [];
+  }
 }

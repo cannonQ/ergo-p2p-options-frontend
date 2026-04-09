@@ -34,7 +34,7 @@ export function TxStatus({ status, txId }: { status: string; txId: string }) {
   return (
     <div className="space-y-2">
       {status && (
-        <div className={`text-center text-sm ${txId ? "text-[#34d399]" : "text-[#8891a5]"}`}>
+        <div className={`text-center text-sm ${txId ? "text-[#34d399]" : "text-[#9da5b8]"}`}>
           {status}
         </div>
       )}
@@ -43,12 +43,12 @@ export function TxStatus({ status, txId }: { status: string; txId: string }) {
           className="flex items-center gap-2 bg-[#0a0c10] border border-[#1e2330] rounded-lg px-3 py-2"
           title={txId}
         >
-          <span className="text-xs text-[#8891a5] font-mono flex-1 truncate">
+          <span className="text-xs text-[#9da5b8] font-mono flex-1 truncate">
             TX: {truncated}
           </span>
           <button
             onClick={handleCopy}
-            className="text-xs text-[#8891a5] hover:text-[#e8eaf0] transition-colors shrink-0"
+            className="text-xs text-[#9da5b8] hover:text-[#e8eaf0] transition-colors shrink-0"
             aria-label="Copy transaction ID"
           >
             {copied ? "Copied!" : "Copy"}

@@ -7,7 +7,7 @@ import {
 } from "@ergo-options/core";
 import { hexToBytes } from "@/lib/oracle-parser";
 
-const NODE_URL = process.env.ERGO_NODE_URL || "http://96.255.150.220:9053";
+import { NODE_URL } from "@/lib/node";
 
 interface ActivityItem {
   type: "BUY" | "WRITE" | "EXERCISE" | "SELL" | "CLOSE";
