@@ -304,7 +304,7 @@ export function WalletButton() {
           }
           setShowMenu(true);
         }}
-        className="px-4 py-1.5 bg-[#c87941] text-white rounded-lg text-sm font-medium hover:bg-[#2563eb] transition-colors"
+        className="px-2.5 py-1 md:px-4 md:py-1.5 bg-[#c87941] text-white rounded-lg text-xs md:text-sm font-medium hover:bg-[#2563eb] transition-colors"
       >
         Connect Wallet
       </button>
