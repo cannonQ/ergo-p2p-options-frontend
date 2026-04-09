@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { AssetCard } from "../components/AssetCard";
 import { ActivityFeed } from "../components/ActivityFeed";
 import { fetchSpotPrices } from "@/lib/oracle-parser";
@@ -70,6 +71,20 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-8">
+      {/* Wizard banner */}
+      <div className="bg-etcha-surface border border-etcha-border rounded-lg px-4 py-3 flex items-center justify-between">
+        <div>
+          <span className="font-semibold text-sm">New to options?</span>
+          <span className="text-sm text-etcha-text-secondary ml-2">Our strategy wizard walks you through step by step.</span>
+        </div>
+        <Link
+          href="/app/wizard"
+          className="px-4 py-2 bg-etcha-copper text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity shrink-0"
+        >
+          Start Wizard
+        </Link>
+      </div>
+
       {CATEGORIES.map((category, catIdx) => (
         <section key={`${category.name}-${catIdx}`}>
           <div className="flex items-baseline gap-2 mb-3">

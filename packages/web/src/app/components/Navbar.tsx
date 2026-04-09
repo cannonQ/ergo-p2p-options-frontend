@@ -184,6 +184,10 @@ export function Navbar() {
             Portfolio
           </Link>
 
+          <Link href="/app/wizard" className="text-[#c87941] hover:text-[#e09a5f] transition-colors font-mono text-sm">
+            Wizard
+          </Link>
+
           <WalletButton />
         </div>
 
@@ -230,6 +234,13 @@ export function Navbar() {
             onClick={() => setMobileOpen(false)}
           >
             Portfolio
+          </Link>
+          <Link
+            href="/app/wizard"
+            className="block text-[#c87941] hover:text-[#e09a5f] font-mono text-sm py-2"
+            onClick={() => setMobileOpen(false)}
+          >
+            Wizard
           </Link>
           <div className="border border-[#c87941]/30 rounded-lg p-3 mt-1 bg-[#c87941]/5">
             <div className="text-[10px] font-bold text-[#c87941] uppercase tracking-widest mb-2">Trade</div>

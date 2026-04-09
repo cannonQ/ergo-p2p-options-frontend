@@ -27,7 +27,7 @@ export default function LandingPage() {
               intermediaries. No databases. Just contracts.
             </p>
             <div className="hero-actions">
-              <Link href="/app" className="btn-launch">Start Trading &rarr;</Link>
+              <Link href="/app/wizard" className="btn-launch">Start Trading &rarr;</Link>
               <a href="#learn" className="btn-secondary">Learn Options</a>
             </div>
             <div className="hero-stats">
@@ -540,7 +540,7 @@ export default function LandingPage() {
             Just code and stablecoins.
           </p>
           <div className="cta-actions">
-            <Link href="/app" className="btn-launch">Launch App &rarr;</Link>
+            <Link href="/app/wizard" className="btn-launch">Launch App &rarr;</Link>
             <a href="/learn/calls-and-puts" className="btn-secondary">Learn Options</a>
           </div>
         </div>

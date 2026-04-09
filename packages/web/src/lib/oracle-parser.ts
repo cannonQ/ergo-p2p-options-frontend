@@ -58,6 +58,39 @@ export async function fetchSpotPriceByIndex(index: number): Promise<number | und
 }
 
 /**
+ * Fetch realized volatility for ALL oracle indices from companion box R5.
+ * Returns Map of oracle index -> bps. Single fetch, same as fetchSpotPrices pattern.
+ */
+export async function fetchVols(): Promise<Map<number, number>> {
+  const vols = new Map<number, number>();
+  try {
+    const res = await fetch(
+      `${NODE_URL}/blockchain/box/unspent/byTokenId/${COMPANION_NFT_ID}?offset=0&limit=1`,
+      { next: { revalidate: 60 } }
+    );
+    if (!res.ok) return vols;
+    const boxes = await res.json();
+    if (!boxes || boxes.length === 0) return vols;
+
+    const box = boxes[0];
+    const r5hex = box.additionalRegisters?.R5;
+    if (!r5hex) return vols;
+
+    const bytes = hexToBytes(r5hex);
+    const parsed = parseCollLong(bytes);
+    if (parsed) {
+      for (let i = 0; i < parsed.length && i < 21; i++) {
+        const val = Number(parsed[i]);
+        if (val > 0) vols.set(i, val);
+      }
+    }
+  } catch (err) {
+    console.error("Failed to fetch oracle vols:", err);
+  }
+  return vols;
+}
+
+/**
  * Fetch realized volatility from the companion box R5 register for a single oracle index.
  * R5 is Coll[Long] with annualized volatility in basis points (1% = 100 bps).
  * Returns bps or undefined if not available.

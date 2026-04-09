@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ORACLE_DECIMAL,
@@ -95,6 +96,20 @@ export default function WritePage({ params }: { params: { asset: string } }) {
   const [autoList, setAutoList] = useState(true);
   const [contractSize, setContractSize] = useState("");
 
+  // Pre-fill from wizard query params (?strike=X&expiry=Y&type=call|put)
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const qType = searchParams.get("type");
+    if (qType === "call" || qType === "put") setOptionType(qType);
+    const qStrike = searchParams.get("strike");
+    if (qStrike && !isNaN(Number(qStrike))) setStrike(qStrike);
+    const qExpiry = searchParams.get("expiry");
+    if (qExpiry && !isNaN(Number(qExpiry))) {
+      setExpiryInput(qExpiry);
+      setExpiryUnit("days");
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Write option hook — single signature, bot handles mint + deliver
   const {
     step,
@@ -127,8 +142,9 @@ export default function WritePage({ params }: { params: { asset: string } }) {
       .then((data) => {
         if (data.price) {
           setSpotPrice(data.price);
-          // Default strike to current oracle price
-          if (!strike) {
+          // Default strike to current oracle price (skip if wizard pre-filled via query param)
+          const hasQueryStrike = !!searchParams.get("strike");
+          if (!strike && !hasQueryStrike) {
             const p = data.price;
             const decimals = p >= 100 ? 0 : p >= 1 ? 2 : p >= 0.01 ? 4 : 6;
             setStrike(p.toFixed(decimals));
