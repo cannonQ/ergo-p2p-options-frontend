@@ -18,6 +18,7 @@ export function LandingNav() {
         {/* Desktop nav links */}
         <ul className="nav-links">
           <li><a href="#products">Products</a></li>
+          <li><Link href="/pool">Pool</Link></li>
           <li><a href="#markets">Markets</a></li>
           <li><a href="#how">How It Works</a></li>
           <li><a href="#how-it-works">Deep Dive</a></li>
@@ -54,6 +55,7 @@ export function LandingNav() {
           padding: "12px 24px 20px",
         }}>
           <a href="#products" onClick={() => setMenuOpen(false)}>Products</a>
+          <Link href="/pool" onClick={() => setMenuOpen(false)}>Pool</Link>
           <a href="#markets" onClick={() => setMenuOpen(false)}>Markets</a>
           <a href="#how" onClick={() => setMenuOpen(false)}>How It Works</a>
           <a href="#how-it-works" onClick={() => setMenuOpen(false)}>Deep Dive</a>

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
 import { LandingNav } from "./components/LandingNav";
+import { LandingFooter } from "./components/LandingFooter";
 import "./landing.css";
 
 export default function LandingPage() {
@@ -86,7 +86,7 @@ export default function LandingPage() {
             </div>
             {/* P2Pool */}
             <div className="product-card">
-              <div className="product-badge badge-next"><span className="badge-dot" /> In Development</div>
+              <div className="product-badge badge-next"><span className="badge-dot" /> LP Bootstrap Open</div>
               <h3>EtchaPool</h3>
               <p className="product-subtitle">Liquidity pool writes the contracts</p>
               <p className="product-desc">
@@ -107,6 +107,9 @@ export default function LandingPage() {
                 <span className="blu">Buyer</span> &rarr; purchases from pool<br />
                 <span className="prp">Bot</span> &rarr; settles (permissionless)
               </div>
+              <Link href="/pool" className="product-proposal-link">
+                Read the LP bootstrapping proposal &rarr;
+              </Link>
             </div>
           </div>
         </div>
@@ -547,25 +550,7 @@ export default function LandingPage() {
       </section>
 
       {/* FOOTER */}
-      <footer>
-        <div className="container">
-          <div className="footer-content">
-            <div>
-              <Link href="/" className="nav-logo" style={{ marginBottom: "8px" }}>
-                <Image src="/etcha-logo.svg" alt="Etcha — Options etched on-chain" width={180} height={52} />
-              </Link>
-              <p className="footer-copy">Decentralized options on Ergo</p>
-            </div>
-            <ul className="footer-links">
-              <li><a href="/learn/calls-and-puts">Learn</a></li>
-              <li><a href="/how-it-works/writing-an-option">How It Works</a></li>
-              <li><a href="https://github.com/cannonQ/ergo-p2p-options-frontend" target="_blank" rel="noopener noreferrer">GitHub</a></li>
-              <li><a href="https://t.me/degensworld_official" target="_blank" rel="noopener noreferrer">Telegram</a></li>
-            </ul>
-            <p className="footer-copy">etcha.io — $ETCH</p>
-          </div>
-        </div>
-      </footer>
+      <LandingFooter />
     </div>
   );
 }

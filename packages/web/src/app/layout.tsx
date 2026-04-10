@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { Space_Grotesk, DM_Mono, Instrument_Serif } from "next/font/google";
+import { Space_Grotesk, DM_Mono, DM_Sans, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
@@ -28,6 +28,13 @@ const dmMono = DM_Mono({
   display: "swap",
 });
 
+const dmSans = DM_Sans({
+  weight: ["300", "400", "500"],
+  subsets: ["latin"],
+  variable: "--font-dm-sans",
+  display: "swap",
+});
+
 const instrumentSerif = Instrument_Serif({
   weight: "400",
   subsets: ["latin"],
@@ -50,7 +57,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" style={{ scrollBehavior: "smooth" }}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${dmMono.variable} ${instrumentSerif.variable} antialiased bg-[#0a0c10] text-[#e8eaf0] min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${dmMono.variable} ${dmSans.variable} ${instrumentSerif.variable} antialiased bg-[#0a0c10] text-[#e8eaf0] min-h-screen`}
       >
         <ErrorBoundary>{children}</ErrorBoundary>
       </body>
