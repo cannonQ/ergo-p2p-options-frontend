@@ -272,6 +272,28 @@
 .landing .product-diagram .hl { color: var(--accent-copper-light); }
 .landing .product-diagram .grn { color: var(--accent-green); }
 .landing .product-diagram .blu { color: var(--accent-blue); }
+
+.landing .product-proposal-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 10px 18px;
+  background: rgba(167, 139, 250, 0.08);
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  color: var(--accent-purple);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: all 0.3s;
+}
+.landing .product-proposal-link:hover {
+  background: rgba(167, 139, 250, 0.15);
+  border-color: rgba(167, 139, 250, 0.45);
+  transform: translateY(-1px);
+}
 .landing .product-diagram .prp { color: var(--accent-purple); }
 
 /* SETTLEMENT SECTION */
