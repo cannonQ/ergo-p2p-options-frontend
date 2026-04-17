@@ -397,6 +397,13 @@
 @media (max-width: 640px) {
   .learn-page main { padding: 80px 16px 60px; }
   .learn-page .graphic { padding: 16px; }
+  .learn-page .graphic .graphic-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .learn-page .graphic .graphic-wrapper svg {
+    min-width: 600px;
+  }
   .learn-page .panels { grid-template-columns: 1fr 1fr; }
   .learn-page .panels-2col { grid-template-columns: 1fr; }
   .learn-page .side-by-side { grid-template-columns: 1fr; }

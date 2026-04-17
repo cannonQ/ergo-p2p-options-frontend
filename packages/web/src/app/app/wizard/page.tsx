@@ -63,7 +63,7 @@ export default async function WizardPage() {
   return (
     <>
     {nodeError && (
-      <div className="bg-[#f87171]/10 border border-[#f87171]/30 rounded-lg px-4 py-3 mb-6 text-sm text-[#f87171]">
+      <div className="bg-[#f87171]/10 border border-[#f87171]/30 rounded-lg px-4 py-3 mb-6 text-sm text-etcha-red">
         Unable to reach Ergo node — data may be unavailable. Try refreshing.
       </div>
     )}

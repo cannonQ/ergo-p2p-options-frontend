@@ -115,7 +115,7 @@ export default function TradingPage() {
               width="240"
               height="120"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(240,160,64,0.4)"
               strokeWidth="1"
             />
@@ -123,7 +123,7 @@ export default function TradingPage() {
               x="160"
               y="78"
               textAnchor="middle"
-              fill="#f0a040"
+              fill="#e09a5f"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -142,7 +142,7 @@ export default function TradingPage() {
               x="160"
               y="112"
               textAnchor="middle"
-              fill="#e6edf3"
+              fill="#e8eaf0"
               fontFamily="Courier New"
               fontSize="11"
             >
@@ -152,7 +152,7 @@ export default function TradingPage() {
               x="160"
               y="132"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -162,7 +162,7 @@ export default function TradingPage() {
               x="160"
               y="150"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -183,7 +183,7 @@ export default function TradingPage() {
               x="360"
               y="100"
               textAnchor="middle"
-              fill="#f0a040"
+              fill="#e09a5f"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -197,7 +197,7 @@ export default function TradingPage() {
               width="300"
               height="152"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(63,185,80,0.4)"
               strokeWidth="1"
             />
@@ -205,7 +205,7 @@ export default function TradingPage() {
               x="600"
               y="60"
               textAnchor="middle"
-              fill="#3fb950"
+              fill="#34d399"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -224,7 +224,7 @@ export default function TradingPage() {
               x="600"
               y="94"
               textAnchor="middle"
-              fill="#e6edf3"
+              fill="#e8eaf0"
               fontFamily="Courier New"
               fontSize="11"
             >
@@ -234,7 +234,7 @@ export default function TradingPage() {
               x="600"
               y="114"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -244,7 +244,7 @@ export default function TradingPage() {
               x="600"
               y="132"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -254,7 +254,7 @@ export default function TradingPage() {
               x="600"
               y="150"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -276,7 +276,7 @@ export default function TradingPage() {
               x="600"
               y="173"
               textAnchor="middle"
-              fill="#3fb950"
+              fill="#34d399"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -380,7 +380,7 @@ export default function TradingPage() {
                 <path
                   d="M0,0 L6,3 L0,6"
                   fill="none"
-                  stroke="#3fb950"
+                  stroke="#34d399"
                   strokeWidth="1"
                 />
               </marker>
@@ -395,7 +395,7 @@ export default function TradingPage() {
                 <path
                   d="M0,0 L6,3 L0,6"
                   fill="none"
-                  stroke="#f0a040"
+                  stroke="#e09a5f"
                   strokeWidth="1"
                 />
               </marker>
@@ -424,7 +424,7 @@ export default function TradingPage() {
               width="220"
               height="80"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(63,185,80,0.4)"
               strokeWidth="1"
             />
@@ -432,7 +432,7 @@ export default function TradingPage() {
               x="150"
               y="66"
               textAnchor="middle"
-              fill="#3fb950"
+              fill="#34d399"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -443,7 +443,7 @@ export default function TradingPage() {
               x="150"
               y="86"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -453,7 +453,7 @@ export default function TradingPage() {
               x="150"
               y="104"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -466,7 +466,7 @@ export default function TradingPage() {
               y1="60"
               x2="440"
               y2="60"
-              stroke="#3fb950"
+              stroke="#34d399"
               strokeWidth="1.5"
               markerEnd="url(#arrowT2green)"
             />
@@ -474,7 +474,7 @@ export default function TradingPage() {
               x="350"
               y="52"
               textAnchor="middle"
-              fill="#3fb950"
+              fill="#34d399"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -488,7 +488,7 @@ export default function TradingPage() {
               width="300"
               height="80"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(63,185,80,0.4)"
               strokeWidth="1"
             />
@@ -496,7 +496,7 @@ export default function TradingPage() {
               x="600"
               y="58"
               textAnchor="middle"
-              fill="#3fb950"
+              fill="#34d399"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -507,7 +507,7 @@ export default function TradingPage() {
               x="600"
               y="80"
               textAnchor="middle"
-              fill="#e6edf3"
+              fill="#e8eaf0"
               fontFamily="Courier New"
               fontSize="11"
             >
@@ -517,7 +517,7 @@ export default function TradingPage() {
               x="600"
               y="98"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -530,7 +530,7 @@ export default function TradingPage() {
               y1="100"
               x2="440"
               y2="170"
-              stroke="#f0a040"
+              stroke="#e09a5f"
               strokeWidth="1.5"
               markerEnd="url(#arrowT2copper)"
             />
@@ -538,7 +538,7 @@ export default function TradingPage() {
               x="320"
               y="148"
               textAnchor="middle"
-              fill="#f0a040"
+              fill="#e09a5f"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -552,7 +552,7 @@ export default function TradingPage() {
               width="300"
               height="64"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(240,160,64,0.4)"
               strokeWidth="1"
             />
@@ -560,7 +560,7 @@ export default function TradingPage() {
               x="600"
               y="170"
               textAnchor="middle"
-              fill="#f0a040"
+              fill="#e09a5f"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -571,7 +571,7 @@ export default function TradingPage() {
               x="600"
               y="192"
               textAnchor="middle"
-              fill="#e6edf3"
+              fill="#e8eaf0"
               fontFamily="Courier New"
               fontSize="11"
             >
@@ -607,7 +607,7 @@ export default function TradingPage() {
               width="300"
               height="52"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(163,113,247,0.4)"
               strokeWidth="1"
             />
@@ -626,7 +626,7 @@ export default function TradingPage() {
               x="600"
               y="278"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >

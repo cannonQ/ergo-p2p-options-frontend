@@ -17,7 +17,7 @@ export function StepIndicator({ current, total = 4 }: StepIndicatorProps) {
             key={n}
             className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 transition-all duration-300 border-2 ${
               done || active
-                ? "bg-etcha-copper border-etcha-copper text-[#0a0c10]"
+                ? "bg-etcha-copper border-etcha-copper text-etcha-bg"
                 : "bg-transparent border-etcha-border text-etcha-text-dim"
             }`}
           >

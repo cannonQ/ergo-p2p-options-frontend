@@ -99,11 +99,11 @@ export function Navbar() {
   }, [tradeOpen]);
 
   return (
-    <nav className="border-b border-[#1e2330] bg-[#0a0c10]/85 backdrop-blur-xl sticky top-0 z-50">
+    <nav className="border-b border-etcha-border bg-[#0a0c10]/85 backdrop-blur-xl sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
           <Image src="/etcha-icon.svg" alt="Etcha" width={28} height={28} />
-          <span className="font-mono text-base font-medium tracking-[3px] uppercase text-[#e09a5f]">
+          <span className="font-mono text-base font-medium tracking-[3px] uppercase text-etcha-copper-light">
             Etcha
           </span>
         </Link>
@@ -124,7 +124,7 @@ export function Navbar() {
                   setFocusIdx(0);
                 }
               }}
-              className={`${pathname.startsWith("/app/trade") ? "text-[#e8eaf0]" : "text-[#9da5b8]"} hover:text-[#e8eaf0] transition-colors flex items-center gap-1 font-mono text-sm`}
+              className={`${pathname.startsWith("/app/trade") ? "text-etcha-text" : "text-etcha-text-secondary"} hover:text-etcha-text transition-colors flex items-center gap-1 font-mono text-sm`}
               aria-label="Trade menu"
               aria-haspopup="menu"
               aria-expanded={tradeOpen}
@@ -138,12 +138,12 @@ export function Navbar() {
 
             {tradeOpen && (
               <div className="absolute top-full left-0 pt-2 w-72 z-50">
-              <div ref={menuRef} onKeyDown={handleMenuKeyDown} className="bg-[#0a0c10] border border-[#1e2330] rounded-lg shadow-xl py-1" role="menu">
+              <div ref={menuRef} onKeyDown={handleMenuKeyDown} className="bg-etcha-bg border border-etcha-border rounded-lg shadow-xl py-1" role="menu">
                 {(() => {
                   let idx = 0;
                   return ASSET_CATEGORIES.map((cat) => (
                     <div key={cat.label}>
-                      <div className="px-3 py-2 text-[10px] font-bold text-[#c87941] uppercase tracking-widest border-b border-[#1e2330]/50 bg-[#12151c]" role="presentation">
+                      <div className="px-3 py-2 text-[10px] font-bold text-etcha-copper uppercase tracking-widest border-b border-[#1e2330]/50 bg-etcha-surface" role="presentation">
                         {cat.label}
                       </div>
                       {cat.assets.map((asset) => {
@@ -154,14 +154,14 @@ export function Navbar() {
                             href={`/app/trade/${asset.slug}`}
                             role="menuitem"
                             tabIndex={focusIdx === thisIdx ? 0 : -1}
-                            className={`flex items-center justify-between px-4 py-2 text-sm text-[#e8eaf0] transition-colors ${
-                              focusIdx === thisIdx ? "bg-[#1e2330]" : "hover:bg-[#1e2330]"
+                            className={`flex items-center justify-between px-4 py-2 text-sm text-etcha-text transition-colors ${
+                              focusIdx === thisIdx ? "bg-etcha-border" : "hover:bg-etcha-border"
                             }`}
                             onClick={() => setTradeOpen(false)}
                           >
                             <span>{asset.name}</span>
                             {"badge" in asset && asset.badge && (
-                              <span className="text-[9px] px-1.5 py-0.5 bg-[#34d399]/10 text-[#34d399] rounded">
+                              <span className="text-[9px] px-1.5 py-0.5 bg-[#34d399]/10 text-etcha-green rounded">
                                 {asset.badge}
                               </span>
                             )}
@@ -176,19 +176,19 @@ export function Navbar() {
             )}
           </div>
 
-          <Link href="/app" className={`${pathname === "/app" ? "text-[#e8eaf0] border-b-2 border-[#c87941] pb-0.5" : "text-[#9da5b8]"} hover:text-[#e8eaf0] transition-colors font-mono text-sm`} {...(pathname === "/app" ? { "aria-current": "page" as const } : {})}>
+          <Link href="/app" className={`${pathname === "/app" ? "text-etcha-text border-b-2 border-etcha-copper pb-0.5" : "text-etcha-text-secondary"} hover:text-etcha-text transition-colors font-mono text-sm`} {...(pathname === "/app" ? { "aria-current": "page" as const } : {})}>
             Dashboard
           </Link>
 
-          <Link href="/app/market" className={`${pathname.startsWith("/app/market") ? "text-[#e8eaf0] border-b-2 border-[#c87941] pb-0.5" : "text-[#9da5b8]"} hover:text-[#e8eaf0] transition-colors font-mono text-sm`} {...(pathname.startsWith("/app/market") ? { "aria-current": "page" as const } : {})}>
+          <Link href="/app/market" className={`${pathname.startsWith("/app/market") ? "text-etcha-text border-b-2 border-etcha-copper pb-0.5" : "text-etcha-text-secondary"} hover:text-etcha-text transition-colors font-mono text-sm`} {...(pathname.startsWith("/app/market") ? { "aria-current": "page" as const } : {})}>
             Market
           </Link>
 
-          <Link href="/app/portfolio" className={`${pathname.startsWith("/app/portfolio") ? "text-[#e8eaf0] border-b-2 border-[#c87941] pb-0.5" : "text-[#9da5b8]"} hover:text-[#e8eaf0] transition-colors font-mono text-sm`} {...(pathname.startsWith("/app/portfolio") ? { "aria-current": "page" as const } : {})}>
+          <Link href="/app/portfolio" className={`${pathname.startsWith("/app/portfolio") ? "text-etcha-text border-b-2 border-etcha-copper pb-0.5" : "text-etcha-text-secondary"} hover:text-etcha-text transition-colors font-mono text-sm`} {...(pathname.startsWith("/app/portfolio") ? { "aria-current": "page" as const } : {})}>
             Portfolio
           </Link>
 
-          <Link href="/app/wizard" className={`${pathname.startsWith("/app/wizard") ? "text-[#e09a5f] border-b-2 border-[#c87941] pb-0.5" : "text-[#c87941]"} hover:text-[#e09a5f] transition-colors font-mono text-sm`} {...(pathname.startsWith("/app/wizard") ? { "aria-current": "page" as const } : {})}>
+          <Link href="/app/wizard" className={`${pathname.startsWith("/app/wizard") ? "text-etcha-copper-light border-b-2 border-etcha-copper pb-0.5" : "text-etcha-copper"} hover:text-etcha-copper-light transition-colors font-mono text-sm`} {...(pathname.startsWith("/app/wizard") ? { "aria-current": "page" as const } : {})}>
             Wizard
           </Link>
 
@@ -200,7 +200,7 @@ export function Navbar() {
           <WalletButton />
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="text-[#9da5b8] hover:text-[#e8eaf0] p-2.5"
+            className="text-etcha-text-secondary hover:text-etcha-text p-2.5"
             aria-label="Open navigation menu"
             aria-expanded={mobileOpen}
           >
@@ -217,10 +217,10 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-[#1e2330] bg-[#0a0c10] px-4 py-4 space-y-3">
+        <div className="md:hidden border-t border-etcha-border bg-etcha-bg px-4 py-4 space-y-3">
           <Link
             href="/app"
-            className={`block ${pathname === "/app" ? "text-[#e8eaf0] border-l-2 border-[#c87941] pl-2" : "text-[#9da5b8]"} hover:text-[#e8eaf0] font-mono text-sm py-2`}
+            className={`block ${pathname === "/app" ? "text-etcha-text border-l-2 border-etcha-copper pl-2" : "text-etcha-text-secondary"} hover:text-etcha-text font-mono text-sm py-2`}
             onClick={() => setMobileOpen(false)}
             {...(pathname === "/app" ? { "aria-current": "page" as const } : {})}
           >
@@ -228,7 +228,7 @@ export function Navbar() {
           </Link>
           <Link
             href="/app/market"
-            className={`block ${pathname.startsWith("/app/market") ? "text-[#e8eaf0] border-l-2 border-[#c87941] pl-2" : "text-[#9da5b8]"} hover:text-[#e8eaf0] font-mono text-sm py-2`}
+            className={`block ${pathname.startsWith("/app/market") ? "text-etcha-text border-l-2 border-etcha-copper pl-2" : "text-etcha-text-secondary"} hover:text-etcha-text font-mono text-sm py-2`}
             onClick={() => setMobileOpen(false)}
             {...(pathname.startsWith("/app/market") ? { "aria-current": "page" as const } : {})}
           >
@@ -236,7 +236,7 @@ export function Navbar() {
           </Link>
           <Link
             href="/app/portfolio"
-            className={`block ${pathname.startsWith("/app/portfolio") ? "text-[#e8eaf0] border-l-2 border-[#c87941] pl-2" : "text-[#9da5b8]"} hover:text-[#e8eaf0] font-mono text-sm py-2`}
+            className={`block ${pathname.startsWith("/app/portfolio") ? "text-etcha-text border-l-2 border-etcha-copper pl-2" : "text-etcha-text-secondary"} hover:text-etcha-text font-mono text-sm py-2`}
             onClick={() => setMobileOpen(false)}
             {...(pathname.startsWith("/app/portfolio") ? { "aria-current": "page" as const } : {})}
           >
@@ -244,28 +244,33 @@ export function Navbar() {
           </Link>
           <Link
             href="/app/wizard"
-            className={`block ${pathname.startsWith("/app/wizard") ? "text-[#e09a5f] border-l-2 border-[#c87941] pl-2" : "text-[#c87941]"} hover:text-[#e09a5f] font-mono text-sm py-2`}
+            className={`block ${pathname.startsWith("/app/wizard") ? "text-etcha-copper-light border-l-2 border-etcha-copper pl-2" : "text-etcha-copper"} hover:text-etcha-copper-light font-mono text-sm py-2`}
             onClick={() => setMobileOpen(false)}
             {...(pathname.startsWith("/app/wizard") ? { "aria-current": "page" as const } : {})}
           >
             Wizard
           </Link>
           <div className="border border-[#c87941]/30 rounded-lg p-3 mt-1 bg-[#c87941]/5">
-            <div className="text-[10px] font-bold text-[#c87941] uppercase tracking-widest mb-2">Trade</div>
-            <div className="grid grid-cols-3 gap-2">
-              {ASSET_CATEGORIES.flatMap((cat) =>
-                cat.assets.map((asset) => (
-                  <Link
-                    key={asset.slug}
-                    href={`/app/trade/${asset.slug}`}
-                    className="text-xs text-[#e8eaf0] hover:text-[#c87941] font-mono py-2.5"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    {asset.name}
-                  </Link>
-                ))
-              )}
-            </div>
+            <div className="text-[10px] font-bold text-etcha-copper uppercase tracking-widest mb-2">Trade</div>
+            {ASSET_CATEGORIES.map((cat, catIdx) => (
+              <div key={cat.label}>
+                <p className={`text-[10px] uppercase tracking-wider text-[#9da5b8]/60 col-span-3 ${catIdx > 0 ? "mt-2" : ""}`}>
+                  {cat.label}
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {cat.assets.map((asset) => (
+                    <Link
+                      key={asset.slug}
+                      href={`/app/trade/${asset.slug}`}
+                      className="text-xs text-etcha-text hover:text-etcha-copper font-mono py-2.5"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      {asset.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

@@ -11,11 +11,11 @@ interface ActivityItem {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  BUY: "text-[#34d399]",
-  WRITE: "text-[#c87941]",
-  EXERCISE: "text-[#e09a5f]",
-  SELL: "text-[#a78bfa]",
-  CLOSE: "text-[#9da5b8]",
+  BUY: "text-etcha-green",
+  WRITE: "text-etcha-copper",
+  EXERCISE: "text-etcha-copper-light",
+  SELL: "text-etcha-purple",
+  CLOSE: "text-etcha-text-secondary",
 };
 
 interface ActivityFeedProps {
@@ -43,34 +43,34 @@ export function ActivityFeed({ maxItems = 8 }: ActivityFeedProps) {
   }, [maxItems]);
 
   return (
-    <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-hidden">
-      <div className="px-4 py-3 border-b border-[#1e2330] flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-[#e8eaf0]">Live Activity</h3>
+    <div className="bg-etcha-surface border border-etcha-border rounded-lg overflow-hidden">
+      <div className="px-4 py-3 border-b border-etcha-border flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-etcha-text">Live Activity</h3>
         <div className="flex items-center gap-1.5">
-          <span className={`w-2 h-2 rounded-full ${activities.length > 0 ? "bg-[#34d399] animate-pulse" : "bg-[#9da5b8]"}`} />
-          <span className="text-xs text-[#9da5b8]">
+          <span className={`w-2 h-2 rounded-full ${activities.length > 0 ? "bg-etcha-green animate-pulse" : "bg-etcha-text-secondary"}`} />
+          <span className="text-xs text-etcha-text-secondary">
             {activities.length > 0 ? "Live" : "Waiting for activity"}
           </span>
         </div>
       </div>
 
       {loading ? (
-        <div className="p-8 text-center text-[#9da5b8] text-sm">Loading...</div>
+        <div className="p-8 text-center text-etcha-text-secondary text-sm">Loading...</div>
       ) : activities.length > 0 ? (
         <div className="divide-y divide-[#1e2330]/50">
           {activities.map((item, i) => (
             <div key={i} className="px-4 py-2.5 flex items-center gap-3 hover:bg-[#1e2330]/30 transition-colors">
-              <span className={`text-xs font-bold w-16 ${TYPE_COLORS[item.type] ?? "text-[#9da5b8]"}`}>
+              <span className={`text-xs font-bold w-16 ${TYPE_COLORS[item.type] ?? "text-etcha-text-secondary"}`}>
                 {item.type}
               </span>
-              <span className="text-xs text-[#9da5b8] w-8">
+              <span className="text-xs text-etcha-text-secondary w-8">
                 {item.timestamp}
               </span>
-              <span className="text-sm text-[#e8eaf0] flex-1 truncate">
+              <span className="text-sm text-etcha-text flex-1 truncate">
                 {item.description}
               </span>
               {item.amount && (
-                <span className="text-sm font-mono text-[#e09a5f] whitespace-nowrap">
+                <span className="text-sm font-mono text-etcha-copper-light whitespace-nowrap">
                   {item.amount}
                 </span>
               )}
@@ -78,7 +78,7 @@ export function ActivityFeed({ maxItems = 8 }: ActivityFeedProps) {
           ))}
         </div>
       ) : (
-        <div className="p-8 text-center text-[#9da5b8] text-sm">
+        <div className="p-8 text-center text-etcha-text-secondary text-sm">
           <p>No recent activity</p>
           <p className="text-xs text-[#9da5b8]/60 mt-1">
             Writes, buys, and exercises will appear here in real-time

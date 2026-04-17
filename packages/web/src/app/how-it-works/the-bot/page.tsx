@@ -151,7 +151,7 @@ export default function TheBotPage() {
               width="140"
               height="100"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(163,113,247,0.4)"
               strokeWidth="1"
             />
@@ -178,7 +178,7 @@ export default function TheBotPage() {
               x="110"
               y="98"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -188,7 +188,7 @@ export default function TheBotPage() {
               x="110"
               y="114"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -198,7 +198,7 @@ export default function TheBotPage() {
               x="110"
               y="130"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -307,7 +307,7 @@ export default function TheBotPage() {
               width="300"
               height="80"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(56,139,253,0.4)"
               strokeWidth="1"
               strokeDasharray="4 2"
@@ -316,7 +316,7 @@ export default function TheBotPage() {
               x="610"
               y="75"
               textAnchor="middle"
-              fill="#388bfd"
+              fill="#60a5fa"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="1"
@@ -327,7 +327,7 @@ export default function TheBotPage() {
               x="610"
               y="95"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -337,7 +337,7 @@ export default function TheBotPage() {
               x="610"
               y="112"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -358,7 +358,7 @@ export default function TheBotPage() {
               x="425"
               y="84"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="8"
             >

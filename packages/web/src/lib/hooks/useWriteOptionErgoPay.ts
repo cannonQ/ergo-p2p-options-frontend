@@ -79,17 +79,6 @@ async function fetchExplorerUtxos(address: string): Promise<any[]> {
   }));
 }
 
-/** Convert Ergo address to ErgoTree via our API */
-async function addressToErgoTree(address: string): Promise<string> {
-  const res = await fetch(`/api/address-to-raw?address=${encodeURIComponent(address)}`);
-  if (!res.ok) throw new Error("Could not resolve address to ErgoTree");
-  const data = await res.json();
-  // address-to-raw returns the raw address; we need ErgoTree
-  // For P2PK: ErgoTree = 0008cd + raw (without network byte + checksum)
-  // Actually let's fetch from Explorer
-  return "";
-}
-
 /** Extract ErgoTree from Explorer UTXO data */
 function getErgoTreeFromBoxes(boxes: any[]): string {
   if (boxes.length === 0) throw new Error("Wallet has no UTXOs");

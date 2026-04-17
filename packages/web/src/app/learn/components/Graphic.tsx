@@ -12,7 +12,9 @@ export default function Graphic({ children }: { children: ReactNode }) {
         onClick={() => setExpanded(true)}
         title="Click to enlarge"
       >
-        {children}
+        <div className="graphic-wrapper">
+          {children}
+        </div>
       </div>
 
       {expanded && (

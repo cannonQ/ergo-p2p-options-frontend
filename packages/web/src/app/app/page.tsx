@@ -30,7 +30,7 @@ export default async function HomePage() {
         <section key={`${category.name}-${catIdx}`}>
           <div className="flex items-baseline gap-2 mb-3">
             <h2 className="text-lg font-semibold">{category.name}</h2>
-            <span className="text-sm text-[#9da5b8]">{category.subtitle}</span>
+            <span className="text-sm text-etcha-text-secondary">{category.subtitle}</span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">

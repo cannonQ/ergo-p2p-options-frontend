@@ -57,7 +57,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" style={{ scrollBehavior: "smooth" }}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${dmMono.variable} ${dmSans.variable} ${instrumentSerif.variable} antialiased bg-[#0a0c10] text-[#e8eaf0] min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${dmMono.variable} ${dmSans.variable} ${instrumentSerif.variable} antialiased bg-etcha-bg text-etcha-text min-h-screen`}
       >
         <ErrorBoundary>{children}</ErrorBoundary>
       </body>

@@ -46,7 +46,7 @@ export default function WritingAnOptionPage() {
         <h2>Three Transactions, One Signature</h2>
 
         <p className="section-text">
-          <strong style={{ color: "#f0a040" }}>
+          <strong style={{ color: "#e09a5f" }}>
             TX 1 — CREATE (you sign this)
           </strong>
           <br />
@@ -101,7 +101,7 @@ export default function WritingAnOptionPage() {
               width="220"
               height="120"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(240,160,64,0.4)"
               strokeWidth="1"
             />
@@ -109,7 +109,7 @@ export default function WritingAnOptionPage() {
               x="170"
               y="78"
               textAnchor="middle"
-              fill="#f0a040"
+              fill="#e09a5f"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -128,7 +128,7 @@ export default function WritingAnOptionPage() {
               x="170"
               y="112"
               textAnchor="middle"
-              fill="#e6edf3"
+              fill="#e8eaf0"
               fontFamily="Courier New"
               fontSize="11"
             >
@@ -138,7 +138,7 @@ export default function WritingAnOptionPage() {
               x="170"
               y="132"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -148,7 +148,7 @@ export default function WritingAnOptionPage() {
               x="170"
               y="152"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -169,7 +169,7 @@ export default function WritingAnOptionPage() {
               x="360"
               y="100"
               textAnchor="middle"
-              fill="#f0a040"
+              fill="#e09a5f"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -183,7 +183,7 @@ export default function WritingAnOptionPage() {
               width="280"
               height="120"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(56,139,253,0.4)"
               strokeWidth="1"
               strokeDasharray="4 2"
@@ -192,7 +192,7 @@ export default function WritingAnOptionPage() {
               x="590"
               y="78"
               textAnchor="middle"
-              fill="#388bfd"
+              fill="#60a5fa"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -211,7 +211,7 @@ export default function WritingAnOptionPage() {
               x="590"
               y="112"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -221,7 +221,7 @@ export default function WritingAnOptionPage() {
               x="590"
               y="130"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -231,7 +231,7 @@ export default function WritingAnOptionPage() {
               x="590"
               y="148"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -253,7 +253,7 @@ export default function WritingAnOptionPage() {
               x="590"
               y="177"
               textAnchor="middle"
-              fill="#388bfd"
+              fill="#60a5fa"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -326,7 +326,7 @@ export default function WritingAnOptionPage() {
               width="200"
               height="80"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(56,139,253,0.4)"
               strokeWidth="1"
               strokeDasharray="4 2"
@@ -335,7 +335,7 @@ export default function WritingAnOptionPage() {
               x="140"
               y="88"
               textAnchor="middle"
-              fill="#388bfd"
+              fill="#60a5fa"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -346,7 +346,7 @@ export default function WritingAnOptionPage() {
               x="140"
               y="110"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -356,7 +356,7 @@ export default function WritingAnOptionPage() {
               x="140"
               y="128"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -402,7 +402,7 @@ export default function WritingAnOptionPage() {
               width="320"
               height="90"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(56,139,253,0.4)"
               strokeWidth="1"
             />
@@ -410,7 +410,7 @@ export default function WritingAnOptionPage() {
               x="590"
               y="56"
               textAnchor="middle"
-              fill="#388bfd"
+              fill="#60a5fa"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -421,7 +421,7 @@ export default function WritingAnOptionPage() {
               x="590"
               y="78"
               textAnchor="middle"
-              fill="#3fb950"
+              fill="#34d399"
               fontFamily="Courier New"
               fontSize="11"
             >
@@ -431,7 +431,7 @@ export default function WritingAnOptionPage() {
               x="590"
               y="96"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -445,7 +445,7 @@ export default function WritingAnOptionPage() {
               width="200"
               height="60"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(163,113,247,0.4)"
               strokeWidth="1"
             />
@@ -464,7 +464,7 @@ export default function WritingAnOptionPage() {
               x="530"
               y="196"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -537,7 +537,7 @@ export default function WritingAnOptionPage() {
                 <path
                   d="M0,0 L6,3 L0,6"
                   fill="none"
-                  stroke="#3fb950"
+                  stroke="#34d399"
                   strokeWidth="1"
                 />
               </marker>
@@ -551,7 +551,7 @@ export default function WritingAnOptionPage() {
               width="220"
               height="100"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(56,139,253,0.4)"
               strokeWidth="1"
             />
@@ -559,7 +559,7 @@ export default function WritingAnOptionPage() {
               x="150"
               y="78"
               textAnchor="middle"
-              fill="#388bfd"
+              fill="#60a5fa"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -578,7 +578,7 @@ export default function WritingAnOptionPage() {
               x="150"
               y="112"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -588,7 +588,7 @@ export default function WritingAnOptionPage() {
               x="150"
               y="130"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -612,7 +612,7 @@ export default function WritingAnOptionPage() {
               y1="120"
               x2="430"
               y2="155"
-              stroke="#3fb950"
+              stroke="#34d399"
               strokeWidth="1.5"
               markerEnd="url(#arrowW3green)"
             />
@@ -620,7 +620,7 @@ export default function WritingAnOptionPage() {
               x="345"
               y="150"
               textAnchor="middle"
-              fill="#3fb950"
+              fill="#34d399"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -634,7 +634,7 @@ export default function WritingAnOptionPage() {
               width="300"
               height="70"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(56,139,253,0.4)"
               strokeWidth="1"
             />
@@ -642,7 +642,7 @@ export default function WritingAnOptionPage() {
               x="590"
               y="50"
               textAnchor="middle"
-              fill="#388bfd"
+              fill="#60a5fa"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -653,7 +653,7 @@ export default function WritingAnOptionPage() {
               x="590"
               y="72"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -667,7 +667,7 @@ export default function WritingAnOptionPage() {
               width="300"
               height="70"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(240,160,64,0.4)"
               strokeWidth="1"
             />
@@ -675,7 +675,7 @@ export default function WritingAnOptionPage() {
               x="590"
               y="148"
               textAnchor="middle"
-              fill="#f0a040"
+              fill="#e09a5f"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -686,7 +686,7 @@ export default function WritingAnOptionPage() {
               x="590"
               y="170"
               textAnchor="middle"
-              fill="#3fb950"
+              fill="#34d399"
               fontFamily="Courier New"
               fontSize="11"
             >

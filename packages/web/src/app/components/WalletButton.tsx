@@ -22,6 +22,26 @@ export function WalletButton() {
   const [wallets, setWallets] = useState<DetectedWallet[]>([]);
   const [ergoPayQr, setErgoPayQr] = useState<{ url: string; sessionId: string } | null>(null);
   const ergoPayPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on click-outside or Escape
+  useEffect(() => {
+    if (!showMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    const escHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowMenu(false);
+    };
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("keydown", escHandler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("keydown", escHandler);
+    };
+  }, [showMenu]);
 
   // Detect available wallets on mount + auto-reconnect
   useEffect(() => {
@@ -195,32 +215,31 @@ export function WalletButton() {
   // Connected state — show address with dropdown
   if (connected && address) {
     return (
-      <div className="relative">
+      <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setShowMenu(!showMenu)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-[#1e2330] text-[#e8eaf0] rounded-lg text-sm font-mono hover:bg-[#334155] transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 bg-etcha-border text-etcha-text rounded-lg text-sm font-mono hover:bg-[#334155] transition-colors"
         >
-          <span className="text-xs text-[#9da5b8] hidden sm:inline">
+          <span className="text-xs text-etcha-text-secondary hidden sm:inline">
             {useWalletStore.getState().ergBalance
               ? `${(Number(useWalletStore.getState().ergBalance) / 1e9).toFixed(2)} ERG`
               : ""}
           </span>
           <span>{address.slice(0, 6)}...{address.slice(-4)}</span>
-          <svg className="w-3 h-3 text-[#9da5b8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-3 h-3 text-etcha-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
 
         {showMenu && (
           <div
-            className="absolute right-0 top-full mt-2 w-56 bg-[#0a0c10] border border-[#1e2330] rounded-lg shadow-xl z-50"
-            onMouseLeave={() => setShowMenu(false)}
+            className="absolute right-0 top-full mt-2 w-56 bg-etcha-bg border border-etcha-border rounded-lg shadow-xl z-50"
           >
             {/* Connected address (full, copyable) */}
-            <div className="px-3 py-2 border-b border-[#1e2330]">
-              <p className="text-[10px] text-[#9da5b8] uppercase tracking-wider mb-1">Connected</p>
+            <div className="px-3 py-2 border-b border-etcha-border">
+              <p className="text-[10px] text-etcha-text-secondary uppercase tracking-wider mb-1">Connected</p>
               <p
-                className="text-xs font-mono text-[#e8eaf0] cursor-pointer hover:text-[#c87941] truncate"
+                className="text-xs font-mono text-etcha-text cursor-pointer hover:text-etcha-copper truncate"
                 onClick={() => {
                   navigator.clipboard.writeText(address);
                   setShowMenu(false);
@@ -232,9 +251,9 @@ export function WalletButton() {
             </div>
 
             {/* Balance */}
-            <div className="px-3 py-2 border-b border-[#1e2330]">
-              <p className="text-xs text-[#9da5b8]">
-                Balance: <span className="text-[#e09a5f] font-mono">
+            <div className="px-3 py-2 border-b border-etcha-border">
+              <p className="text-xs text-etcha-text-secondary">
+                Balance: <span className="text-etcha-copper-light font-mono">
                   {useWalletStore.getState().ergBalance
                     ? `${(Number(useWalletStore.getState().ergBalance) / 1e9).toFixed(4)} ERG`
                     : "—"}
@@ -244,8 +263,8 @@ export function WalletButton() {
 
             {/* Switch wallet */}
             {wallets.length > 1 && (
-              <div className="border-b border-[#1e2330]">
-                <p className="px-3 py-1 text-[10px] text-[#9da5b8] uppercase tracking-wider">Switch Wallet</p>
+              <div className="border-b border-etcha-border">
+                <p className="px-3 py-1 text-[10px] text-etcha-text-secondary uppercase tracking-wider">Switch Wallet</p>
                 {wallets.map((w) => (
                   <button
                     key={w.id}
@@ -253,7 +272,7 @@ export function WalletButton() {
                       handleDisconnect();
                       setTimeout(() => connectToWallet(w.id), 300);
                     }}
-                    className="w-full text-left px-3 py-1.5 text-sm text-[#e8eaf0] hover:bg-[#1e2330] transition-colors"
+                    className="w-full text-left px-3 py-1.5 text-sm text-etcha-text hover:bg-etcha-border transition-colors"
                   >
                     {w.name}
                   </button>
@@ -264,7 +283,7 @@ export function WalletButton() {
             {/* Disconnect */}
             <button
               onClick={handleDisconnect}
-              className="w-full text-left px-3 py-2 text-sm text-[#f87171] hover:bg-[#1e2330] transition-colors rounded-b-lg"
+              className="w-full text-left px-3 py-2 text-sm text-etcha-red hover:bg-etcha-border transition-colors rounded-b-lg"
             >
               Disconnect
             </button>
@@ -277,7 +296,7 @@ export function WalletButton() {
   // Not connected — show connect button or wallet picker
   if (connecting && !ergoPayQr) {
     return (
-      <button disabled className="px-4 py-1.5 bg-[#c87941] text-white rounded-lg text-sm font-medium opacity-50">
+      <button disabled className="px-4 py-1.5 bg-etcha-copper text-white rounded-lg text-sm font-medium opacity-50">
         Connecting...
       </button>
     );
@@ -285,7 +304,7 @@ export function WalletButton() {
 
   // Connect button + wallet picker (always includes ErgoPay option)
   return (
-    <><div className="relative">
+    <><div className="relative" ref={dropdownRef}>
       <button
         onClick={async () => {
           // On mobile, skip the dropdown and go straight to ErgoPay
@@ -304,32 +323,31 @@ export function WalletButton() {
           }
           setShowMenu(true);
         }}
-        className="px-2.5 py-1 md:px-4 md:py-1.5 bg-[#c87941] text-white rounded-lg text-xs md:text-sm font-medium hover:bg-[#e09a5f] transition-colors"
+        className="px-2.5 py-1 md:px-4 md:py-1.5 bg-etcha-copper text-white rounded-lg text-xs md:text-sm font-medium hover:bg-etcha-copper-light transition-colors"
       >
         Connect Wallet
       </button>
 
       {showMenu && (
         <div
-          className="absolute right-0 top-full mt-2 w-56 bg-[#0a0c10] border border-[#1e2330] rounded-lg shadow-xl z-50 py-1"
-          onMouseLeave={() => setShowMenu(false)}
+          className="absolute right-0 top-full mt-2 w-56 bg-etcha-bg border border-etcha-border rounded-lg shadow-xl z-50 py-1"
         >
-          <p className="px-3 py-1 text-[10px] text-[#c87941] uppercase tracking-wider font-bold">
+          <p className="px-3 py-1 text-[10px] text-etcha-copper uppercase tracking-wider font-bold">
             Select Wallet
           </p>
           {!isMobileDevice() && wallets.map((w) => (
             <button
               key={w.id}
               onClick={() => connectToWallet(w.id)}
-              className="w-full text-left px-3 py-2 text-sm text-[#e8eaf0] hover:bg-[#1e2330] transition-colors"
+              className="w-full text-left px-3 py-2 text-sm text-etcha-text hover:bg-etcha-border transition-colors"
             >
               {w.name}
             </button>
           ))}
-          <div className={!isMobileDevice() && wallets.length > 0 ? "border-t border-[#1e2330] mt-1 pt-1" : ""}>
+          <div className={!isMobileDevice() && wallets.length > 0 ? "border-t border-etcha-border mt-1 pt-1" : ""}>
             <button
               onClick={connectViaErgoPay}
-              className="w-full text-left px-3 py-2 text-sm text-[#e8eaf0] hover:bg-[#1e2330] transition-colors"
+              className="w-full text-left px-3 py-2 text-sm text-etcha-text hover:bg-etcha-border transition-colors"
             >
               {isMobileDevice() ? "Connect with Wallet App" : "Mobile Wallet (ErgoPay)"}
             </button>

@@ -3,12 +3,25 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ParsedReserve } from "@/lib/reserve-scanner";
+import type { ParsedSellOrder } from "@/lib/sell-order-scanner";
 import { ASSET_SLUG } from "@/lib/asset-map";
 
 interface MarketFiltersProps {
   reserves: ParsedReserve[];
   spotPrices: Record<number, number>;
   currentHeight: number;
+  sellOrders: ParsedSellOrder[];
+}
+
+/**
+ * Convert sell order premium from raw stablecoin units to USD.
+ * USE: 1000 raw = $1.  SigUSD: 100 raw = $1.
+ */
+function premiumToUsd(premiumPerToken: string, paymentTokenId: string): number {
+  const raw = BigInt(premiumPerToken);
+  const isUSE = paymentTokenId.startsWith("a55b");
+  const divisor = isUSE ? 1000 : 100;
+  return Number(raw) / divisor;
 }
 
 // Time-based expiry buckets (blocks at ~2min each)
@@ -31,7 +44,7 @@ function formatBlocksToTime(blocks: number): string {
   return `${days}d ${hours % 24}h`;
 }
 
-export function MarketFilters({ reserves, spotPrices, currentHeight }: MarketFiltersProps) {
+export function MarketFilters({ reserves, spotPrices, currentHeight, sellOrders }: MarketFiltersProps) {
   const router = useRouter();
   const [assetFilter, setAssetFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -68,8 +81,8 @@ export function MarketFilters({ reserves, spotPrices, currentHeight }: MarketFil
   return (
     <>
       {/* Current height */}
-      <div className="text-xs text-[#9da5b8]">
-        Chain height: <span className="font-mono text-[#e8eaf0]">{currentHeight.toLocaleString()}</span>
+      <div className="text-xs text-etcha-text-secondary">
+        Chain height: <span className="font-mono text-etcha-text">{currentHeight.toLocaleString()}</span>
       </div>
 
       {/* Filters */}
@@ -77,7 +90,7 @@ export function MarketFilters({ reserves, spotPrices, currentHeight }: MarketFil
         <select
           value={assetFilter}
           onChange={(e) => setAssetFilter(e.target.value)}
-          className="bg-[#12151c] border border-[#1e2330] rounded-lg px-3 py-1.5 text-sm text-[#e8eaf0]"
+          className="bg-etcha-surface border border-etcha-border rounded-lg px-3 py-1.5 text-sm text-etcha-text"
         >
           <option value="all">All Assets</option>
           {assets.map((a) => (
@@ -87,7 +100,7 @@ export function MarketFilters({ reserves, spotPrices, currentHeight }: MarketFil
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="bg-[#12151c] border border-[#1e2330] rounded-lg px-3 py-1.5 text-sm text-[#e8eaf0]"
+          className="bg-etcha-surface border border-etcha-border rounded-lg px-3 py-1.5 text-sm text-etcha-text"
         >
           <option value="all">All Types</option>
           <option value="call">Calls</option>
@@ -96,36 +109,38 @@ export function MarketFilters({ reserves, spotPrices, currentHeight }: MarketFil
         <select
           value={expiryFilter}
           onChange={(e) => setExpiryFilter(e.target.value)}
-          className="bg-[#12151c] border border-[#1e2330] rounded-lg px-3 py-1.5 text-sm text-[#e8eaf0]"
+          className="bg-etcha-surface border border-etcha-border rounded-lg px-3 py-1.5 text-sm text-etcha-text"
         >
           <option value="all">All Expiries</option>
           {EXPIRY_BUCKETS.map((b) => (
             <option key={b.label} value={b.label}>{b.label}</option>
           ))}
         </select>
-        <label className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#9da5b8] cursor-pointer">
+        <label className="flex items-center gap-2 px-3 py-1.5 text-sm text-etcha-text-secondary cursor-pointer">
           <input
             type="checkbox"
             checked={itmOnly}
             onChange={(e) => setItmOnly(e.target.checked)}
-            className="w-4 h-4 rounded border-[#1e2330] bg-[#0a0c10] text-[#c87941]"
+            className="w-4 h-4 rounded border-etcha-border bg-etcha-bg text-etcha-copper"
           />
           ITM only
         </label>
       </div>
 
       {/* Table */}
-      <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-hidden overflow-x-auto">
+      <div className="bg-etcha-surface border border-etcha-border rounded-lg overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[#1e2330]">
-              <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">Asset</th>
-              <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">Type</th>
-              <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Strike</th>
-              <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Spot</th>
-              <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Expiry</th>
-              <th className="text-left py-3 px-4 text-[#9da5b8] font-medium hidden md:table-cell">Settlement</th>
-              <th className="text-left py-3 px-4 text-[#9da5b8] font-medium hidden md:table-cell">Style</th>
+            <tr className="border-b border-etcha-border">
+              <th className="text-left py-3 px-4 text-etcha-text-secondary font-medium">Asset</th>
+              <th className="text-left py-3 px-4 text-etcha-text-secondary font-medium">Type</th>
+              <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Strike</th>
+              <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Spot</th>
+              <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium hidden md:table-cell">Best Ask</th>
+              <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium hidden md:table-cell">Available</th>
+              <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Expiry</th>
+              <th className="text-left py-3 px-4 text-etcha-text-secondary font-medium hidden md:table-cell">Settlement</th>
+              <th className="text-left py-3 px-4 text-etcha-text-secondary font-medium hidden md:table-cell">Style</th>
             </tr>
           </thead>
           <tbody>
@@ -137,60 +152,87 @@ export function MarketFilters({ reserves, spotPrices, currentHeight }: MarketFil
                   ? spot !== undefined && spot > r.strikePrice
                   : spot !== undefined && spot < r.strikePrice;
 
+                // Find matching sell orders for this reserve's option token
+                const matchingOrders = r.optionTokenId
+                  ? sellOrders.filter((so) => so.optionTokenId === r.optionTokenId)
+                  : [];
+                let bestAskUsd: number | null = null;
+                let totalAvailable = 0;
+                for (const so of matchingOrders) {
+                  const usd = premiumToUsd(so.premiumPerToken, so.paymentTokenId);
+                  if (bestAskUsd === null || usd < bestAskUsd) bestAskUsd = usd;
+                  totalAvailable += Number(BigInt(so.tokenAmount));
+                }
+
                 return (
                   <tr
                     key={r.boxId}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => {
                       const slug = ASSET_SLUG[r.assetName];
                       if (slug) router.push(`/app/trade/${slug}`);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        const slug = ASSET_SLUG[r.assetName];
+                        if (slug) router.push(`/app/trade/${slug}`);
+                      }
                     }}
                     className={`border-b border-[#1e2330]/50 hover:bg-[#1e2330]/30 cursor-pointer ${
                       isITM ? "bg-[#34d399]/5" : ""
                     }`}
                   >
-                    <td className="py-2 px-4 text-[#e8eaf0] font-medium">{r.assetName}</td>
+                    <td className="py-2 px-4 text-etcha-text font-medium">{r.assetName}</td>
                     <td className="py-2 px-4">
-                      <span className={r.optionType === "call" ? "text-[#34d399]" : "text-[#f87171]"}>
+                      <span className={r.optionType === "call" ? "text-etcha-green" : "text-etcha-red"}>
                         {r.optionType === "call" ? "Call" : "Put"}
                       </span>
                     </td>
-                    <td className="py-2 px-4 text-right font-mono text-[#e09a5f]">
+                    <td className="py-2 px-4 text-right font-mono text-etcha-copper-light">
                       ${r.strikePrice >= 100 ? r.strikePrice.toFixed(0) : r.strikePrice.toFixed(r.strikePrice >= 1 ? 2 : 4)}
                     </td>
-                    <td className="py-2 px-4 text-right font-mono text-[#9da5b8]">
+                    <td className="py-2 px-4 text-right font-mono text-etcha-text-secondary">
                       {spot !== undefined ? `$${spot >= 100 ? spot.toFixed(0) : spot.toFixed(spot >= 1 ? 2 : 4)}` : "—"}
+                    </td>
+                    <td className="py-2 px-4 text-right font-mono text-etcha-text hidden md:table-cell">
+                      {bestAskUsd !== null ? `$${bestAskUsd >= 1 ? bestAskUsd.toFixed(2) : bestAskUsd.toFixed(4)}` : "—"}
+                    </td>
+                    <td className="py-2 px-4 text-right font-mono text-etcha-text hidden md:table-cell">
+                      {totalAvailable > 0 ? totalAvailable.toLocaleString() : "—"}
                     </td>
                     <td className="py-2 px-4 text-right">
                       <div className="text-xs space-y-0.5">
                         {blocksToExpiry > 0 ? (
                           <>
-                            <div className="font-mono text-[#e8eaf0]">
+                            <div className="font-mono text-etcha-text">
                               {formatBlocksToTime(blocksToExpiry)} to maturity
                             </div>
                           </>
                         ) : blocksToExpiry > -720 ? (
                           <>
-                            <div className="font-mono text-[#e09a5f]">
+                            <div className="font-mono text-etcha-copper-light">
                               Exercise window: {formatBlocksToTime(720 + blocksToExpiry)}
                             </div>
-                            <div className="text-[#34d399] font-semibold">Exercisable</div>
+                            <div className="text-etcha-green font-semibold">Exercisable</div>
                           </>
                         ) : (
-                          <div className="font-mono text-[#f87171]">Expired</div>
+                          <div className="font-mono text-etcha-red">Expired</div>
                         )}
-                        <div className="text-[#9da5b8]">
+                        <div className="text-etcha-text-secondary">
                           blk {r.maturityHeight.toLocaleString()}
                         </div>
                       </div>
                     </td>
-                    <td className="py-2 px-4 text-[#9da5b8] capitalize hidden md:table-cell">{r.settlement}</td>
-                    <td className="py-2 px-4 text-[#9da5b8] capitalize hidden md:table-cell">{r.style}</td>
+                    <td className="py-2 px-4 text-etcha-text-secondary capitalize hidden md:table-cell">{r.settlement}</td>
+                    <td className="py-2 px-4 text-etcha-text-secondary capitalize hidden md:table-cell">{r.style}</td>
                   </tr>
                 );
               })
             ) : (
               <tr>
-                <td colSpan={7} className="text-center py-12 text-[#9da5b8]">
+                <td colSpan={9} className="text-center py-12 text-etcha-text-secondary">
                   {reserves.length === 0
                     ? "No options currently listed. Be the first to write one."
                     : "No options match your filters."}

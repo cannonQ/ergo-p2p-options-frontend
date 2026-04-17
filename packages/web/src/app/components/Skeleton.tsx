@@ -2,7 +2,7 @@
 export function Skeleton({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`animate-pulse bg-[#1e2330] rounded ${className}`}
+      className={`animate-pulse bg-etcha-border rounded ${className}`}
       aria-hidden="true"
     />
   );

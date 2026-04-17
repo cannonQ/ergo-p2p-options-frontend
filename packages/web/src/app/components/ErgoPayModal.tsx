@@ -78,18 +78,18 @@ export function ErgoPayModal({
         role="dialog"
         aria-modal="true"
         aria-label="Sign with mobile wallet"
-        className="relative bg-[#12151c] border border-[#1e2330] rounded-xl shadow-2xl w-full max-w-sm p-6 space-y-5"
+        className="relative bg-etcha-surface border border-etcha-border rounded-xl shadow-2xl w-full max-w-sm p-6 space-y-5"
       >
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-[#e8eaf0]">
+          <h2 className="text-lg font-bold text-etcha-text">
             {state === "signed" ? "Transaction Signed" :
              state === "expired" ? "Request Expired" :
              "Sign with Mobile Wallet"}
           </h2>
           <button
             onClick={onClose}
-            className="text-[#9da5b8] hover:text-[#e8eaf0] text-xl"
+            className="text-etcha-text-secondary hover:text-etcha-text text-xl"
             aria-label="Close"
           >
             &times;
@@ -97,7 +97,7 @@ export function ErgoPayModal({
         </div>
 
         {/* Message */}
-        <p className="text-sm text-[#9da5b8]">{message}</p>
+        <p className="text-sm text-etcha-text-secondary">{message}</p>
 
         <div className="flex flex-col items-center gap-4">
           {/* Waiting state */}
@@ -114,19 +114,19 @@ export function ErgoPayModal({
               {isMobile && (
                 <a
                   href={ergoPayUrl}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-[#c87941] text-white font-medium text-sm hover:bg-[#e09a5f] transition-colors"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-etcha-copper text-white font-medium text-sm hover:bg-etcha-copper-light transition-colors"
                 >
                   Open in Wallet
                 </a>
               )}
 
               {/* Waiting spinner */}
-              <div className="flex items-center gap-2 text-[#9da5b8] text-sm">
-                <div className="w-4 h-4 border-2 border-[#c87941] border-t-transparent rounded-full animate-spin" />
+              <div className="flex items-center gap-2 text-etcha-text-secondary text-sm">
+                <div className="w-4 h-4 border-2 border-etcha-copper border-t-transparent rounded-full animate-spin" />
                 <span>Waiting for wallet to sign...</span>
               </div>
 
-              <p className="text-xs text-[#7a82a0] text-center">
+              <p className="text-xs text-etcha-text-dim text-center">
                 {isMobile
                   ? "Tap the button above to open your Ergo wallet app."
                   : "Scan this QR code with your Ergo mobile wallet (Terminus or Minotaur)."}
@@ -138,15 +138,15 @@ export function ErgoPayModal({
           {state === "signed" && (
             <div className="flex flex-col items-center gap-3 py-2">
               <div className="w-12 h-12 rounded-full bg-[#34d399]/20 flex items-center justify-center">
-                <span className="text-[#34d399] text-2xl">&#10003;</span>
+                <span className="text-etcha-green text-2xl">&#10003;</span>
               </div>
-              <p className="text-sm text-[#34d399] font-semibold">Transaction signed and submitted!</p>
+              <p className="text-sm text-etcha-green font-semibold">Transaction signed and submitted!</p>
               {txId && (
                 <a
                   href={`https://ergexplorer.com/transactions#${txId}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-[#9da5b8] hover:text-[#c87941] font-mono transition-colors"
+                  className="text-xs text-etcha-text-secondary hover:text-etcha-copper font-mono transition-colors"
                 >
                   {txId.slice(0, 12)}...{txId.slice(-8)}
                 </a>
@@ -158,10 +158,10 @@ export function ErgoPayModal({
           {state === "expired" && (
             <div className="flex flex-col items-center gap-3 py-2">
               <div className="w-12 h-12 rounded-full bg-[#f87171]/20 flex items-center justify-center">
-                <span className="text-[#f87171] text-2xl">&#10007;</span>
+                <span className="text-etcha-red text-2xl">&#10007;</span>
               </div>
-              <p className="text-sm text-[#f87171] font-semibold">Request expired</p>
-              <p className="text-xs text-[#9da5b8] text-center">
+              <p className="text-sm text-etcha-red font-semibold">Request expired</p>
+              <p className="text-xs text-etcha-text-secondary text-center">
                 The signing request was not completed in time. Please try again.
               </p>
             </div>
@@ -171,7 +171,7 @@ export function ErgoPayModal({
         {/* Close button */}
         <button
           onClick={onClose}
-          className="w-full py-2 text-sm text-[#9da5b8] hover:text-[#e8eaf0] border border-[#1e2330] rounded-lg transition-colors"
+          className="w-full py-2 text-sm text-etcha-text-secondary hover:text-etcha-text border border-etcha-border rounded-lg transition-colors"
         >
           {state === "waiting" ? "Cancel" : "Close"}
         </button>

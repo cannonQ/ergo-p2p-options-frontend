@@ -65,7 +65,7 @@ export function AssetPicker({
             onClick={() => setCategory(cat.id)}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold font-mono transition-colors cursor-pointer ${
               category === cat.id
-                ? "bg-etcha-copper text-[#0a0c10]"
+                ? "bg-etcha-copper text-etcha-bg"
                 : "bg-etcha-surface border border-etcha-border text-etcha-text-secondary hover:border-etcha-copper"
             }`}
           >
@@ -234,7 +234,7 @@ export function AssetPicker({
       <button
         disabled={!selectedAsset || !direction}
         onClick={onContinue}
-        className="w-full rounded-lg bg-etcha-copper text-[#0a0c10] font-bold text-[15px] py-3.5 transition-all disabled:bg-etcha-border disabled:text-etcha-text-dim disabled:cursor-not-allowed hover:enabled:opacity-90 cursor-pointer"
+        className="w-full rounded-lg bg-etcha-copper text-etcha-bg font-bold text-[15px] py-3.5 transition-all disabled:bg-etcha-border disabled:text-etcha-text-dim disabled:cursor-not-allowed hover:enabled:opacity-90 cursor-pointer"
       >
         Continue &rarr;
       </button>

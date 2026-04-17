@@ -34,21 +34,21 @@ export function TxStatus({ status, txId }: { status: string; txId: string }) {
   return (
     <div className="space-y-2">
       {status && (
-        <div className={`text-center text-sm ${txId ? "text-[#34d399]" : "text-[#9da5b8]"}`}>
+        <div className={`text-center text-sm ${txId ? "text-etcha-green" : "text-etcha-text-secondary"}`}>
           {status}
         </div>
       )}
       {txId && (
         <div
-          className="flex items-center gap-2 bg-[#0a0c10] border border-[#1e2330] rounded-lg px-3 py-2"
+          className="flex items-center gap-2 bg-etcha-bg border border-etcha-border rounded-lg px-3 py-2"
           title={txId}
         >
-          <span className="text-xs text-[#9da5b8] font-mono flex-1 truncate">
+          <span className="text-xs text-etcha-text-secondary font-mono flex-1 truncate">
             TX: {truncated}
           </span>
           <button
             onClick={handleCopy}
-            className="text-xs text-[#9da5b8] hover:text-[#e8eaf0] transition-colors shrink-0"
+            className="text-xs text-etcha-text-secondary hover:text-etcha-text transition-colors shrink-0"
             aria-label="Copy transaction ID"
           >
             {copied ? "Copied!" : "Copy"}
@@ -57,7 +57,7 @@ export function TxStatus({ status, txId }: { status: string; txId: string }) {
             href={`${EXPLORER_BASE}${txId}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-[#c87941] hover:text-[#e09a5f] transition-colors shrink-0"
+            className="text-xs text-etcha-copper hover:text-etcha-copper-light transition-colors shrink-0"
             aria-label="View transaction on block explorer"
           >
             View ↗

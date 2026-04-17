@@ -23,6 +23,7 @@ import {
 } from "@/lib/wallet";
 import { fetchHeight, submitTransaction } from "@/lib/api";
 import { parseCollLong, hexToBytes as hexToBytesOracle } from "@/lib/oracle-parser";
+import Link from "next/link";
 import { ListForSaleModal } from "./components/ListForSaleModal";
 import { ExerciseDialog } from "./components/ExerciseDialog";
 
@@ -82,23 +83,23 @@ function PaginatedSection({
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold">
           {title}
-          {total > 0 && <span className="ml-2 text-sm font-normal text-[#9da5b8]">({total})</span>}
+          {total > 0 && <span className="ml-2 text-sm font-normal text-etcha-text-secondary">({total})</span>}
         </h2>
         {totalPages > 1 && (
           <div className="flex items-center gap-2 text-sm">
             <button
               onClick={() => setPage(Math.max(0, page - 1))}
               disabled={page === 0}
-              className="px-2 py-1 bg-[#1e2330] rounded text-[#9da5b8] hover:text-[#e8eaf0] disabled:opacity-30"
+              className="px-2 py-1 bg-etcha-border rounded text-etcha-text-secondary hover:text-etcha-text disabled:opacity-30"
               aria-label="Previous page"
             >
               &larr;
             </button>
-            <span className="text-[#9da5b8]">{page + 1}/{totalPages}</span>
+            <span className="text-etcha-text-secondary">{page + 1}/{totalPages}</span>
             <button
               onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
               disabled={page >= totalPages - 1}
-              className="px-2 py-1 bg-[#1e2330] rounded text-[#9da5b8] hover:text-[#e8eaf0] disabled:opacity-30"
+              className="px-2 py-1 bg-etcha-border rounded text-etcha-text-secondary hover:text-etcha-text disabled:opacity-30"
               aria-label="Next page"
             >
               &rarr;
@@ -1224,7 +1225,7 @@ export default function PortfolioPage() {
     return (
       <div className="text-center py-20">
         <h1 className="text-xl font-bold mb-2">Portfolio</h1>
-        <p className="text-[#9da5b8] mb-4">Connect your wallet to view positions</p>
+        <p className="text-etcha-text-secondary mb-4">Connect your wallet to view positions</p>
         <p className="text-sm text-[#9da5b8]/60">
           Click &quot;Connect Wallet&quot; in the top right to get started
         </p>
@@ -1245,7 +1246,7 @@ export default function PortfolioPage() {
         <button
           onClick={loadTokens}
           disabled={loading}
-          className="px-3 py-1.5 bg-[#1e2330] text-[#9da5b8] rounded-lg text-sm hover:text-[#e8eaf0] transition-colors disabled:opacity-50"
+          className="px-3 py-1.5 bg-etcha-border text-etcha-text-secondary rounded-lg text-sm hover:text-etcha-text transition-colors disabled:opacity-50"
         >
           {loading ? "Loading..." : "Refresh"}
         </button>
@@ -1259,7 +1260,7 @@ export default function PortfolioPage() {
             href={`https://ergexplorer.com/transactions#${successBanner.txId}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-[#9da5b8] hover:text-[#4ade80] transition-colors ml-4 whitespace-nowrap"
+            className="text-xs text-etcha-text-secondary hover:text-[#4ade80] transition-colors ml-4 whitespace-nowrap"
           >
             {successBanner.txId.slice(0, 12)}...
           </a>
@@ -1269,10 +1270,10 @@ export default function PortfolioPage() {
       {/* Error banner */}
       {loadError && (
         <div className="flex items-center justify-between bg-[#2a1215] border border-[#4d1a1e] rounded-lg px-4 py-3">
-          <span className="text-sm text-[#f87171]">{loadError}</span>
+          <span className="text-sm text-etcha-red">{loadError}</span>
           <button
             onClick={loadTokens}
-            className="text-xs text-[#9da5b8] hover:text-[#f87171] transition-colors ml-4 whitespace-nowrap"
+            className="text-xs text-etcha-text-secondary hover:text-etcha-red transition-colors ml-4 whitespace-nowrap"
           >
             Retry
           </button>
@@ -1292,24 +1293,45 @@ export default function PortfolioPage() {
         />
       )}
 
+      {/* Empty state when no positions exist */}
+      {!loading && holdings.length === 0 && writtenOptions.length === 0 && openOrders.length === 0 && pendingBoxes.length === 0 && (
+        <div className="text-center py-16 bg-etcha-surface border border-etcha-border rounded-lg">
+          <svg className="mx-auto mb-4 w-10 h-10 text-etcha-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15a2.25 2.25 0 012.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
+          </svg>
+          <h3 className="text-lg font-semibold text-etcha-text mb-2">No positions yet</h3>
+          <p className="text-etcha-text-secondary mb-6">
+            Write your first option or browse the marketplace to get started.
+          </p>
+          <div className="flex justify-center gap-3">
+            <Link href="/app/wizard" className="px-4 py-2 bg-etcha-copper text-white rounded-lg hover:bg-etcha-copper-light transition-colors">
+              Option Wizard
+            </Link>
+            <Link href="/app/market" className="px-4 py-2 bg-etcha-border text-etcha-text-secondary rounded-lg hover:text-etcha-text transition-colors">
+              Browse Market
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Active Options (Holding) */}
       <PaginatedSection title="Active Options (Holding)" total={holdings.length} pageSize={PAGE_SIZE}>
         {(page) => {
           const pageHoldings = holdings.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
           return (
-            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-x-auto">
+            <div className="bg-etcha-surface border border-etcha-border rounded-lg overflow-x-auto">
               {/* Desktop table */}
               <div className="hidden md:block">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-[#1e2330]">
-                    <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">Asset</th>
-                    <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">Type</th>
-                    <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Strike</th>
-                    <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Expiry</th>
-                    <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Qty</th>
-                    <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Status</th>
-                    <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Action</th>
+                  <tr className="border-b border-etcha-border">
+                    <th className="text-left py-3 px-4 text-etcha-text-secondary font-medium">Asset</th>
+                    <th className="text-left py-3 px-4 text-etcha-text-secondary font-medium">Type</th>
+                    <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Strike</th>
+                    <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Expiry</th>
+                    <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Qty</th>
+                    <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Status</th>
+                    <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1322,14 +1344,14 @@ export default function PortfolioPage() {
 
                     return (
                       <tr key={h.optionTokenId} className="border-b border-[#1e2330]/50 hover:bg-[#1e2330]/30">
-                        <td className="py-2 px-4 text-[#e8eaf0] font-medium">{h.assetName}</td>
+                        <td className="py-2 px-4 text-etcha-text font-medium">{h.assetName}</td>
                         <td className="py-2 px-4">
                           <span className={`text-xs px-2 py-0.5 rounded ${
-                            h.optionType === "call" ? "bg-[#34d399]/20 text-[#34d399]" : "bg-[#f87171]/20 text-[#f87171]"
+                            h.optionType === "call" ? "bg-[#34d399]/20 text-etcha-green" : "bg-[#f87171]/20 text-etcha-red"
                           }`}>
                             {h.optionType === "call" ? "Call" : "Put"}
                           </span>
-                          <span className="text-xs ml-1 text-[#9da5b8]">{h.settlement}</span>
+                          <span className="text-xs ml-1 text-etcha-text-secondary">{h.settlement}</span>
                         </td>
                         <td className="py-2 px-4 text-right">
                           {(() => {
@@ -1338,11 +1360,11 @@ export default function PortfolioPage() {
                             const perContract = perUnit * size;
                             return (
                               <div>
-                                <div className="font-mono text-[#e09a5f]">
+                                <div className="font-mono text-etcha-copper-light">
                                   ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(4)}
                                 </div>
                                 {size !== 1 && (
-                                  <div className="text-[10px] text-[#9da5b8]">
+                                  <div className="text-[10px] text-etcha-text-secondary">
                                     {size} × ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(2)} = ${perContract >= 100 ? perContract.toFixed(0) : perContract.toFixed(2)}/contract
                                   </div>
                                 )}
@@ -1352,25 +1374,25 @@ export default function PortfolioPage() {
                         </td>
                         <td className="py-2 px-4 text-right text-xs">
                           {isExpired ? (
-                            <span className="text-[#f87171]">Expired</span>
+                            <span className="text-etcha-red">Expired</span>
                           ) : blocksToExpiry > 0 ? (
-                            <span className="text-[#e8eaf0]">{formatBlocksToTime(blocksToExpiry)}</span>
+                            <span className="text-etcha-text">{formatBlocksToTime(blocksToExpiry)}</span>
                           ) : (
-                            <span className="text-[#e09a5f]">Exercise window</span>
+                            <span className="text-etcha-copper-light">Exercise window</span>
                           )}
                         </td>
-                        <td className="py-2 px-4 text-right font-mono text-[#e8eaf0]">
+                        <td className="py-2 px-4 text-right font-mono text-etcha-text">
                           {h.quantity.toString()}
                         </td>
                         <td className="py-2 px-4 text-right">
                           {isExercisable && (
-                            <span className="text-xs text-[#34d399] font-semibold">Exercisable</span>
+                            <span className="text-xs text-etcha-green font-semibold">Exercisable</span>
                           )}
                           {!isExercisable && !isExpired && (
-                            <span className="text-xs text-[#9da5b8]">Active</span>
+                            <span className="text-xs text-etcha-text-secondary">Active</span>
                           )}
                           {isExpired && (
-                            <span className="text-xs text-[#f87171]">Expired</span>
+                            <span className="text-xs text-etcha-red">Expired</span>
                           )}
                         </td>
                         <td className="py-2 px-4 text-right">
@@ -1389,7 +1411,7 @@ export default function PortfolioPage() {
                                   maturityDate: h.maturityHeight,
                                   oracleIndex: h.oracleIndex,
                                 })}
-                                className="text-xs px-2 py-1 bg-[#34d399]/20 text-[#34d399] rounded hover:bg-[#34d399]/30"
+                                className="text-xs px-2 py-1 bg-[#34d399]/20 text-etcha-green rounded hover:bg-[#34d399]/30"
                               >
                                 Exercise
                               </button>
@@ -1407,7 +1429,7 @@ export default function PortfolioPage() {
                                 maturityDate: h.maturityHeight,
                                 oracleIndex: h.oracleIndex,
                               })}
-                              className="text-xs px-2 py-1 bg-[#c87941]/20 text-[#c87941] rounded hover:bg-[#c87941]/30"
+                              className="text-xs px-2 py-1 bg-[#c87941]/20 text-etcha-copper rounded hover:bg-[#c87941]/30"
                             >
                               List
                             </button>
@@ -1417,7 +1439,7 @@ export default function PortfolioPage() {
                     );
                   }) : (
                     <tr>
-                      <td colSpan={7} className="text-center py-8 text-[#9da5b8]">
+                      <td colSpan={7} className="text-center py-8 text-etcha-text-secondary">
                         {loading ? <table className="w-full"><tbody><SkeletonRow cols={7} /><SkeletonRow cols={7} /></tbody></table> : "No active option positions"}
                       </td>
                     </tr>
@@ -1440,25 +1462,25 @@ export default function PortfolioPage() {
                     <div key={h.optionTokenId} className="border-b border-[#1e2330]/50 px-4 py-3">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-[#e8eaf0] font-medium">{h.assetName}</span>
+                          <span className="text-etcha-text font-medium">{h.assetName}</span>
                           <span className={`text-xs px-2 py-0.5 rounded ${
-                            h.optionType === "call" ? "bg-[#34d399]/20 text-[#34d399]" : "bg-[#f87171]/20 text-[#f87171]"
+                            h.optionType === "call" ? "bg-[#34d399]/20 text-etcha-green" : "bg-[#f87171]/20 text-etcha-red"
                           }`}>
                             {h.optionType === "call" ? "Call" : "Put"}
                           </span>
                         </div>
-                        <span className="font-mono text-[#e09a5f]">
+                        <span className="font-mono text-etcha-copper-light">
                           ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(4)}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-xs text-[#9da5b8] mb-2">
+                      <div className="flex items-center justify-between text-xs text-etcha-text-secondary mb-2">
                         <span>
                           {isExpired ? (
-                            <span className="text-[#f87171]">Expired</span>
+                            <span className="text-etcha-red">Expired</span>
                           ) : blocksToExpiry > 0 ? (
-                            <span className="text-[#e8eaf0]">{formatBlocksToTime(blocksToExpiry)}</span>
+                            <span className="text-etcha-text">{formatBlocksToTime(blocksToExpiry)}</span>
                           ) : (
-                            <span className="text-[#e09a5f]">Exercise window</span>
+                            <span className="text-etcha-copper-light">Exercise window</span>
                           )}
                         </span>
                         <span className="font-mono">Qty: {h.quantity.toString()}</span>
@@ -1478,7 +1500,7 @@ export default function PortfolioPage() {
                               maturityDate: h.maturityHeight,
                               oracleIndex: h.oracleIndex,
                             })}
-                            className="min-h-[44px] text-sm px-4 py-2 bg-[#34d399]/20 text-[#34d399] rounded-lg hover:bg-[#34d399]/30"
+                            className="min-h-[44px] text-sm px-4 py-2 bg-[#34d399]/20 text-etcha-green rounded-lg hover:bg-[#34d399]/30"
                           >
                             Exercise
                           </button>
@@ -1496,7 +1518,7 @@ export default function PortfolioPage() {
                             maturityDate: h.maturityHeight,
                             oracleIndex: h.oracleIndex,
                           })}
-                          className="min-h-[44px] text-sm px-4 py-2 bg-[#c87941]/20 text-[#c87941] rounded-lg hover:bg-[#c87941]/30"
+                          className="min-h-[44px] text-sm px-4 py-2 bg-[#c87941]/20 text-etcha-copper rounded-lg hover:bg-[#c87941]/30"
                         >
                           List
                         </button>
@@ -1504,7 +1526,7 @@ export default function PortfolioPage() {
                     </div>
                   );
                 }) : (
-                  <div className="text-center py-8 text-[#9da5b8]">
+                  <div className="text-center py-8 text-etcha-text-secondary">
                     {loading ? <table className="w-full"><tbody><SkeletonRow cols={3} /><SkeletonRow cols={3} /></tbody></table> : "No active option positions"}
                   </div>
                 )}
@@ -1519,22 +1541,22 @@ export default function PortfolioPage() {
         {(page) => {
           const pageItems = writtenOptions.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
           return (
-            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-x-auto">
+            <div className="bg-etcha-surface border border-etcha-border rounded-lg overflow-x-auto">
               {pageItems.length > 0 ? (
                 <>
                 {/* Desktop table */}
                 <div className="hidden md:block">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-[#1e2330]">
-                      <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">Name</th>
-                      <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">Type</th>
-                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Strike</th>
-                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Expiry</th>
-                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Qty</th>
-                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Value Locked</th>
-                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Status</th>
-                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Action</th>
+                    <tr className="border-b border-etcha-border">
+                      <th className="text-left py-3 px-4 text-etcha-text-secondary font-medium">Name</th>
+                      <th className="text-left py-3 px-4 text-etcha-text-secondary font-medium">Type</th>
+                      <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Strike</th>
+                      <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Expiry</th>
+                      <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Qty</th>
+                      <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Value Locked</th>
+                      <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Status</th>
+                      <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1547,14 +1569,14 @@ export default function PortfolioPage() {
                       const isFullyExercised = box.state === "RESERVE" && !box.tokenCount && walletBal === 0n;
                       return (
                         <tr key={box.boxId} className="border-b border-[#1e2330]/50 hover:bg-[#1e2330]/30">
-                          <td className="py-2 px-4 text-[#e8eaf0]">{box.name}</td>
+                          <td className="py-2 px-4 text-etcha-text">{box.name}</td>
                           <td className="py-2 px-4">
                             <span className={`text-xs px-2 py-0.5 rounded ${
-                              box.optionType === "call" ? "bg-[#34d399]/20 text-[#34d399]" : "bg-[#f87171]/20 text-[#f87171]"
+                              box.optionType === "call" ? "bg-[#34d399]/20 text-etcha-green" : "bg-[#f87171]/20 text-etcha-red"
                             }`}>
                               {box.optionType === "call" ? "Call" : "Put"}
                             </span>
-                            <span className="text-xs ml-1 text-[#9da5b8]">{box.settlement}</span>
+                            <span className="text-xs ml-1 text-etcha-text-secondary">{box.settlement}</span>
                           </td>
                           <td className="py-2 px-4 text-right">
                             {box.strikePrice ? (() => {
@@ -1563,11 +1585,11 @@ export default function PortfolioPage() {
                               const perContract = perUnit * size;
                               return (
                                 <div>
-                                  <div className="font-mono text-[#e09a5f]">
+                                  <div className="font-mono text-etcha-copper-light">
                                     ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(4)}
                                   </div>
                                   {size !== 1 && (
-                                    <div className="text-[10px] text-[#9da5b8]">
+                                    <div className="text-[10px] text-etcha-text-secondary">
                                       {size} × ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(2)} = ${box.strikePrice >= 100 ? box.strikePrice.toFixed(0) : box.strikePrice.toFixed(2)}/contract
                                     </div>
                                   )}
@@ -1577,58 +1599,58 @@ export default function PortfolioPage() {
                           </td>
                           <td className="py-2 px-4 text-right text-xs">
                             {isExpired ? (
-                              <span className="text-[#f87171]">Expired</span>
+                              <span className="text-etcha-red">Expired</span>
                             ) : blocksToExpiry <= 0 && blocksToClose > 0 ? (
-                              <span className="text-[#e09a5f]">Exercise window</span>
+                              <span className="text-etcha-copper-light">Exercise window</span>
                             ) : blocksToExpiry > 0 ? (
-                              <span className="text-[#e8eaf0]">{formatBlocksToTime(blocksToExpiry)}</span>
+                              <span className="text-etcha-text">{formatBlocksToTime(blocksToExpiry)}</span>
                             ) : (
-                              <span className="text-[#e09a5f]">Exercise window</span>
+                              <span className="text-etcha-copper-light">Exercise window</span>
                             )}
                           </td>
-                          <td className="py-2 px-4 text-right font-mono text-[#e8eaf0]">
+                          <td className="py-2 px-4 text-right font-mono text-etcha-text">
                             {walletBal > 0n ? walletBal.toString() : box.tokenCount ?? "\u2014"}
                           </td>
-                          <td className="py-2 px-4 text-right font-mono text-[#9da5b8]">
+                          <td className="py-2 px-4 text-right font-mono text-etcha-text-secondary">
                             {formatCollateral(box)}
                           </td>
                           <td className="py-2 px-4 text-right">
                             {isExpired ? (
-                              <span className="text-xs px-2 py-0.5 rounded bg-[#f87171]/20 text-[#f87171]">Expired</span>
+                              <span className="text-xs px-2 py-0.5 rounded bg-[#f87171]/20 text-etcha-red">Expired</span>
                             ) : blocksToExpiry <= 0 && blocksToClose > 0 ? (
-                              <span className="text-xs text-[#e09a5f]">
+                              <span className="text-xs text-etcha-copper-light">
                                 Refund in {formatBlocksToTime(blocksToClose)}
                               </span>
                             ) : isFullyExercised ? (
-                              <span className="text-xs px-2 py-0.5 rounded bg-[#e09a5f]/20 text-[#e09a5f]">Exercised</span>
+                              <span className="text-xs px-2 py-0.5 rounded bg-[#e09a5f]/20 text-etcha-copper-light">Exercised</span>
                             ) : (
-                              <span className="text-xs px-2 py-0.5 rounded bg-[#34d399]/20 text-[#34d399]">Active</span>
+                              <span className="text-xs px-2 py-0.5 rounded bg-[#34d399]/20 text-etcha-green">Active</span>
                             )}
                           </td>
                           <td className="py-2 px-4 text-right">
                             {actionStatus[box.boxId] ? (
-                              <span className="text-xs text-[#9da5b8]">{actionStatus[box.boxId]}</span>
+                              <span className="text-xs text-etcha-text-secondary">{actionStatus[box.boxId]}</span>
                             ) : (
                               <>
                                 {box.state === "RESERVE" && (() => {
                                   if (isFullyExercised) {
-                                    return <span className="text-xs text-[#9da5b8]">Closeable after expiry</span>;
+                                    return <span className="text-xs text-etcha-text-secondary">Closeable after expiry</span>;
                                   }
                                   return walletBal > 0n ? (
                                     <button
                                       onClick={() => handleListForSaleClick(box)}
-                                      className="text-xs px-2 py-1 bg-[#c87941]/20 text-[#c87941] rounded hover:bg-[#c87941]/30"
+                                      className="text-xs px-2 py-1 bg-[#c87941]/20 text-etcha-copper rounded hover:bg-[#c87941]/30"
                                     >
                                       List for Sale
                                     </button>
                                   ) : (
-                                    <span className="text-xs text-[#9da5b8]">No tokens</span>
+                                    <span className="text-xs text-etcha-text-secondary">No tokens</span>
                                   );
                                 })()}
                                 {box.state === "EXPIRED" && (
                                   <button
                                     onClick={() => handleClose(box)}
-                                    className="text-xs px-2 py-1 bg-[#f87171]/20 text-[#f87171] rounded hover:bg-[#f87171]/30"
+                                    className="text-xs px-2 py-1 bg-[#f87171]/20 text-etcha-red rounded hover:bg-[#f87171]/30"
                                   >
                                     Close
                                   </button>
@@ -1658,50 +1680,50 @@ export default function PortfolioPage() {
                       <div key={box.boxId} className="border-b border-[#1e2330]/50 px-4 py-3">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <span className="text-[#e8eaf0] font-medium text-sm">{box.name}</span>
+                            <span className="text-etcha-text font-medium text-sm">{box.name}</span>
                             <span className={`text-xs px-2 py-0.5 rounded ${
-                              box.optionType === "call" ? "bg-[#34d399]/20 text-[#34d399]" : "bg-[#f87171]/20 text-[#f87171]"
+                              box.optionType === "call" ? "bg-[#34d399]/20 text-etcha-green" : "bg-[#f87171]/20 text-etcha-red"
                             }`}>
                               {box.optionType === "call" ? "Call" : "Put"}
                             </span>
                           </div>
                           {perUnit ? (
-                            <span className="font-mono text-[#e09a5f]">
+                            <span className="font-mono text-etcha-copper-light">
                               ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(4)}
                             </span>
-                          ) : <span className="text-[#9da5b8]">{"\u2014"}</span>}
+                          ) : <span className="text-etcha-text-secondary">{"\u2014"}</span>}
                         </div>
-                        <div className="flex items-center justify-between text-xs text-[#9da5b8] mb-2">
+                        <div className="flex items-center justify-between text-xs text-etcha-text-secondary mb-2">
                           <span>
                             {isExpired ? (
-                              <span className="text-[#f87171]">Expired</span>
+                              <span className="text-etcha-red">Expired</span>
                             ) : blocksToExpiry <= 0 && blocksToClose > 0 ? (
-                              <span className="text-[#e09a5f]">Exercise window</span>
+                              <span className="text-etcha-copper-light">Exercise window</span>
                             ) : blocksToExpiry > 0 ? (
-                              <span className="text-[#e8eaf0]">{formatBlocksToTime(blocksToExpiry)}</span>
+                              <span className="text-etcha-text">{formatBlocksToTime(blocksToExpiry)}</span>
                             ) : (
-                              <span className="text-[#e09a5f]">Exercise window</span>
+                              <span className="text-etcha-copper-light">Exercise window</span>
                             )}
                           </span>
                           <span>
                             {isExpired ? (
-                              <span className="text-xs px-2 py-0.5 rounded bg-[#f87171]/20 text-[#f87171]">Expired</span>
+                              <span className="text-xs px-2 py-0.5 rounded bg-[#f87171]/20 text-etcha-red">Expired</span>
                             ) : isFullyExercised ? (
-                              <span className="text-xs px-2 py-0.5 rounded bg-[#e09a5f]/20 text-[#e09a5f]">Exercised</span>
+                              <span className="text-xs px-2 py-0.5 rounded bg-[#e09a5f]/20 text-etcha-copper-light">Exercised</span>
                             ) : (
-                              <span className="text-xs px-2 py-0.5 rounded bg-[#34d399]/20 text-[#34d399]">Active</span>
+                              <span className="text-xs px-2 py-0.5 rounded bg-[#34d399]/20 text-etcha-green">Active</span>
                             )}
                           </span>
                         </div>
                         <div className="flex gap-2 justify-end">
                           {actionStatus[box.boxId] ? (
-                            <span className="text-xs text-[#9da5b8]">{actionStatus[box.boxId]}</span>
+                            <span className="text-xs text-etcha-text-secondary">{actionStatus[box.boxId]}</span>
                           ) : (
                             <>
                               {box.state === "RESERVE" && !isFullyExercised && walletBal > 0n && (
                                 <button
                                   onClick={() => handleListForSaleClick(box)}
-                                  className="min-h-[44px] text-sm px-4 py-2 bg-[#c87941]/20 text-[#c87941] rounded-lg hover:bg-[#c87941]/30"
+                                  className="min-h-[44px] text-sm px-4 py-2 bg-[#c87941]/20 text-etcha-copper rounded-lg hover:bg-[#c87941]/30"
                                 >
                                   List for Sale
                                 </button>
@@ -1709,7 +1731,7 @@ export default function PortfolioPage() {
                               {box.state === "EXPIRED" && (
                                 <button
                                   onClick={() => handleClose(box)}
-                                  className="min-h-[44px] text-sm px-4 py-2 bg-[#f87171]/20 text-[#f87171] rounded-lg hover:bg-[#f87171]/30"
+                                  className="min-h-[44px] text-sm px-4 py-2 bg-[#f87171]/20 text-etcha-red rounded-lg hover:bg-[#f87171]/30"
                                 >
                                   Close
                                 </button>
@@ -1723,7 +1745,7 @@ export default function PortfolioPage() {
                 </div>
                 </>
               ) : (
-                <div className="p-8 text-center text-[#9da5b8]">
+                <div className="p-8 text-center text-etcha-text-secondary">
                   {loading ? <table className="w-full"><tbody><SkeletonRow cols={8} /><SkeletonRow cols={8} /></tbody></table> : "No written options"}
                 </div>
               )}
@@ -1737,16 +1759,16 @@ export default function PortfolioPage() {
         {(page) => {
           const pageItems = openOrders.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
           return (
-            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-x-auto">
+            <div className="bg-etcha-surface border border-etcha-border rounded-lg overflow-x-auto">
               {pageItems.length > 0 ? (
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-[#1e2330]">
-                      <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">Option Token</th>
-                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Premium</th>
-                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Qty</th>
-                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Payment</th>
-                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Action</th>
+                    <tr className="border-b border-etcha-border">
+                      <th className="text-left py-3 px-4 text-etcha-text-secondary font-medium">Option Token</th>
+                      <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Premium</th>
+                      <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Qty</th>
+                      <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Payment</th>
+                      <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1756,31 +1778,31 @@ export default function PortfolioPage() {
                       const premiumDisplay = (Number(order.premiumPerToken) / Math.pow(10, decimals)).toFixed(decimals);
                       return (
                         <tr key={order.boxId} className="border-b border-[#1e2330]/50 hover:bg-[#1e2330]/30">
-                          <td className="py-2 px-4 text-xs text-[#e8eaf0]">
+                          <td className="py-2 px-4 text-xs text-etcha-text">
                             {tokenIdToName.get(order.optionTokenId) ?? (
                               <span className="font-mono">{order.optionTokenId.slice(0, 10)}...{order.optionTokenId.slice(-6)}</span>
                             )}
                           </td>
-                          <td className="py-2 px-4 text-right font-mono text-[#e09a5f]">
+                          <td className="py-2 px-4 text-right font-mono text-etcha-copper-light">
                             {premiumDisplay} {isUSE ? "USE" : "SigUSD"}
                           </td>
-                          <td className="py-2 px-4 text-right font-mono text-[#e8eaf0]">
+                          <td className="py-2 px-4 text-right font-mono text-etcha-text">
                             {order.tokenAmount}
                           </td>
                           <td className="py-2 px-4 text-right">
                             <span className={`text-xs px-2 py-0.5 rounded ${
-                              isUSE ? "bg-[#34d399]/20 text-[#34d399]" : "bg-[#60a5fa]/20 text-[#60a5fa]"
+                              isUSE ? "bg-[#34d399]/20 text-etcha-green" : "bg-[#60a5fa]/20 text-etcha-blue"
                             }`}>
                               {isUSE ? "USE" : "SigUSD"}
                             </span>
                           </td>
                           <td className="py-2 px-4 text-right">
                             {actionStatus[order.boxId] ? (
-                              <span className="text-xs text-[#9da5b8]">{actionStatus[order.boxId]}</span>
+                              <span className="text-xs text-etcha-text-secondary">{actionStatus[order.boxId]}</span>
                             ) : (
                               <button
                                 onClick={() => handleCancelSellOrder(order)}
-                                className="text-xs px-2 py-1 bg-[#f87171]/20 text-[#f87171] rounded hover:bg-[#f87171]/30"
+                                className="text-xs px-2 py-1 bg-[#f87171]/20 text-etcha-red rounded hover:bg-[#f87171]/30"
                               >
                                 Cancel
                               </button>
@@ -1792,7 +1814,7 @@ export default function PortfolioPage() {
                   </tbody>
                 </table>
               ) : (
-                <div className="p-8 text-center text-[#9da5b8]">
+                <div className="p-8 text-center text-etcha-text-secondary">
                   {loading ? <table className="w-full"><tbody><SkeletonRow cols={5} /><SkeletonRow cols={5} /></tbody></table> : "No open sell orders"}
                 </div>
               )}
@@ -1806,29 +1828,29 @@ export default function PortfolioPage() {
         {(page) => {
           const pageBoxes = pendingBoxes.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
           return (
-            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-x-auto">
+            <div className="bg-etcha-surface border border-etcha-border rounded-lg overflow-x-auto">
               {pageBoxes.length > 0 ? (
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-[#1e2330]">
-                      <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">Name</th>
-                      <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">State</th>
-                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Strike</th>
-                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Expiry</th>
-                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Value Locked</th>
-                      <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Action</th>
+                    <tr className="border-b border-etcha-border">
+                      <th className="text-left py-3 px-4 text-etcha-text-secondary font-medium">Name</th>
+                      <th className="text-left py-3 px-4 text-etcha-text-secondary font-medium">State</th>
+                      <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Strike</th>
+                      <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Expiry</th>
+                      <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Value Locked</th>
+                      <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pageBoxes.map((box) => (
                       <tr key={box.boxId} className="border-b border-[#1e2330]/50 hover:bg-[#1e2330]/30">
-                        <td className="py-2 px-4 text-[#e8eaf0]">{box.name}</td>
+                        <td className="py-2 px-4 text-etcha-text">{box.name}</td>
                         <td className="py-2 px-4">
                           <span className={`text-xs px-2 py-0.5 rounded ${
-                            box.state === "DEFINITION" ? "bg-[#e09a5f]/20 text-[#e09a5f]" :
-                            box.state === "MINTED_UNDELIVERED" ? "bg-[#c87941]/20 text-[#c87941]" :
-                            box.state === "RESERVE" ? "bg-[#34d399]/20 text-[#34d399]" :
-                            "bg-[#f87171]/20 text-[#f87171]"
+                            box.state === "DEFINITION" ? "bg-[#e09a5f]/20 text-etcha-copper-light" :
+                            box.state === "MINTED_UNDELIVERED" ? "bg-[#c87941]/20 text-etcha-copper" :
+                            box.state === "RESERVE" ? "bg-[#34d399]/20 text-etcha-green" :
+                            "bg-[#f87171]/20 text-etcha-red"
                           }`}>
                             {box.state === "DEFINITION" ? "Pending Mint" :
                              box.state === "MINTED_UNDELIVERED" ? "Pending Delivery" :
@@ -1843,11 +1865,11 @@ export default function PortfolioPage() {
                               const perContract = perUnit * size;
                             return (
                               <div>
-                                <div className="font-mono text-[#e09a5f]">
+                                <div className="font-mono text-etcha-copper-light">
                                   ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(4)}
                                 </div>
                                 {size !== 1 && (
-                                  <div className="text-[10px] text-[#9da5b8]">
+                                  <div className="text-[10px] text-etcha-text-secondary">
                                     {size} × ${perUnit >= 100 ? perUnit.toFixed(0) : perUnit.toFixed(2)} = ${box.strikePrice >= 100 ? box.strikePrice.toFixed(0) : box.strikePrice.toFixed(2)}/contract
                                   </div>
                                 )}
@@ -1868,39 +1890,39 @@ export default function PortfolioPage() {
 
                             return (
                               <div className="text-xs space-y-0.5">
-                                <div className="font-mono text-[#9da5b8]">
+                                <div className="font-mono text-etcha-text-secondary">
                                   Block {box.maturityDate.toLocaleString()}
                                 </div>
                                 {isExpired ? (
-                                  <div className="text-[#f87171]">Expired</div>
+                                  <div className="text-etcha-red">Expired</div>
                                 ) : blocksToExpiry > 0 ? (
-                                  <div className="text-[#e8eaf0]">
+                                  <div className="text-etcha-text">
                                     {formatBlocksToTime(blocksToExpiry)} to maturity
                                   </div>
                                 ) : (
-                                  <div className="text-[#e09a5f]">
+                                  <div className="text-etcha-copper-light">
                                     Exercise window: {formatBlocksToTime(blocksToClose)}
                                   </div>
                                 )}
                                 {isExercisable && (
-                                  <div className="text-[#34d399] font-semibold">Exercisable</div>
+                                  <div className="text-etcha-green font-semibold">Exercisable</div>
                                 )}
                               </div>
                             );
                           })() : "\u2014"}
                         </td>
-                        <td className="py-2 px-4 text-right font-mono text-[#9da5b8]">
+                        <td className="py-2 px-4 text-right font-mono text-etcha-text-secondary">
                           {formatCollateral(box)}
                         </td>
                         <td className="py-2 px-4 text-right">
                           {actionStatus[box.boxId] ? (
-                            <span className="text-xs text-[#9da5b8]">{actionStatus[box.boxId]}</span>
+                            <span className="text-xs text-etcha-text-secondary">{actionStatus[box.boxId]}</span>
                           ) : (
                             <>
                               {box.state === "DEFINITION" && (
                                 <button
                                   onClick={() => handleReclaim(box)}
-                                  className="text-xs px-2 py-1 bg-[#e09a5f]/20 text-[#e09a5f] rounded hover:bg-[#e09a5f]/30"
+                                  className="text-xs px-2 py-1 bg-[#e09a5f]/20 text-etcha-copper-light rounded hover:bg-etcha-copper-light/30"
                                 >
                                   Reclaim
                                 </button>
@@ -1908,7 +1930,7 @@ export default function PortfolioPage() {
                               {box.state === "EXPIRED" && (
                                 <button
                                   onClick={() => handleClose(box)}
-                                  className="text-xs px-2 py-1 bg-[#f87171]/20 text-[#f87171] rounded hover:bg-[#f87171]/30"
+                                  className="text-xs px-2 py-1 bg-[#f87171]/20 text-etcha-red rounded hover:bg-[#f87171]/30"
                                 >
                                   Close
                                 </button>
@@ -1917,20 +1939,20 @@ export default function PortfolioPage() {
                                 <div className="flex gap-1">
                                   <button
                                     onClick={() => handleExerciseClick(box)}
-                                    className="text-xs px-2 py-1 bg-[#34d399]/20 text-[#34d399] rounded hover:bg-[#34d399]/30"
+                                    className="text-xs px-2 py-1 bg-[#34d399]/20 text-etcha-green rounded hover:bg-[#34d399]/30"
                                   >
                                     Exercise
                                   </button>
                                   <button
                                     onClick={() => handleListForSaleClick(box)}
-                                    className="text-xs px-2 py-1 bg-[#c87941]/20 text-[#c87941] rounded hover:bg-[#c87941]/30"
+                                    className="text-xs px-2 py-1 bg-[#c87941]/20 text-etcha-copper rounded hover:bg-[#c87941]/30"
                                   >
                                     List
                                   </button>
                                 </div>
                               )}
                               {box.state === "MINTED_UNDELIVERED" && (
-                                <span className="text-xs text-[#c87941]">Bot handling...</span>
+                                <span className="text-xs text-etcha-copper">Bot handling...</span>
                               )}
                             </>
                           )}
@@ -1940,7 +1962,7 @@ export default function PortfolioPage() {
                   </tbody>
                 </table>
               ) : (
-                <div className="p-8 text-center text-[#9da5b8]">
+                <div className="p-8 text-center text-etcha-text-secondary">
                   {loading ? "Scanning contract..." : "No boxes found at contract address"}
                 </div>
               )}
@@ -1959,40 +1981,40 @@ export default function PortfolioPage() {
           const pageRows = allRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
           return (
-            <div className="bg-[#12151c] border border-[#1e2330] rounded-lg overflow-x-auto">
+            <div className="bg-etcha-surface border border-etcha-border rounded-lg overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-[#1e2330]">
-                    <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">Asset</th>
-                    <th className="text-left py-3 px-4 text-[#9da5b8] font-medium">Token ID</th>
-                    <th className="text-right py-3 px-4 text-[#9da5b8] font-medium">Balance</th>
+                  <tr className="border-b border-etcha-border">
+                    <th className="text-left py-3 px-4 text-etcha-text-secondary font-medium">Asset</th>
+                    <th className="text-left py-3 px-4 text-etcha-text-secondary font-medium">Token ID</th>
+                    <th className="text-right py-3 px-4 text-etcha-text-secondary font-medium">Balance</th>
                   </tr>
                 </thead>
                 <tbody>
                   {pageRows.length > 0 ? pageRows.map((t) => (
                     <tr key={t.tokenId} className="border-b border-[#1e2330]/50 hover:bg-[#1e2330]/30">
-                      <td className="py-2 px-4 text-[#e8eaf0] font-medium">
+                      <td className="py-2 px-4 text-etcha-text font-medium">
                         {t.name}
                       </td>
-                      <td className="py-2 px-4 font-mono text-xs text-[#9da5b8]">
+                      <td className="py-2 px-4 font-mono text-xs text-etcha-text-secondary">
                         {t.isNative ? "native" : (
                           <a
                             href={`https://ergexplorer.com/token#${t.tokenId}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="hover:text-[#c87941] transition-colors"
+                            className="hover:text-etcha-copper transition-colors"
                           >
                             {t.tokenId.slice(0, 8)}...{t.tokenId.slice(-4)}
                           </a>
                         )}
                       </td>
-                      <td className="py-2 px-4 text-right font-mono text-[#e09a5f]">
+                      <td className="py-2 px-4 text-right font-mono text-etcha-copper-light">
                         {t.displayAmount}
                       </td>
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={3} className="text-center py-8 text-[#9da5b8]">
+                      <td colSpan={3} className="text-center py-8 text-etcha-text-secondary">
                         {loading ? "Loading..." : "No relevant tokens found"}
                       </td>
                     </tr>

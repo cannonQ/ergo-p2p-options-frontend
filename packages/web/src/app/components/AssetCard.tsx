@@ -88,16 +88,16 @@ export function AssetCard({
   return (
     <Link
       href={`/app/trade/${slug}`}
-      className="block p-4 bg-[#12151c] border border-[#1e2330] rounded-lg hover:border-[#c87941] transition-colors group"
+      className="block p-4 bg-etcha-surface border border-etcha-border rounded-lg hover:border-etcha-copper transition-colors group"
     >
       {/* Name + Badge + 24h change */}
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-1.5">
-          <span className="text-lg font-bold text-[#e8eaf0] group-hover:text-[#e09a5f] transition-colors">
+          <span className="text-lg font-bold text-etcha-text group-hover:text-etcha-copper-light transition-colors">
             {name}
           </span>
           {badge && (
-            <span className="text-[9px] px-1 py-0.5 bg-[#34d399]/10 text-[#34d399] rounded">
+            <span className="text-[9px] px-1 py-0.5 bg-[#34d399]/10 text-etcha-green rounded">
               {badge}
             </span>
           )}
@@ -105,7 +105,7 @@ export function AssetCard({
         {change24h !== undefined && (
           <span
             className={`text-xs font-mono font-semibold ${
-              change24h >= 0 ? "text-[#34d399]" : "text-[#f87171]"
+              change24h >= 0 ? "text-etcha-green" : "text-etcha-red"
             }`}
           >
             {formatChange(change24h)}
@@ -114,7 +114,7 @@ export function AssetCard({
       </div>
 
       {/* Price */}
-      <div className="text-xl font-mono text-[#e09a5f] mb-1">
+      <div className="text-xl font-mono text-etcha-copper-light mb-1">
         {price !== undefined && price > 0 ? `$${formatPrice(price)}` : "\u2014"}
       </div>
 
@@ -125,12 +125,12 @@ export function AssetCard({
         </div>
       )}
 
-      <div className="text-sm text-[#9da5b8]">
+      <div className="text-sm text-etcha-text-secondary">
         {optionCount} option{optionCount !== 1 ? "s" : ""}
       </div>
 
       {(openInterest !== undefined || ivRank !== undefined) && (
-        <div className="text-xs text-[#9da5b8] mt-1">
+        <div className="text-xs text-etcha-text-secondary mt-1">
           {openInterest !== undefined && (
             <span>OI: {openInterest.toLocaleString()} USE</span>
           )}

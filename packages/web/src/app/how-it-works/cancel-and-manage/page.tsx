@@ -69,7 +69,7 @@ export default function CancelAndManagePage() {
                 <path
                   d="M0,0 L6,3 L0,6"
                   fill="none"
-                  stroke="#f0a040"
+                  stroke="#e09a5f"
                   strokeWidth="1"
                 />
               </marker>
@@ -83,7 +83,7 @@ export default function CancelAndManagePage() {
               width="220"
               height="100"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(56,139,253,0.4)"
               strokeWidth="1"
             />
@@ -91,7 +91,7 @@ export default function CancelAndManagePage() {
               x="230"
               y="80"
               textAnchor="middle"
-              fill="#388bfd"
+              fill="#60a5fa"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -110,7 +110,7 @@ export default function CancelAndManagePage() {
               x="230"
               y="112"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -120,7 +120,7 @@ export default function CancelAndManagePage() {
               x="230"
               y="130"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -133,7 +133,7 @@ export default function CancelAndManagePage() {
               y1="100"
               x2="460"
               y2="100"
-              stroke="#f0a040"
+              stroke="#e09a5f"
               strokeWidth="1.5"
               markerEnd="url(#arrCancel)"
             />
@@ -141,7 +141,7 @@ export default function CancelAndManagePage() {
               x="400"
               y="90"
               textAnchor="middle"
-              fill="#f0a040"
+              fill="#e09a5f"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -155,7 +155,7 @@ export default function CancelAndManagePage() {
               width="220"
               height="100"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(240,160,64,0.4)"
               strokeWidth="1"
             />
@@ -163,7 +163,7 @@ export default function CancelAndManagePage() {
               x="580"
               y="80"
               textAnchor="middle"
-              fill="#f0a040"
+              fill="#e09a5f"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -182,7 +182,7 @@ export default function CancelAndManagePage() {
               x="580"
               y="112"
               textAnchor="middle"
-              fill="#e6edf3"
+              fill="#e8eaf0"
               fontFamily="Courier New"
               fontSize="11"
             >
@@ -192,7 +192,7 @@ export default function CancelAndManagePage() {
               x="580"
               y="130"
               textAnchor="middle"
-              fill="#3fb950"
+              fill="#34d399"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -322,7 +322,7 @@ export default function CancelAndManagePage() {
                 <path
                   d="M0,0 L6,3 L0,6"
                   fill="none"
-                  stroke="#3fb950"
+                  stroke="#34d399"
                   strokeWidth="1"
                 />
               </marker>
@@ -337,7 +337,7 @@ export default function CancelAndManagePage() {
                 <path
                   d="M0,0 L6,3 L0,6"
                   fill="none"
-                  stroke="#f0a040"
+                  stroke="#e09a5f"
                   strokeWidth="1"
                 />
               </marker>
@@ -367,7 +367,7 @@ export default function CancelAndManagePage() {
                 <path
                   d="M0,0 L6,3 L0,6"
                   fill="none"
-                  stroke="#f85149"
+                  stroke="#f87171"
                   strokeWidth="1"
                 />
               </marker>
@@ -379,7 +379,7 @@ export default function CancelAndManagePage() {
               x="400"
               y="20"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -394,7 +394,7 @@ export default function CancelAndManagePage() {
               width="120"
               height="65"
               rx="5"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(240,160,64,0.4)"
               strokeWidth="1"
             />
@@ -402,7 +402,7 @@ export default function CancelAndManagePage() {
               x="80"
               y="58"
               textAnchor="middle"
-              fill="#f0a040"
+              fill="#e09a5f"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="1"
@@ -413,7 +413,7 @@ export default function CancelAndManagePage() {
               x="80"
               y="75"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -423,7 +423,7 @@ export default function CancelAndManagePage() {
               x="80"
               y="90"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -444,7 +444,7 @@ export default function CancelAndManagePage() {
               x="158"
               y="60"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="8"
             >
@@ -458,7 +458,7 @@ export default function CancelAndManagePage() {
               width="120"
               height="65"
               rx="5"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(56,139,253,0.4)"
               strokeWidth="1"
               strokeDasharray="4 2"
@@ -467,7 +467,7 @@ export default function CancelAndManagePage() {
               x="240"
               y="58"
               textAnchor="middle"
-              fill="#388bfd"
+              fill="#60a5fa"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -477,7 +477,7 @@ export default function CancelAndManagePage() {
               x="240"
               y="75"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -487,7 +487,7 @@ export default function CancelAndManagePage() {
               x="240"
               y="90"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -522,7 +522,7 @@ export default function CancelAndManagePage() {
               width="130"
               height="65"
               rx="5"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(56,139,253,0.4)"
               strokeWidth="1"
             />
@@ -530,7 +530,7 @@ export default function CancelAndManagePage() {
               x="410"
               y="55"
               textAnchor="middle"
-              fill="#388bfd"
+              fill="#60a5fa"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -540,7 +540,7 @@ export default function CancelAndManagePage() {
               x="410"
               y="72"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -550,7 +550,7 @@ export default function CancelAndManagePage() {
               x="410"
               y="88"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -585,7 +585,7 @@ export default function CancelAndManagePage() {
               width="120"
               height="65"
               rx="5"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(56,139,253,0.4)"
               strokeWidth="1"
             />
@@ -593,7 +593,7 @@ export default function CancelAndManagePage() {
               x="585"
               y="55"
               textAnchor="middle"
-              fill="#388bfd"
+              fill="#60a5fa"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -603,7 +603,7 @@ export default function CancelAndManagePage() {
               x="585"
               y="72"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -613,7 +613,7 @@ export default function CancelAndManagePage() {
               x="585"
               y="88"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -627,7 +627,7 @@ export default function CancelAndManagePage() {
               width="120"
               height="65"
               rx="5"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(240,160,64,0.4)"
               strokeWidth="1"
             />
@@ -635,7 +635,7 @@ export default function CancelAndManagePage() {
               x="720"
               y="55"
               textAnchor="middle"
-              fill="#f0a040"
+              fill="#e09a5f"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -645,7 +645,7 @@ export default function CancelAndManagePage() {
               x="720"
               y="72"
               textAnchor="middle"
-              fill="#e6edf3"
+              fill="#e8eaf0"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -655,7 +655,7 @@ export default function CancelAndManagePage() {
               x="720"
               y="88"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -708,7 +708,7 @@ export default function CancelAndManagePage() {
               x="400"
               y="200"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -723,7 +723,7 @@ export default function CancelAndManagePage() {
               width="140"
               height="65"
               rx="5"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(240,160,64,0.4)"
               strokeWidth="1"
             />
@@ -731,7 +731,7 @@ export default function CancelAndManagePage() {
               x="150"
               y="238"
               textAnchor="middle"
-              fill="#f0a040"
+              fill="#e09a5f"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -741,7 +741,7 @@ export default function CancelAndManagePage() {
               x="150"
               y="255"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -751,7 +751,7 @@ export default function CancelAndManagePage() {
               x="150"
               y="270"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -772,7 +772,7 @@ export default function CancelAndManagePage() {
               x="252"
               y="240"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="8"
             >
@@ -786,7 +786,7 @@ export default function CancelAndManagePage() {
               width="140"
               height="65"
               rx="5"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(56,139,253,0.4)"
               strokeWidth="1"
             />
@@ -794,7 +794,7 @@ export default function CancelAndManagePage() {
               x="360"
               y="238"
               textAnchor="middle"
-              fill="#388bfd"
+              fill="#60a5fa"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -804,7 +804,7 @@ export default function CancelAndManagePage() {
               x="360"
               y="255"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -814,7 +814,7 @@ export default function CancelAndManagePage() {
               x="360"
               y="270"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -827,7 +827,7 @@ export default function CancelAndManagePage() {
               y1="247"
               x2="495"
               y2="247"
-              stroke="#3fb950"
+              stroke="#34d399"
               strokeWidth="1"
               markerEnd="url(#arrGrn)"
             />
@@ -835,7 +835,7 @@ export default function CancelAndManagePage() {
               x="462"
               y="240"
               textAnchor="middle"
-              fill="#3fb950"
+              fill="#34d399"
               fontFamily="Courier New"
               fontSize="8"
             >
@@ -849,7 +849,7 @@ export default function CancelAndManagePage() {
               width="220"
               height="65"
               rx="5"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(63,185,80,0.4)"
               strokeWidth="1"
             />
@@ -857,7 +857,7 @@ export default function CancelAndManagePage() {
               x="610"
               y="238"
               textAnchor="middle"
-              fill="#3fb950"
+              fill="#34d399"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -867,7 +867,7 @@ export default function CancelAndManagePage() {
               x="610"
               y="255"
               textAnchor="middle"
-              fill="#f0a040"
+              fill="#e09a5f"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -877,7 +877,7 @@ export default function CancelAndManagePage() {
               x="610"
               y="270"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -899,7 +899,7 @@ export default function CancelAndManagePage() {
               x="400"
               y="325"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -914,7 +914,7 @@ export default function CancelAndManagePage() {
               width="230"
               height="110"
               rx="5"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(63,185,80,0.4)"
               strokeWidth="1"
             />
@@ -922,7 +922,7 @@ export default function CancelAndManagePage() {
               x="135"
               y="368"
               textAnchor="middle"
-              fill="#3fb950"
+              fill="#34d399"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="1"
@@ -941,7 +941,7 @@ export default function CancelAndManagePage() {
               x="135"
               y="398"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -951,7 +951,7 @@ export default function CancelAndManagePage() {
               x="135"
               y="416"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -961,7 +961,7 @@ export default function CancelAndManagePage() {
               x="135"
               y="434"
               textAnchor="middle"
-              fill="#f85149"
+              fill="#f87171"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -975,7 +975,7 @@ export default function CancelAndManagePage() {
               width="230"
               height="110"
               rx="5"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(240,160,64,0.4)"
               strokeWidth="1"
             />
@@ -983,7 +983,7 @@ export default function CancelAndManagePage() {
               x="400"
               y="368"
               textAnchor="middle"
-              fill="#f0a040"
+              fill="#e09a5f"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="1"
@@ -1002,7 +1002,7 @@ export default function CancelAndManagePage() {
               x="400"
               y="398"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -1012,7 +1012,7 @@ export default function CancelAndManagePage() {
               x="400"
               y="416"
               textAnchor="middle"
-              fill="#f85149"
+              fill="#f87171"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -1022,7 +1022,7 @@ export default function CancelAndManagePage() {
               x="400"
               y="434"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -1036,7 +1036,7 @@ export default function CancelAndManagePage() {
               width="230"
               height="110"
               rx="5"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(163,113,247,0.4)"
               strokeWidth="1"
             />
@@ -1063,7 +1063,7 @@ export default function CancelAndManagePage() {
               x="665"
               y="398"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -1073,7 +1073,7 @@ export default function CancelAndManagePage() {
               x="665"
               y="416"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -1083,7 +1083,7 @@ export default function CancelAndManagePage() {
               x="665"
               y="434"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -1105,7 +1105,7 @@ export default function CancelAndManagePage() {
               x="320"
               y="512"
               textAnchor="middle"
-              fill="#388bfd"
+              fill="#60a5fa"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -1115,7 +1115,7 @@ export default function CancelAndManagePage() {
               x="320"
               y="528"
               textAnchor="middle"
-              fill="#388bfd"
+              fill="#60a5fa"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -1155,7 +1155,7 @@ export default function CancelAndManagePage() {
               x="610"
               y="512"
               textAnchor="middle"
-              fill="#388bfd"
+              fill="#60a5fa"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -1165,7 +1165,7 @@ export default function CancelAndManagePage() {
               x="610"
               y="528"
               textAnchor="middle"
-              fill="#388bfd"
+              fill="#60a5fa"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -1192,31 +1192,31 @@ export default function CancelAndManagePage() {
               stroke="rgba(255,255,255,0.06)"
               strokeWidth="0.5"
             />
-            <circle cx="140" cy="588" r="4" fill="#3fb950" />
+            <circle cx="140" cy="588" r="4" fill="#34d399" />
             <text
               x="150"
               y="592"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
               Buyer
             </text>
-            <circle cx="220" cy="588" r="4" fill="#f0a040" />
+            <circle cx="220" cy="588" r="4" fill="#e09a5f" />
             <text
               x="230"
               y="592"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
               Writer/Seller
             </text>
-            <circle cx="340" cy="588" r="4" fill="#388bfd" />
+            <circle cx="340" cy="588" r="4" fill="#60a5fa" />
             <text
               x="350"
               y="592"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -1226,17 +1226,17 @@ export default function CancelAndManagePage() {
             <text
               x="450"
               y="592"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
               Bot/Fee
             </text>
-            <circle cx="520" cy="588" r="4" fill="#f85149" />
+            <circle cx="520" cy="588" r="4" fill="#f87171" />
             <text
               x="530"
               y="592"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >

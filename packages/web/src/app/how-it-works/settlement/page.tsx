@@ -101,7 +101,7 @@ export default function SettlementPage() {
                 <path
                   d="M0,0 L6,3 L0,6"
                   fill="none"
-                  stroke="#3fb950"
+                  stroke="#34d399"
                   strokeWidth="1"
                 />
               </marker>
@@ -116,7 +116,7 @@ export default function SettlementPage() {
                 <path
                   d="M0,0 L6,3 L0,6"
                   fill="none"
-                  stroke="#f0a040"
+                  stroke="#e09a5f"
                   strokeWidth="1"
                 />
               </marker>
@@ -131,7 +131,7 @@ export default function SettlementPage() {
                 <path
                   d="M0,0 L6,3 L0,6"
                   fill="none"
-                  stroke="#f85149"
+                  stroke="#f87171"
                   strokeWidth="1"
                 />
               </marker>
@@ -145,7 +145,7 @@ export default function SettlementPage() {
               width="220"
               height="100"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(56,139,253,0.4)"
               strokeWidth="1"
             />
@@ -153,7 +153,7 @@ export default function SettlementPage() {
               x="150"
               y="66"
               textAnchor="middle"
-              fill="#388bfd"
+              fill="#60a5fa"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -172,7 +172,7 @@ export default function SettlementPage() {
               x="150"
               y="100"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -182,7 +182,7 @@ export default function SettlementPage() {
               x="150"
               y="118"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -195,7 +195,7 @@ export default function SettlementPage() {
               y1="70"
               x2="440"
               y2="55"
-              stroke="#3fb950"
+              stroke="#34d399"
               strokeWidth="1.5"
               markerEnd="url(#arrowS1green)"
             />
@@ -203,7 +203,7 @@ export default function SettlementPage() {
               x="350"
               y="52"
               textAnchor="middle"
-              fill="#3fb950"
+              fill="#34d399"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -217,7 +217,7 @@ export default function SettlementPage() {
               width="300"
               height="70"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(63,185,80,0.4)"
               strokeWidth="1"
             />
@@ -225,7 +225,7 @@ export default function SettlementPage() {
               x="600"
               y="50"
               textAnchor="middle"
-              fill="#3fb950"
+              fill="#34d399"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -236,7 +236,7 @@ export default function SettlementPage() {
               x="600"
               y="72"
               textAnchor="middle"
-              fill="#e6edf3"
+              fill="#e8eaf0"
               fontFamily="Courier New"
               fontSize="11"
             >
@@ -249,7 +249,7 @@ export default function SettlementPage() {
               y1="110"
               x2="440"
               y2="145"
-              stroke="#f0a040"
+              stroke="#e09a5f"
               strokeWidth="1.5"
               markerEnd="url(#arrowS1copper)"
             />
@@ -257,7 +257,7 @@ export default function SettlementPage() {
               x="340"
               y="140"
               textAnchor="middle"
-              fill="#f0a040"
+              fill="#e09a5f"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -271,7 +271,7 @@ export default function SettlementPage() {
               width="300"
               height="70"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(240,160,64,0.4)"
               strokeWidth="1"
             />
@@ -279,7 +279,7 @@ export default function SettlementPage() {
               x="600"
               y="144"
               textAnchor="middle"
-              fill="#f0a040"
+              fill="#e09a5f"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -290,7 +290,7 @@ export default function SettlementPage() {
               x="600"
               y="170"
               textAnchor="middle"
-              fill="#e6edf3"
+              fill="#e8eaf0"
               fontFamily="Courier New"
               fontSize="11"
             >
@@ -303,7 +303,7 @@ export default function SettlementPage() {
               y1="140"
               x2="150"
               y2="220"
-              stroke="#f85149"
+              stroke="#f87171"
               strokeWidth="1.5"
               markerEnd="url(#arrowS1red)"
             />
@@ -323,7 +323,7 @@ export default function SettlementPage() {
               x="150"
               y="250"
               textAnchor="middle"
-              fill="#f85149"
+              fill="#f87171"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -334,7 +334,7 @@ export default function SettlementPage() {
               x="150"
               y="266"
               textAnchor="middle"
-              fill="#f85149"
+              fill="#f87171"
               fontFamily="Courier New"
               fontSize="11"
               fontWeight="700"
@@ -356,7 +356,7 @@ export default function SettlementPage() {
             <text
               x="56"
               y="316"
-              fill="#f85149"
+              fill="#f87171"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="1"
@@ -366,7 +366,7 @@ export default function SettlementPage() {
             <text
               x="140"
               y="316"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -375,7 +375,7 @@ export default function SettlementPage() {
             <text
               x="56"
               y="332"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -475,7 +475,7 @@ export default function SettlementPage() {
                 <path
                   d="M0,0 L6,3 L0,6"
                   fill="none"
-                  stroke="#f0a040"
+                  stroke="#e09a5f"
                   strokeWidth="1"
                 />
               </marker>
@@ -490,7 +490,7 @@ export default function SettlementPage() {
                 <path
                   d="M0,0 L6,3 L0,6"
                   fill="none"
-                  stroke="#f85149"
+                  stroke="#f87171"
                   strokeWidth="1"
                 />
               </marker>
@@ -504,7 +504,7 @@ export default function SettlementPage() {
               width="240"
               height="100"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(56,139,253,0.4)"
               strokeWidth="1"
             />
@@ -512,7 +512,7 @@ export default function SettlementPage() {
               x="160"
               y="76"
               textAnchor="middle"
-              fill="#388bfd"
+              fill="#60a5fa"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -531,7 +531,7 @@ export default function SettlementPage() {
               x="160"
               y="108"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -541,7 +541,7 @@ export default function SettlementPage() {
               x="160"
               y="126"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -551,7 +551,7 @@ export default function SettlementPage() {
               x="160"
               y="144"
               textAnchor="middle"
-              fill="#f85149"
+              fill="#f87171"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -564,7 +564,7 @@ export default function SettlementPage() {
               y1="80"
               x2="440"
               y2="60"
-              stroke="#f0a040"
+              stroke="#e09a5f"
               strokeWidth="1.5"
               markerEnd="url(#arrowS2copper)"
             />
@@ -572,7 +572,7 @@ export default function SettlementPage() {
               x="360"
               y="58"
               textAnchor="middle"
-              fill="#f0a040"
+              fill="#e09a5f"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -586,7 +586,7 @@ export default function SettlementPage() {
               width="300"
               height="70"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(240,160,64,0.4)"
               strokeWidth="1"
             />
@@ -594,7 +594,7 @@ export default function SettlementPage() {
               x="600"
               y="56"
               textAnchor="middle"
-              fill="#f0a040"
+              fill="#e09a5f"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -605,7 +605,7 @@ export default function SettlementPage() {
               x="600"
               y="78"
               textAnchor="middle"
-              fill="#e6edf3"
+              fill="#e8eaf0"
               fontFamily="Courier New"
               fontSize="11"
             >
@@ -618,7 +618,7 @@ export default function SettlementPage() {
               y1="120"
               x2="440"
               y2="160"
-              stroke="#f85149"
+              stroke="#f87171"
               strokeWidth="1.5"
               markerEnd="url(#arrowS2red)"
             />
@@ -626,7 +626,7 @@ export default function SettlementPage() {
               x="340"
               y="150"
               textAnchor="middle"
-              fill="#f85149"
+              fill="#f87171"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -648,7 +648,7 @@ export default function SettlementPage() {
               x="550"
               y="156"
               textAnchor="middle"
-              fill="#f85149"
+              fill="#f87171"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -659,7 +659,7 @@ export default function SettlementPage() {
               x="550"
               y="172"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -680,7 +680,7 @@ export default function SettlementPage() {
             <text
               x="56"
               y="222"
-              fill="#3fb950"
+              fill="#34d399"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="1"
@@ -690,7 +690,7 @@ export default function SettlementPage() {
             <text
               x="200"
               y="222"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -783,7 +783,7 @@ export default function SettlementPage() {
                 <path
                   d="M0,0 L6,3 L0,6"
                   fill="none"
-                  stroke="#f0a040"
+                  stroke="#e09a5f"
                   strokeWidth="1"
                 />
               </marker>
@@ -797,7 +797,7 @@ export default function SettlementPage() {
               width="260"
               height="100"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(56,139,253,0.4)"
               strokeWidth="1"
               strokeDasharray="4 2"
@@ -806,7 +806,7 @@ export default function SettlementPage() {
               x="170"
               y="66"
               textAnchor="middle"
-              fill="#388bfd"
+              fill="#60a5fa"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -825,7 +825,7 @@ export default function SettlementPage() {
               x="170"
               y="100"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -835,7 +835,7 @@ export default function SettlementPage() {
               x="170"
               y="118"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >
@@ -848,7 +848,7 @@ export default function SettlementPage() {
               y1="90"
               x2="460"
               y2="90"
-              stroke="#f0a040"
+              stroke="#e09a5f"
               strokeWidth="1.5"
               markerEnd="url(#arrowS3copper)"
             />
@@ -856,7 +856,7 @@ export default function SettlementPage() {
               x="380"
               y="80"
               textAnchor="middle"
-              fill="#f0a040"
+              fill="#e09a5f"
               fontFamily="Courier New"
               fontSize="9"
             >
@@ -870,7 +870,7 @@ export default function SettlementPage() {
               width="280"
               height="100"
               rx="6"
-              fill="#161b22"
+              fill="#12151c"
               stroke="rgba(240,160,64,0.4)"
               strokeWidth="1"
             />
@@ -878,7 +878,7 @@ export default function SettlementPage() {
               x="610"
               y="66"
               textAnchor="middle"
-              fill="#f0a040"
+              fill="#e09a5f"
               fontFamily="Courier New"
               fontSize="10"
               letterSpacing="2"
@@ -897,7 +897,7 @@ export default function SettlementPage() {
               x="610"
               y="100"
               textAnchor="middle"
-              fill="#e6edf3"
+              fill="#e8eaf0"
               fontFamily="Courier New"
               fontSize="11"
             >
@@ -907,7 +907,7 @@ export default function SettlementPage() {
               x="610"
               y="118"
               textAnchor="middle"
-              fill="#7d8590"
+              fill="#9da5b8"
               fontFamily="Courier New"
               fontSize="10"
             >

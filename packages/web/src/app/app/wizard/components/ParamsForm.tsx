@@ -169,7 +169,7 @@ export function ParamsForm({
       <button
         disabled={!selectedExpiry || !selectedStrike}
         onClick={onContinue}
-        className="w-full rounded-lg bg-etcha-copper text-[#0a0c10] font-bold text-[15px] py-3.5 transition-all disabled:bg-etcha-border disabled:text-etcha-text-dim disabled:cursor-not-allowed hover:enabled:opacity-90 cursor-pointer"
+        className="w-full rounded-lg bg-etcha-copper text-etcha-bg font-bold text-[15px] py-3.5 transition-all disabled:bg-etcha-border disabled:text-etcha-text-dim disabled:cursor-not-allowed hover:enabled:opacity-90 cursor-pointer"
       >
         {isBuy ? "Check the market \u2192" : "Review & write \u2192"}
       </button>

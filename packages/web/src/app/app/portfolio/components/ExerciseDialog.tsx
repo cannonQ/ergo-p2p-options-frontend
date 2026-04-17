@@ -50,6 +50,7 @@ export function ExerciseDialog({
   const exerciseQty = Number(quantity);
   const [status, setStatus] = useState("");
   const [txId, setTxId] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
   const stableDecimals = stablecoin === "USE" ? 3 : 2;
 
   // Compute per-contract delivery amounts using registry rate
@@ -76,6 +77,7 @@ export function ExerciseDialog({
     if (!isOpen) return;
     setStatus("");
     setTxId("");
+    setConfirmed(false);
     const handleEsc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handleEsc);
     return () => window.removeEventListener("keydown", handleEsc);
@@ -86,7 +88,7 @@ export function ExerciseDialog({
   const isCallColor = optionType === "call";
   const accentColor = isCallColor ? "#34d399" : "#f87171";
   const accentBg = isCallColor ? "bg-[#34d399]/10 border-[#34d399]/30" : "bg-[#f87171]/10 border-[#f87171]/30";
-  const accentText = isCallColor ? "text-[#34d399]" : "text-[#f87171]";
+  const accentText = isCallColor ? "text-etcha-green" : "text-etcha-red";
 
   // Exercise window status
   const windowStatus = (() => {
@@ -140,7 +142,7 @@ export function ExerciseDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/60" onClick={txId ? undefined : onClose} aria-hidden="true" />
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="exercise-title" className="relative bg-[#12151c] border border-[#1e2330] rounded-xl shadow-2xl w-full max-w-md p-6 space-y-5">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="exercise-title" className="relative bg-etcha-surface border border-etcha-border rounded-xl shadow-2xl w-full max-w-md p-6 space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h2 id="exercise-title" className="text-lg font-bold">
@@ -150,12 +152,12 @@ export function ExerciseDialog({
             </span>{" "}
             ${strikePrice.toFixed(strikePrice >= 100 ? 0 : strikePrice >= 1 ? 2 : 4)} Strike
           </h2>
-          <button onClick={onClose} className="text-[#9da5b8] hover:text-[#e8eaf0] text-xl" aria-label="Close exercise dialog">&times;</button>
+          <button onClick={onClose} className="text-etcha-text-secondary hover:text-etcha-text text-xl" aria-label="Close exercise dialog">&times;</button>
         </div>
 
         {/* Exercise window badge */}
         <div className={`inline-block px-2 py-1 rounded text-xs font-medium border ${
-          windowStatus.ok ? accentBg + " " + accentText : "bg-[#e09a5f]/10 border-[#e09a5f]/30 text-[#e09a5f]"
+          windowStatus.ok ? accentBg + " " + accentText : "bg-[#e09a5f]/10 border-[#e09a5f]/30 text-etcha-copper-light"
         }`}>
           {windowStatus.label}
         </div>
@@ -164,24 +166,24 @@ export function ExerciseDialog({
         <div className="space-y-3 text-sm">
           {settlementType === "physical" && optionType === "call" && (
             <div className="space-y-2">
-              <p className="text-[#9da5b8]">You will:</p>
+              <p className="text-etcha-text-secondary">You will:</p>
               <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 pl-2">
-                <span className="text-[#f87171]">Pay:</span>
-                <span className="text-[#e8eaf0] font-mono">{strikePerContract.toFixed(stableDecimals)} {stablecoin} per contract (strike → writer)</span>
-                <span className="text-[#34d399]">Receive:</span>
-                <span className="text-[#e8eaf0] font-mono">{formatUnderlying(1)} per contract (from reserve)</span>
+                <span className="text-etcha-red">Pay:</span>
+                <span className="text-etcha-text font-mono">{strikePerContract.toFixed(stableDecimals)} {stablecoin} per contract (strike → writer)</span>
+                <span className="text-etcha-green">Receive:</span>
+                <span className="text-etcha-text font-mono">{formatUnderlying(1)} per contract (from reserve)</span>
               </div>
             </div>
           )}
 
           {settlementType === "physical" && optionType === "put" && (
             <div className="space-y-2">
-              <p className="text-[#9da5b8]">You will:</p>
+              <p className="text-etcha-text-secondary">You will:</p>
               <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 pl-2">
-                <span className="text-[#f87171]">Send:</span>
-                <span className="text-[#e8eaf0] font-mono">{formatUnderlying(1)} per contract (to writer)</span>
-                <span className="text-[#34d399]">Receive:</span>
-                <span className="text-[#e8eaf0] font-mono">{strikePerContract.toFixed(stableDecimals)} {stablecoin} per contract (from reserve)</span>
+                <span className="text-etcha-red">Send:</span>
+                <span className="text-etcha-text font-mono">{formatUnderlying(1)} per contract (to writer)</span>
+                <span className="text-etcha-green">Receive:</span>
+                <span className="text-etcha-text font-mono">{strikePerContract.toFixed(stableDecimals)} {stablecoin} per contract (from reserve)</span>
               </div>
             </div>
           )}
@@ -190,18 +192,18 @@ export function ExerciseDialog({
             <div className="space-y-2">
               {spotPrice !== undefined && (
                 <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-                  <span className="text-[#9da5b8]">Oracle spot:</span>
-                  <span className="text-[#e09a5f] font-mono">${spotPrice >= 1 ? spotPrice.toFixed(2) : spotPrice >= 0.01 ? spotPrice.toFixed(4) : spotPrice.toFixed(6)}</span>
-                  <span className="text-[#9da5b8]">Strike:</span>
-                  <span className="text-[#e8eaf0] font-mono">${strikePrice >= 1 ? strikePrice.toFixed(2) : strikePrice >= 0.01 ? strikePrice.toFixed(4) : strikePrice.toFixed(6)}</span>
-                  <span className="text-[#9da5b8]">Profit/contract:</span>
-                  <span className={`font-mono ${cashProfit > 0 ? "text-[#34d399]" : "text-[#f87171]"}`}>
+                  <span className="text-etcha-text-secondary">Oracle spot:</span>
+                  <span className="text-etcha-copper-light font-mono">${spotPrice >= 1 ? spotPrice.toFixed(2) : spotPrice >= 0.01 ? spotPrice.toFixed(4) : spotPrice.toFixed(6)}</span>
+                  <span className="text-etcha-text-secondary">Strike:</span>
+                  <span className="text-etcha-text font-mono">${strikePrice >= 1 ? strikePrice.toFixed(2) : strikePrice >= 0.01 ? strikePrice.toFixed(4) : strikePrice.toFixed(6)}</span>
+                  <span className="text-etcha-text-secondary">Profit/contract:</span>
+                  <span className={`font-mono ${cashProfit > 0 ? "text-etcha-green" : "text-etcha-red"}`}>
                     {cashProfit > 0 ? `$${cashProfit.toFixed(stableDecimals)}` : "OTM — no profit"}
                   </span>
                 </div>
               )}
               {isOTM && (
-                <p className="text-xs text-[#e09a5f]">
+                <p className="text-xs text-etcha-copper-light">
                   Option is out of the money. Nothing to exercise.
                 </p>
               )}
@@ -210,57 +212,57 @@ export function ExerciseDialog({
         </div>
 
         {/* Totals */}
-        <div className="p-3 bg-[#0a0c10] rounded-lg border border-[#1e2330] space-y-1 text-sm">
+        <div className="p-3 bg-etcha-bg rounded-lg border border-etcha-border space-y-1 text-sm">
           {settlementType === "physical" && optionType === "call" && (
             <>
               <div className="flex justify-between">
-                <span className="text-[#9da5b8]">Total payment:</span>
-                <span className="text-[#e8eaf0] font-mono">{(strikePerContract * exerciseQty).toFixed(stableDecimals)} {stablecoin}</span>
+                <span className="text-etcha-text-secondary">Total payment:</span>
+                <span className="text-etcha-text font-mono">{(strikePerContract * exerciseQty).toFixed(stableDecimals)} {stablecoin}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#9da5b8]">Total received:</span>
-                <span className="text-[#34d399] font-mono">{formatUnderlying(exerciseQty)}</span>
+                <span className="text-etcha-text-secondary">Total received:</span>
+                <span className="text-etcha-green font-mono">{formatUnderlying(exerciseQty)}</span>
               </div>
             </>
           )}
           {settlementType === "physical" && optionType === "put" && (
             <>
               <div className="flex justify-between">
-                <span className="text-[#9da5b8]">Total sent:</span>
-                <span className="text-[#e8eaf0] font-mono">{formatUnderlying(exerciseQty)}</span>
+                <span className="text-etcha-text-secondary">Total sent:</span>
+                <span className="text-etcha-text font-mono">{formatUnderlying(exerciseQty)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#9da5b8]">Total received:</span>
-                <span className="text-[#34d399] font-mono">{(strikePerContract * exerciseQty).toFixed(stableDecimals)} {stablecoin}</span>
+                <span className="text-etcha-text-secondary">Total received:</span>
+                <span className="text-etcha-green font-mono">{(strikePerContract * exerciseQty).toFixed(stableDecimals)} {stablecoin}</span>
               </div>
             </>
           )}
           {settlementType === "cash" && cashProfit > 0 && (
             <div className="flex justify-between">
-              <span className="text-[#9da5b8]">Total payout:</span>
-              <span className="text-[#34d399] font-mono">{(cashProfit * exerciseQty).toFixed(stableDecimals)} {stablecoin}</span>
+              <span className="text-etcha-text-secondary">Total payout:</span>
+              <span className="text-etcha-green font-mono">{(cashProfit * exerciseQty).toFixed(stableDecimals)} {stablecoin}</span>
             </div>
           )}
           <div className="flex justify-between pt-1 border-t border-[#1e2330]/50">
-            <span className="text-[#9da5b8]">Network fee:</span>
-            <span className="text-[#9da5b8] font-mono">0.0022 ERG</span>
+            <span className="text-etcha-text-secondary">Network fee:</span>
+            <span className="text-etcha-text-secondary font-mono">0.0022 ERG</span>
           </div>
         </div>
 
         {/* Success Summary */}
         {txId && (
           <div className="p-3 bg-[#34d399]/10 border border-[#34d399]/30 rounded-lg space-y-1 text-sm">
-            <p className="font-semibold text-[#34d399]">
+            <p className="font-semibold text-etcha-green">
               Exercised {exerciseQty} {assetName} {optionType === "call" ? "Call" : "Put"} ${strikePrice >= 100 ? strikePrice.toFixed(0) : strikePrice.toFixed(4)}
             </p>
             {settlementType === "physical" && optionType === "call" && (
-              <p className="text-[#e8eaf0]">Paid: {(strikePerContract * exerciseQty).toFixed(stableDecimals)} {stablecoin} &middot; Received: {formatUnderlying(exerciseQty)}</p>
+              <p className="text-etcha-text">Paid: {(strikePerContract * exerciseQty).toFixed(stableDecimals)} {stablecoin} &middot; Received: {formatUnderlying(exerciseQty)}</p>
             )}
             {settlementType === "physical" && optionType === "put" && (
-              <p className="text-[#e8eaf0]">Sent: {formatUnderlying(exerciseQty)} &middot; Received: {(strikePerContract * exerciseQty).toFixed(stableDecimals)} {stablecoin}</p>
+              <p className="text-etcha-text">Sent: {formatUnderlying(exerciseQty)} &middot; Received: {(strikePerContract * exerciseQty).toFixed(stableDecimals)} {stablecoin}</p>
             )}
             {settlementType === "cash" && cashProfit > 0 && (
-              <p className="text-[#e8eaf0]">Received: {(cashProfit * exerciseQty).toFixed(stableDecimals)} {stablecoin} profit</p>
+              <p className="text-etcha-text">Received: {(cashProfit * exerciseQty).toFixed(stableDecimals)} {stablecoin} profit</p>
             )}
           </div>
         )}
@@ -269,24 +271,82 @@ export function ExerciseDialog({
         <TxStatus status={status} txId={txId} />
 
         {/* Actions */}
-        <div className="flex gap-3">
-          <button
-            disabled={!canExercise || isSubmitting}
-            onClick={handleExercise}
-            className={`flex-1 py-3 rounded-lg font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-              isCallColor
-                ? "bg-[#34d399] hover:bg-[#16a34a] text-white"
-                : "bg-[#f87171] hover:bg-[#dc2626] text-white"
-            }`}
-          >
-            {txId ? "Exercised!" : isSubmitting ? status : `Exercise ${exerciseQty} Contract${exerciseQty !== 1 ? "s" : ""}`}
-          </button>
-          <button
-            onClick={onClose}
-            className="px-6 py-3 bg-[#1e2330] text-[#9da5b8] rounded-lg hover:text-[#e8eaf0] transition-colors"
-          >
-            {txId ? "Close" : "Cancel"}
-          </button>
+        <div className="space-y-2">
+          {txId ? (
+            <div className="flex gap-3">
+              <button
+                disabled
+                className={`flex-1 py-3 rounded-lg font-medium opacity-40 cursor-not-allowed ${
+                  isCallColor
+                    ? "bg-etcha-green text-white"
+                    : "bg-etcha-red text-white"
+                }`}
+              >
+                Exercised!
+              </button>
+              <button
+                onClick={onClose}
+                className="px-6 py-3 bg-etcha-border text-etcha-text-secondary rounded-lg hover:text-etcha-text transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          ) : isSubmitting ? (
+            <div className="flex gap-3">
+              <button
+                disabled
+                className={`flex-1 py-3 rounded-lg font-medium opacity-40 cursor-not-allowed ${
+                  isCallColor
+                    ? "bg-etcha-green text-white"
+                    : "bg-etcha-red text-white"
+                }`}
+              >
+                {status}
+              </button>
+              <button
+                onClick={onClose}
+                className="px-6 py-3 bg-etcha-border text-etcha-text-secondary rounded-lg hover:text-etcha-text transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : !confirmed ? (
+            <div className="flex gap-3">
+              <button
+                disabled={!canExercise}
+                onClick={() => setConfirmed(true)}
+                className={`flex-1 py-3 rounded-lg font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                  isCallColor
+                    ? "bg-etcha-green hover:bg-[#16a34a] text-white"
+                    : "bg-etcha-red hover:bg-[#dc2626] text-white"
+                }`}
+              >
+                Exercise {exerciseQty} Contract{exerciseQty !== 1 ? "s" : ""}
+              </button>
+              <button
+                onClick={onClose}
+                className="px-6 py-3 bg-etcha-border text-etcha-text-secondary rounded-lg hover:text-etcha-text transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="bg-[#f87171]/10 border border-[#f87171]/30 rounded-lg px-3 py-2 text-sm text-etcha-red">
+                {settlementType === "cash"
+                  ? "This action is irreversible. You will receive the cash profit payout."
+                  : "This action is irreversible. You will pay the strike amount and receive the underlying asset."}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setConfirmed(false)} className="flex-1 py-2 rounded-lg bg-etcha-border text-etcha-text-secondary hover:text-etcha-text">
+                  Cancel
+                </button>
+                <button onClick={handleExercise} className="flex-1 py-2 rounded-lg bg-etcha-red text-white hover:bg-[#ef4444]">
+                  Confirm Exercise
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

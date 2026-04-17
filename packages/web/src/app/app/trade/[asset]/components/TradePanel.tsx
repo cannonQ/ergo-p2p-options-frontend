@@ -273,9 +273,9 @@ export function TradePanel({
       />
 
       {/* Slide-out panel */}
-      <div role="dialog" aria-modal="true" aria-label={`Trade ${assetName} ${typeLabel}`} className="fixed top-0 right-0 h-full w-full max-w-md bg-[#12151c] border-l border-[#1e2330] z-50 overflow-y-auto shadow-2xl animate-slide-in">
+      <div role="dialog" aria-modal="true" aria-label={`Trade ${assetName} ${typeLabel}`} className="fixed top-0 right-0 h-full w-full max-w-md bg-etcha-surface border-l border-etcha-border z-50 overflow-y-auto shadow-2xl animate-slide-in">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e2330]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-etcha-border">
           <div className="flex items-center gap-2">
             <span
               className="px-2 py-0.5 text-xs font-bold rounded"
@@ -283,16 +283,16 @@ export function TradePanel({
             >
               {typeLabel}
             </span>
-            <span className="font-bold text-[#e8eaf0]">{assetName}</span>
-            <span className="text-[#e09a5f] font-mono">${strike >= 100 ? strike.toFixed(0) : strike >= 1 ? strike.toFixed(2) : strike.toFixed(4)}</span>
+            <span className="font-bold text-etcha-text">{assetName}</span>
+            <span className="text-etcha-copper-light font-mono">${strike >= 100 ? strike.toFixed(0) : strike >= 1 ? strike.toFixed(2) : strike.toFixed(4)}</span>
             {cSize !== 1 && (
-              <span className="text-[#9da5b8] text-xs">×{cSize >= 1 ? cSize.toFixed(0) : cSize}</span>
+              <span className="text-etcha-text-secondary text-xs">×{cSize >= 1 ? cSize.toFixed(0) : cSize}</span>
             )}
-            <span className="text-[#9da5b8] text-sm">Exp: {expiry}</span>
+            <span className="text-etcha-text-secondary text-sm">Exp: {expiry}</span>
           </div>
           <button
             onClick={onClose}
-            className="text-[#9da5b8] hover:text-[#e8eaf0] text-xl leading-none px-2"
+            className="text-etcha-text-secondary hover:text-etcha-text text-xl leading-none px-2"
             aria-label="Close trade panel"
           >
             x
@@ -307,8 +307,8 @@ export function TradePanel({
               aria-pressed={side === "buy"}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
                 side === "buy"
-                  ? "bg-[#c87941] text-white"
-                  : "bg-[#1e2330] text-[#9da5b8] hover:text-[#e8eaf0]"
+                  ? "bg-etcha-copper text-white"
+                  : "bg-etcha-border text-etcha-text-secondary hover:text-etcha-text"
               }`}
             >
               Buy
@@ -318,8 +318,8 @@ export function TradePanel({
               aria-pressed={side === "sell"}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
                 side === "sell"
-                  ? "bg-[#c87941] text-white"
-                  : "bg-[#1e2330] text-[#9da5b8] hover:text-[#e8eaf0]"
+                  ? "bg-etcha-copper text-white"
+                  : "bg-etcha-border text-etcha-text-secondary hover:text-etcha-text"
               }`}
             >
               Sell
@@ -327,29 +327,29 @@ export function TradePanel({
           </div>
 
           {side === "sell" ? (
-            <div className="text-center py-8 text-[#9da5b8]">
+            <div className="text-center py-8 text-etcha-text-secondary">
               <p className="text-lg font-semibold mb-2">Sell Orders — Coming Soon</p>
               <p className="text-sm mb-4">Direct sell orders from the trade panel are not yet available.</p>
-              <p className="text-sm">To sell options you already hold, go to<br /><a href="/app/portfolio" className="text-[#c87941] hover:underline">Portfolio → List for Sale</a></p>
+              <p className="text-sm">To sell options you already hold, go to<br /><a href="/app/portfolio" className="text-etcha-copper hover:underline">Portfolio → List for Sale</a></p>
             </div>
           ) : (
             <>
               {/* Available / Premium / Contract Size */}
-              <div className="bg-[#0a0c10] rounded-lg px-4 py-3 space-y-1">
+              <div className="bg-etcha-bg rounded-lg px-4 py-3 space-y-1">
                 <div className="flex justify-between text-sm">
-                  <span className="text-[#9da5b8]">Available</span>
-                  <span className="text-[#e8eaf0] font-mono">{available} contracts</span>
+                  <span className="text-etcha-text-secondary">Available</span>
+                  <span className="text-etcha-text font-mono">{available} contracts</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-[#9da5b8]">Premium</span>
-                  <span className="text-[#e09a5f] font-mono">
+                  <span className="text-etcha-text-secondary">Premium</span>
+                  <span className="text-etcha-copper-light font-mono">
                     {premium > 0 ? `${premium.toFixed(stableDecimals)} ${coin}` : "—"}
                   </span>
                 </div>
                 {cSize !== 1 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-[#9da5b8]">Contract Size</span>
-                    <span className="text-[#e8eaf0] font-mono">
+                    <span className="text-etcha-text-secondary">Contract Size</span>
+                    <span className="text-etcha-text font-mono">
                       {(() => {
                         const rate = oracleIndex !== undefined ? Number(REGISTRY_RATES[oracleIndex] ?? 0n) : 0;
                         const rateIsPow10 = rate > 0 && Math.log10(rate) % 1 === 0;
@@ -365,44 +365,44 @@ export function TradePanel({
 
               {/* Quantity input */}
               <div>
-                <label className="text-sm text-[#9da5b8] block mb-1">Quantity</label>
+                <label className="text-sm text-etcha-text-secondary block mb-1">Quantity</label>
                 <input
                   type="number"
                   min="1"
                   max={available}
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
-                  className="w-full bg-[#0a0c10] border border-[#1e2330] rounded-lg px-4 py-2 text-[#e8eaf0] font-mono text-lg focus:border-[#c87941] focus:outline-none transition-colors"
+                  className="w-full bg-etcha-bg border border-etcha-border rounded-lg px-4 py-2 text-etcha-text font-mono text-lg focus:border-etcha-copper focus:outline-none transition-colors"
                 />
               </div>
 
               {/* Total */}
               <div className="flex justify-between items-center px-1">
-                <span className="text-[#9da5b8] text-sm">Total</span>
-                <span className="text-[#e09a5f] font-mono text-xl font-bold">
+                <span className="text-etcha-text-secondary text-sm">Total</span>
+                <span className="text-etcha-copper-light font-mono text-xl font-bold">
                   {total > 0 ? `${total.toFixed(stableDecimals)} ${coin}` : "—"}
                 </span>
               </div>
 
               {/* Exercise info */}
-              <div className="border border-[#1e2330] rounded-lg px-4 py-3 space-y-2">
-                <div className="text-sm text-[#9da5b8] font-medium border-b border-[#1e2330] pb-1 mb-1">
+              <div className="border border-etcha-border rounded-lg px-4 py-3 space-y-2">
+                <div className="text-sm text-etcha-text-secondary font-medium border-b border-etcha-border pb-1 mb-1">
                   If Exercised
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-[#9da5b8]">You receive</span>
-                  <span className="text-[#34d399] font-mono">
+                  <span className="text-etcha-text-secondary">You receive</span>
+                  <span className="text-etcha-green font-mono">
                     {exerciseReceive}
-                    {isCall && exerciseReceiveUsd > 0 && <span className="text-[#9da5b8] ml-1">(~${exerciseReceiveUsd.toFixed(2)})</span>}
+                    {isCall && exerciseReceiveUsd > 0 && <span className="text-etcha-text-secondary ml-1">(~${exerciseReceiveUsd.toFixed(2)})</span>}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-[#9da5b8]">You pay</span>
-                  <span className="text-[#f87171] font-mono">{exercisePay}</span>
+                  <span className="text-etcha-text-secondary">You pay</span>
+                  <span className="text-etcha-red font-mono">{exercisePay}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-[#9da5b8]">Breakeven</span>
-                  <span className="text-[#e8eaf0] font-mono">
+                  <span className="text-etcha-text-secondary">Breakeven</span>
+                  <span className="text-etcha-text font-mono">
                     ${breakeven >= 100 ? breakeven.toFixed(0) : breakeven.toFixed(4)}/{assetName}
                   </span>
                 </div>
@@ -411,20 +411,20 @@ export function TradePanel({
               {/* Slippage & Stablecoin (read-only for buy) */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm text-[#9da5b8] block mb-1">Slippage</label>
+                  <label className="text-sm text-etcha-text-secondary block mb-1">Slippage</label>
                   <div className="relative">
                     <input
                       type="text"
                       value={slippage}
                       onChange={(e) => setSlippage(e.target.value)}
-                      className="w-full bg-[#0a0c10] border border-[#1e2330] rounded-lg px-3 py-2 text-[#e8eaf0] font-mono text-sm focus:border-[#c87941] focus:outline-none"
+                      className="w-full bg-etcha-bg border border-etcha-border rounded-lg px-3 py-2 text-etcha-text font-mono text-sm focus:border-etcha-copper focus:outline-none"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9da5b8] text-sm">%</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-etcha-text-secondary text-sm">%</span>
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm text-[#9da5b8] block mb-1">Stablecoin</label>
-                  <div className="w-full bg-[#0a0c10] border border-[#1e2330] rounded-lg px-3 py-2 text-[#9da5b8] text-sm">
+                  <label className="text-sm text-etcha-text-secondary block mb-1">Stablecoin</label>
+                  <div className="w-full bg-etcha-bg border border-etcha-border rounded-lg px-3 py-2 text-etcha-text-secondary text-sm">
                     {coin} {sellOrder ? "(fixed by order)" : ""}
                   </div>
                 </div>
@@ -436,7 +436,7 @@ export function TradePanel({
                 onClick={handleConfirmBuy}
                 className={`w-full py-3 rounded-lg font-bold text-white transition-colors ${
                   canBuy && !txId
-                    ? "bg-[#c87941] hover:bg-[#e09a5f] cursor-pointer"
+                    ? "bg-etcha-copper hover:bg-etcha-copper-light cursor-pointer"
                     : "bg-[#c87941]/30 cursor-not-allowed"
                 }`}
               >
@@ -473,7 +473,7 @@ export function TradePanel({
 
           {/* Spot price footer */}
           {side !== "sell" && (
-            <div className="text-center text-xs text-[#9da5b8]">
+            <div className="text-center text-xs text-etcha-text-secondary">
               Spot: ${spotPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
               {" "} | Oracle feed
             </div>

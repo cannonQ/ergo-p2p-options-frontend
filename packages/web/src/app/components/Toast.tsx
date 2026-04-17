@@ -48,16 +48,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               key={t.id}
               className={`flex items-start gap-3 px-4 py-3 rounded-lg border shadow-lg text-sm animate-slide-up ${
                 t.type === "error"
-                  ? "bg-[#2a1215] border-[#4d1a1e] text-[#f87171]"
+                  ? "bg-[#2a1215] border-[#4d1a1e] text-etcha-red"
                   : t.type === "success"
                   ? "bg-[#0d2818] border-[#1a4d2e] text-[#4ade80]"
-                  : "bg-[#12151c] border-[#1e2330] text-[#e8eaf0]"
+                  : "bg-etcha-surface border-etcha-border text-etcha-text"
               }`}
             >
               <span className="flex-1">{t.message}</span>
               <button
                 onClick={() => dismiss(t.id)}
-                className="text-[#9da5b8] hover:text-[#e8eaf0] text-xs shrink-0"
+                className="text-etcha-text-secondary hover:text-etcha-text text-xs shrink-0"
                 aria-label="Dismiss"
               >
                 &times;

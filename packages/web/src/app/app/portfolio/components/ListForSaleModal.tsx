@@ -161,13 +161,13 @@ export function ListForSaleModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="list-sale-title" className="bg-[#12151c] border border-[#1e2330] rounded-xl w-full max-w-md mx-4 p-6 space-y-5">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="list-sale-title" className="bg-etcha-surface border border-etcha-border rounded-xl w-full max-w-md mx-4 p-6 space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h2 id="list-sale-title" className="text-lg font-semibold text-[#e8eaf0]">List for Sale</h2>
+          <h2 id="list-sale-title" className="text-lg font-semibold text-etcha-text">List for Sale</h2>
           <button
             onClick={onClose}
-            className="text-[#9da5b8] hover:text-[#e8eaf0] text-xl leading-none"
+            className="text-etcha-text-secondary hover:text-etcha-text text-xl leading-none"
             aria-label="Close list for sale dialog"
           >
             &times;
@@ -175,10 +175,10 @@ export function ListForSaleModal({
         </div>
 
         {/* Option info */}
-        <div className="text-sm text-[#9da5b8] space-y-1">
+        <div className="text-sm text-etcha-text-secondary space-y-1">
           <div>
             <span className="text-[#64748b]">Option:</span>{" "}
-            <span className="text-[#e8eaf0]">{optionName}</span>
+            <span className="text-etcha-text">{optionName}</span>
           </div>
           <div>
             <span className="text-[#64748b]">Token ID:</span>{" "}
@@ -188,12 +188,12 @@ export function ListForSaleModal({
           </div>
           <div>
             <span className="text-[#64748b]">Available:</span>{" "}
-            <span className="text-[#e8eaf0]">{maxTokens.toString()} tokens</span>
+            <span className="text-etcha-text">{maxTokens.toString()} tokens</span>
           </div>
           {spotPrice !== null && (
             <div>
               <span className="text-[#64748b]">Spot Price:</span>{" "}
-              <span className="text-[#e09a5f] font-mono">${spotPrice.toFixed(4)}</span>
+              <span className="text-etcha-copper-light font-mono">${spotPrice.toFixed(4)}</span>
             </div>
           )}
           {strikePrice !== undefined && (() => {
@@ -203,14 +203,14 @@ export function ListForSaleModal({
             return (
             <div>
               <span className="text-[#64748b]">Strike:</span>{" "}
-              <span className="text-[#e8eaf0] font-mono">${strikePerUnit.toFixed(4)}</span>
+              <span className="text-etcha-text font-mono">${strikePerUnit.toFixed(4)}</span>
               {size !== 1 && (
-                <span className="text-[#9da5b8] text-xs ml-1">(${strikePrice.toFixed(size >= 100 ? 0 : 4)}/contract)</span>
+                <span className="text-etcha-text-secondary text-xs ml-1">(${strikePrice.toFixed(size >= 100 ? 0 : 4)}/contract)</span>
               )}
               {spotPrice !== null && (
                 <span className={`ml-2 text-xs ${
                   (optionType === "call" ? spotPrice > strikePerUnit : spotPrice < strikePerUnit)
-                    ? "text-[#34d399]" : "text-[#f87171]"
+                    ? "text-etcha-green" : "text-etcha-red"
                 }`}>
                   {optionType === "call"
                     ? (spotPrice > strikePerUnit ? "ITM" : "OTM")
@@ -231,37 +231,37 @@ export function ListForSaleModal({
               return (
                 <div>
                   <span className="text-[#64748b]">Each token:</span>{" "}
-                  <span className="text-[#e8eaf0] font-mono">{tokenCount} {unitName}</span>
-                  <span className="text-[#9da5b8] ml-1">(~${(contractSize * spotPrice).toFixed(2)})</span>
+                  <span className="text-etcha-text font-mono">{tokenCount} {unitName}</span>
+                  <span className="text-etcha-text-secondary ml-1">(~${(contractSize * spotPrice).toFixed(2)})</span>
                 </div>
               );
             }
             return (
               <div>
                 <span className="text-[#64748b]">Each token:</span>{" "}
-                <span className="text-[#e8eaf0] font-mono">{contractSize} {unitName}</span>
-                <span className="text-[#9da5b8] ml-1">(~${(contractSize * spotPrice).toFixed(2)})</span>
+                <span className="text-etcha-text font-mono">{contractSize} {unitName}</span>
+                <span className="text-etcha-text-secondary ml-1">(~${(contractSize * spotPrice).toFixed(2)})</span>
               </div>
             );
           })()}
           {suggestedPremium !== null && (
             <div>
               <span className="text-[#64748b]">B-S Suggested:</span>{" "}
-              <span className="text-[#a78bfa] font-mono">{suggestedPremium.toFixed(6)} {stablecoin}</span>
+              <span className="text-etcha-purple font-mono">{suggestedPremium.toFixed(6)} {stablecoin}</span>
             </div>
           )}
         </div>
 
         {/* Stablecoin selector */}
         <div>
-          <label className="block text-sm text-[#9da5b8] mb-1.5">Payment Currency</label>
+          <label className="block text-sm text-etcha-text-secondary mb-1.5">Payment Currency</label>
           <div className="flex gap-2">
             <button
               onClick={() => setStablecoin("USE")}
               className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
                 stablecoin === "USE"
-                  ? "bg-[#c87941]/20 border-[#c87941] text-[#c87941]"
-                  : "bg-[#1e2330] border-[#1e2330] text-[#9da5b8] hover:border-[#1e2330]"
+                  ? "bg-[#c87941]/20 border-etcha-copper text-etcha-copper"
+                  : "bg-etcha-border border-etcha-border text-etcha-text-secondary hover:border-etcha-border"
               }`}
             >
               USE (Dexy USD)
@@ -270,8 +270,8 @@ export function ListForSaleModal({
               onClick={() => setStablecoin("SigUSD")}
               className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
                 stablecoin === "SigUSD"
-                  ? "bg-[#c87941]/20 border-[#c87941] text-[#c87941]"
-                  : "bg-[#1e2330] border-[#1e2330] text-[#9da5b8] hover:border-[#1e2330]"
+                  ? "bg-[#c87941]/20 border-etcha-copper text-etcha-copper"
+                  : "bg-etcha-border border-etcha-border text-etcha-text-secondary hover:border-etcha-border"
               }`}
             >
               SigUSD
@@ -281,13 +281,13 @@ export function ListForSaleModal({
 
         {/* Premium per token */}
         <div>
-          <label className="flex items-center justify-between text-sm text-[#9da5b8] mb-1.5">
+          <label className="flex items-center justify-between text-sm text-etcha-text-secondary mb-1.5">
             <span>Premium per Token ({unitName})</span>
             {suggestedPremium !== null && suggestedPremium > 0 && (
               <button
                 type="button"
                 onClick={() => setPremiumInput(suggestedPremium.toFixed(6))}
-                className="text-xs text-[#c87941] hover:underline"
+                className="text-xs text-etcha-copper hover:underline"
               >
                 B-S: {suggestedPremium.toFixed(4)} {unitName}
               </button>
@@ -305,13 +305,13 @@ export function ListForSaleModal({
             value={premiumInput}
             onChange={(e) => setPremiumInput(e.target.value)}
             placeholder={suggestedPremium ? suggestedPremium.toFixed(6) : `e.g. 0.${decimals === 3 ? "050" : "05"}`}
-            className="w-full px-3 py-2 bg-[#1e2330] border border-[#1e2330] rounded-lg text-[#e8eaf0] text-sm focus:outline-none focus:border-[#c87941]"
+            className="w-full px-3 py-2 bg-etcha-border border border-etcha-border rounded-lg text-etcha-text text-sm focus:outline-none focus:border-etcha-copper"
           />
         </div>
 
         {/* Token amount */}
         <div>
-          <label className="block text-sm text-[#9da5b8] mb-1.5">
+          <label className="block text-sm text-etcha-text-secondary mb-1.5">
             Tokens to List
           </label>
           <div className="flex gap-2">
@@ -321,11 +321,11 @@ export function ListForSaleModal({
               max={maxTokens.toString()}
               value={tokenAmountInput}
               onChange={(e) => setTokenAmountInput(e.target.value)}
-              className="flex-1 px-3 py-2 bg-[#1e2330] border border-[#1e2330] rounded-lg text-[#e8eaf0] text-sm focus:outline-none focus:border-[#c87941]"
+              className="flex-1 px-3 py-2 bg-etcha-border border border-etcha-border rounded-lg text-etcha-text text-sm focus:outline-none focus:border-etcha-copper"
             />
             <button
               onClick={() => setTokenAmountInput(maxTokens.toString())}
-              className="px-3 py-2 bg-[#1e2330] border border-[#1e2330] rounded-lg text-[#9da5b8] text-xs hover:text-[#e8eaf0]"
+              className="px-3 py-2 bg-etcha-border border border-etcha-border rounded-lg text-etcha-text-secondary text-xs hover:text-etcha-text"
             >
               Max
             </button>
@@ -338,22 +338,22 @@ export function ListForSaleModal({
           const feeAmount = totalPremium * 0.01;
           const sellerReceives = totalPremium - feeAmount;
           return (
-            <div className="bg-[#1e2330]/50 border border-[#1e2330] rounded-lg p-3 text-sm space-y-1">
-              <div className="flex justify-between text-[#9da5b8]">
+            <div className="bg-[#1e2330]/50 border border-etcha-border rounded-lg p-3 text-sm space-y-1">
+              <div className="flex justify-between text-etcha-text-secondary">
                 <span>Total premium (if fully filled)</span>
-                <span className="text-[#e09a5f] font-mono">
+                <span className="text-etcha-copper-light font-mono">
                   {totalPremium.toFixed(decimals)} {stablecoin}
                 </span>
               </div>
-              <div className="flex justify-between text-[#9da5b8]">
+              <div className="flex justify-between text-etcha-text-secondary">
                 <span>Protocol fee (1%)</span>
                 <span className="text-[#64748b] font-mono">
                   −{feeAmount.toFixed(feeAmount < 0.01 ? 4 : decimals)} {stablecoin}
                 </span>
               </div>
-              <div className="flex justify-between text-[#9da5b8] border-t border-[#1e2330] pt-1 mt-1">
+              <div className="flex justify-between text-etcha-text-secondary border-t border-etcha-border pt-1 mt-1">
                 <span>You receive</span>
-                <span className="text-[#34d399] font-mono">
+                <span className="text-etcha-green font-mono">
                   {sellerReceives.toFixed(decimals)} {stablecoin}
                 </span>
               </div>
@@ -363,7 +363,7 @@ export function ListForSaleModal({
 
         {/* Error / Success */}
         {error && (
-          <div className="bg-[#f87171]/10 border border-[#f87171]/30 rounded-lg p-3 text-sm text-[#f87171]">
+          <div className="bg-[#f87171]/10 border border-[#f87171]/30 rounded-lg p-3 text-sm text-etcha-red">
             {error}
           </div>
         )}
@@ -375,14 +375,14 @@ export function ListForSaleModal({
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 bg-[#1e2330] text-[#9da5b8] rounded-lg text-sm hover:text-[#e8eaf0] transition-colors"
+            className="flex-1 py-2.5 bg-etcha-border text-etcha-text-secondary rounded-lg text-sm hover:text-etcha-text transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={!isValid || submitting}
-            className="flex-1 py-2.5 bg-[#c87941] text-white rounded-lg text-sm font-medium hover:bg-[#e09a5f] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex-1 py-2.5 bg-etcha-copper text-white rounded-lg text-sm font-medium hover:bg-etcha-copper-light transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {submitting ? "Signing..." : "List for Sale"}
           </button>

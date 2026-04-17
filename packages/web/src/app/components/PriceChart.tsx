@@ -37,7 +37,7 @@ export function PriceChart({ data, assetName, strikePrice, change7d }: PriceChar
 
   if (data.length < 2) {
     return (
-      <div className="bg-[#12151c] border border-[#1e2330] rounded-lg px-4 py-6 text-center text-sm text-[#9da5b8]">
+      <div className="bg-etcha-surface border border-etcha-border rounded-lg px-4 py-6 text-center text-sm text-etcha-text-secondary">
         Price history unavailable
       </div>
     );
@@ -81,28 +81,28 @@ export function PriceChart({ data, assetName, strikePrice, change7d }: PriceChar
   const hoverTs = hoverIdx !== null ? data[hoverIdx]?.timestamp : null;
 
   return (
-    <div className="bg-[#12151c] border border-[#1e2330] rounded-lg px-4 pt-3 pb-2 mb-5">
+    <div className="bg-etcha-surface border border-etcha-border rounded-lg px-4 pt-3 pb-2 mb-5">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-semibold text-[#e8eaf0]">{assetName}/USD</span>
-          <span className="text-xs text-[#9da5b8]">7D</span>
+          <span className="text-sm font-semibold text-etcha-text">{assetName}/USD</span>
+          <span className="text-xs text-etcha-text-secondary">7D</span>
         </div>
         <div className="flex items-center gap-3">
           {hoverPrice !== null ? (
             <>
-              <span className="text-sm font-mono text-[#e09a5f]">${formatPrice(hoverPrice)}</span>
+              <span className="text-sm font-mono text-etcha-copper-light">${formatPrice(hoverPrice)}</span>
               {hoverTs && (
-                <span className="text-xs text-[#9da5b8]">
+                <span className="text-xs text-etcha-text-secondary">
                   {new Date(hoverTs).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                 </span>
               )}
             </>
           ) : (
             <>
-              <span className="text-sm font-mono text-[#e09a5f]">${formatPrice(currentPrice)}</span>
+              <span className="text-sm font-mono text-etcha-copper-light">${formatPrice(currentPrice)}</span>
               {change7d !== undefined && (
-                <span className={`text-xs font-mono font-semibold ${change7d >= 0 ? "text-[#34d399]" : "text-[#f87171]"}`}>
+                <span className={`text-xs font-mono font-semibold ${change7d >= 0 ? "text-etcha-green" : "text-etcha-red"}`}>
                   {change7d >= 0 ? "+" : ""}{change7d.toFixed(1)}%
                 </span>
               )}

@@ -354,7 +354,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
   ]);
 
   if (!info) {
-    return <div className="text-center py-20 text-[#9da5b8]">Asset not found</div>;
+    return <div className="text-center py-20 text-etcha-text-secondary">Asset not found</div>;
   }
 
   // Summary calculations
@@ -370,7 +370,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <Link href={`/app/trade/${params.asset}`} className="text-sm text-[#c87941] hover:underline">
+        <Link href={`/app/trade/${params.asset}`} className="text-sm text-etcha-copper hover:underline">
           &larr; Back to {info.name} chain
         </Link>
         <h1 className="text-xl font-bold mt-2">Write an Option on {info.name}</h1>
@@ -387,11 +387,11 @@ export default function WritePage({ params }: { params: { asset: string } }) {
       />
 
       {(isErgoPay ? ergoPay.step <= 1 : step === 0) ? (
-        <div className="bg-[#12151c] border border-[#1e2330] rounded-lg p-6 space-y-5">
+        <div className="bg-etcha-surface border border-etcha-border rounded-lg p-6 space-y-5">
           {/* Row 1: Type + Style */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm text-[#9da5b8] mb-2">
+              <label className="block text-sm text-etcha-text-secondary mb-2">
                 Type
                 <Tooltip text="Call: You profit when the price goes UP. You lock the underlying asset and buyers pay the strike price to claim it. Put: You profit when the price goes DOWN. You lock stablecoin and buyers deliver the underlying asset to claim it." />
               </label>
@@ -401,9 +401,9 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                     className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       optionType === t
                         ? t === "call"
-                          ? "bg-[#34d399]/20 text-[#34d399] border border-[#34d399]/30"
-                          : "bg-[#f87171]/20 text-[#f87171] border border-[#f87171]/30"
-                        : "bg-[#1e2330] text-[#9da5b8] hover:text-[#e8eaf0]"
+                          ? "bg-[#34d399]/20 text-etcha-green border border-[#34d399]/30"
+                          : "bg-[#f87171]/20 text-etcha-red border border-[#f87171]/30"
+                        : "bg-etcha-border text-etcha-text-secondary hover:text-etcha-text"
                     }`}>
                     {t.charAt(0).toUpperCase() + t.slice(1)}
                   </button>
@@ -411,7 +411,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
               </div>
             </div>
             <div>
-              <label className="block text-sm text-[#9da5b8] mb-2">
+              <label className="block text-sm text-etcha-text-secondary mb-2">
                 Style
                 <Tooltip text={style === "european"
                   ? "European: Buyer can only exercise during the ~24h window after maturity. Better for writers — price spikes during the term don't matter."
@@ -423,8 +423,8 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                   <button key={s} onClick={() => setStyle(s)}
                     className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       style === s
-                        ? "bg-[#c87941]/20 text-[#c87941] border border-[#c87941]/30"
-                        : "bg-[#1e2330] text-[#9da5b8] hover:text-[#e8eaf0]"
+                        ? "bg-[#c87941]/20 text-etcha-copper border border-[#c87941]/30"
+                        : "bg-etcha-border text-etcha-text-secondary hover:text-etcha-text"
                     }`}>
                     {s.charAt(0).toUpperCase() + s.slice(1)}
                   </button>
@@ -435,7 +435,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
 
           {/* Settlement */}
           <div>
-            <label className="block text-sm text-[#9da5b8] mb-2">Settlement</label>
+            <label className="block text-sm text-etcha-text-secondary mb-2">Settlement</label>
             <div className="flex gap-2">
               {(["physical", "cash"] as const).map((s) => {
                 const disabled = s === "physical" && !hasPhysicalDelivery(info.index);
@@ -445,10 +445,10 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                     disabled={disabled}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       settlement === s
-                        ? "bg-[#c87941]/20 text-[#c87941] border border-[#c87941]/30"
+                        ? "bg-[#c87941]/20 text-etcha-copper border border-[#c87941]/30"
                         : disabled
                         ? "bg-[#1e2330]/50 text-[#9da5b8]/40 cursor-not-allowed"
-                        : "bg-[#1e2330] text-[#9da5b8] hover:text-[#e8eaf0]"
+                        : "bg-etcha-border text-etcha-text-secondary hover:text-etcha-text"
                     }`}>
                     {s.charAt(0).toUpperCase() + s.slice(1)}
                     {disabled && " (N/A)"}
@@ -461,10 +461,10 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           {/* Row 2: Strike + Expiry */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm text-[#9da5b8] mb-2">
+              <label className="block text-sm text-etcha-text-secondary mb-2">
                 Strike Price (USD)
                 {oracleLoading ? (
-                  <span className="ml-2 text-sm text-[#9da5b8] animate-pulse">Loading oracle data...</span>
+                  <span className="ml-2 text-sm text-etcha-text-secondary animate-pulse">Loading oracle data...</span>
                 ) : spotPrice > 0 ? (
                   <button
                     type="button"
@@ -473,7 +473,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                       const d = p >= 100 ? 0 : p >= 1 ? 2 : p >= 0.01 ? 4 : 6;
                       setStrike(p.toFixed(d));
                     }}
-                    className="ml-2 text-[#e09a5f] hover:underline cursor-pointer"
+                    className="ml-2 text-etcha-copper-light hover:underline cursor-pointer"
                   >
                     Current: ${spotPrice.toFixed(spotPrice >= 100 ? 2 : 4)}
                   </button>
@@ -487,27 +487,27 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                   const mag = Math.pow(10, Math.max(0, Math.floor(Math.log10(val)) - 1));
                   return mag.toString();
                 })()}
-                className="w-full bg-[#0a0c10] border border-[#1e2330] rounded-lg px-4 py-2 text-[#e8eaf0] font-mono focus:border-[#c87941] focus:outline-none" />
+                className="w-full bg-etcha-bg border border-etcha-border rounded-lg px-4 py-2 text-etcha-text font-mono focus:border-etcha-copper focus:outline-none" />
             </div>
             <div>
-              <label className="block text-sm text-[#9da5b8] mb-2">Expiry</label>
+              <label className="block text-sm text-etcha-text-secondary mb-2">Expiry</label>
               <div className="flex gap-2 items-center">
                 <input type="number" value={expiryInput} onChange={(e) => setExpiryInput(e.target.value)}
                   min="1" step={expiryUnit === "days" ? "1" : "10"}
-                  className="w-24 bg-[#0a0c10] border border-[#1e2330] rounded-lg px-3 py-2 text-[#e8eaf0] font-mono focus:border-[#c87941] focus:outline-none" />
-                <div className="flex bg-[#0a0c10] border border-[#1e2330] rounded-lg overflow-hidden">
+                  className="w-24 bg-etcha-bg border border-etcha-border rounded-lg px-3 py-2 text-etcha-text font-mono focus:border-etcha-copper focus:outline-none" />
+                <div className="flex bg-etcha-bg border border-etcha-border rounded-lg overflow-hidden">
                   <button type="button"
                     onClick={() => { setExpiryUnit("days"); setExpiryInput("7"); }}
-                    className={`px-3 py-2 text-xs font-medium transition-colors ${expiryUnit === "days" ? "bg-[#c87941] text-white" : "text-[#9da5b8] hover:text-[#e8eaf0]"}`}>
+                    className={`px-3 py-2 text-xs font-medium transition-colors ${expiryUnit === "days" ? "bg-etcha-copper text-white" : "text-etcha-text-secondary hover:text-etcha-text"}`}>
                     Days
                   </button>
                   <button type="button"
                     onClick={() => { setExpiryUnit("blocks"); setExpiryInput("720"); }}
-                    className={`px-3 py-2 text-xs font-medium transition-colors ${expiryUnit === "blocks" ? "bg-[#c87941] text-white" : "text-[#9da5b8] hover:text-[#e8eaf0]"}`}>
+                    className={`px-3 py-2 text-xs font-medium transition-colors ${expiryUnit === "blocks" ? "bg-etcha-copper text-white" : "text-etcha-text-secondary hover:text-etcha-text"}`}>
                     Blocks
                   </button>
                 </div>
-                <span className="text-xs text-[#9da5b8]">
+                <span className="text-xs text-etcha-text-secondary">
                   {expiryUnit === "days" ? `${expiryBlocks} blocks` : `~${(expiryBlocks / BLOCKS_PER_DAY).toFixed(1)} days`}
                 </span>
               </div>
@@ -517,7 +517,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           {/* Contract Size + Number of Contracts — side by side */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-[#9da5b8] mb-2">
+              <label className="block text-sm text-etcha-text-secondary mb-2">
                 Contract Size ({optionType === "call" && settlement === "physical" ? (info.oracleUnit ?? info.unit) : "USD equivalent"})
               </label>
               <div className="flex items-center gap-2">
@@ -530,25 +530,25 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                     const mag = Math.pow(10, Math.floor(Math.log10(val)));
                     return mag.toString();
                   })()}
-                  className="w-full bg-[#0a0c10] border border-[#1e2330] rounded-lg px-4 py-2 text-[#e8eaf0] font-mono focus:border-[#c87941] focus:outline-none" />
-                <span className="text-xs text-[#9da5b8] whitespace-nowrap">
+                  className="w-full bg-etcha-bg border border-etcha-border rounded-lg px-4 py-2 text-etcha-text font-mono focus:border-etcha-copper focus:outline-none" />
+                <span className="text-xs text-etcha-text-secondary whitespace-nowrap">
                   {optionType === "call" && settlement === "physical" ? (info.oracleUnit ?? info.unit) : "USD"}
                 </span>
               </div>
               {cSize > 0 && spotPrice > 0 && (
-                <p className="mt-1 text-xs text-[#9da5b8]">
-                  1 contract = <span className="text-[#e8eaf0] font-semibold">{contractSize} {info.oracleUnit ?? info.unit}</span>
-                  {" "}(~<span className="text-[#e09a5f]">${contractUsdValue.toFixed(2)}</span>)
+                <p className="mt-1 text-xs text-etcha-text-secondary">
+                  1 contract = <span className="text-etcha-text font-semibold">{contractSize} {info.oracleUnit ?? info.unit}</span>
+                  {" "}(~<span className="text-etcha-copper-light">${contractUsdValue.toFixed(2)}</span>)
                 </p>
               )}
             </div>
             <div>
-              <label className="block text-sm text-[#9da5b8] mb-2">
+              <label className="block text-sm text-etcha-text-secondary mb-2">
                 Number of Contracts
               </label>
               <input type="number" value={numContracts} onChange={(e) => setNumContracts(e.target.value)}
                 placeholder="10" min="1" step="1"
-                className="w-full bg-[#0a0c10] border border-[#1e2330] rounded-lg px-4 py-2 text-[#e8eaf0] font-mono focus:border-[#c87941] focus:outline-none" />
+                className="w-full bg-etcha-bg border border-etcha-border rounded-lg px-4 py-2 text-etcha-text font-mono focus:border-etcha-copper focus:outline-none" />
             </div>
           </div>
 
@@ -561,31 +561,31 @@ export default function WritePage({ params }: { params: { asset: string } }) {
             const hasTokenUnit = isPhysicalCall && info.oracleUnit && info.unit !== info.oracleUnit && rate > 0;
             const tokenCount = hasTokenUnit ? Math.ceil(collateral * rate) : 0;
             return (
-              <div className="p-4 bg-[#0a0c10] rounded-lg border border-[#1e2330]">
-                <h3 className="text-sm font-semibold text-[#e8eaf0] mb-2">Collateral Required</h3>
+              <div className="p-4 bg-etcha-bg rounded-lg border border-etcha-border">
+                <h3 className="text-sm font-semibold text-etcha-text mb-2">Collateral Required</h3>
                 <div className="text-sm space-y-1">
                   <div className="flex justify-between">
-                    <span className="text-[#9da5b8]">{contracts} contracts × {contractSize} {displayUnit}</span>
+                    <span className="text-etcha-text-secondary">{contracts} contracts × {contractSize} {displayUnit}</span>
                     {hasTokenUnit ? (
-                      <span className="text-[#e8eaf0] font-mono font-semibold">
+                      <span className="text-etcha-text font-mono font-semibold">
                         {tokenCount} {info.unit}
                       </span>
                     ) : (
-                      <span className="text-[#e8eaf0] font-mono font-semibold">
+                      <span className="text-etcha-text font-mono font-semibold">
                         {collateral.toFixed(collateral >= 1 ? 4 : 6)} {displayUnit}
                       </span>
                     )}
                   </div>
                   {hasTokenUnit && (
                     <div className="flex justify-between">
-                      <span className="text-[#9da5b8]">{collateral.toFixed(collateral >= 1 ? 4 : 6)} {info.oracleUnit}</span>
-                      <span className="text-[#9da5b8] text-xs">({rate} {info.unit} per {info.oracleUnit})</span>
+                      <span className="text-etcha-text-secondary">{collateral.toFixed(collateral >= 1 ? 4 : 6)} {info.oracleUnit}</span>
+                      <span className="text-etcha-text-secondary text-xs">({rate} {info.unit} per {info.oracleUnit})</span>
                     </div>
                   )}
                   {spotPrice > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-[#9da5b8]">USD value</span>
-                      <span className="text-[#e09a5f] font-mono">~${(collateral * (isPhysicalCall ? spotPrice : 1)).toFixed(2)}</span>
+                      <span className="text-etcha-text-secondary">USD value</span>
+                      <span className="text-etcha-copper-light font-mono">~${(collateral * (isPhysicalCall ? spotPrice : 1)).toFixed(2)}</span>
                     </div>
                   )}
                 </div>
@@ -596,34 +596,34 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           {/* Stablecoin + Est. Premium — side by side */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-[#9da5b8] mb-2">Stablecoin for Strike Payment</label>
+              <label className="block text-sm text-etcha-text-secondary mb-2">Stablecoin for Strike Payment</label>
               <div className="flex gap-2">
                 {(["USE", "SigUSD"] as const).map((s) => (
                   <button key={s} onClick={() => setStablecoin(s)}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       stablecoin === s
-                        ? "bg-[#e09a5f]/20 text-[#e09a5f] border border-[#e09a5f]/30"
-                        : "bg-[#1e2330] text-[#9da5b8] hover:text-[#e8eaf0]"
+                        ? "bg-[#e09a5f]/20 text-etcha-copper-light border border-[#e09a5f]/30"
+                        : "bg-etcha-border text-etcha-text-secondary hover:text-etcha-text"
                     }`}>
                     {s} (${s === "USE" ? "1.000" : "1.00"})
                   </button>
                 ))}
               </div>
               {strike && (
-                <p className="mt-1 text-xs text-[#9da5b8]">
+                <p className="mt-1 text-xs text-etcha-text-secondary">
                   Strike payment per contract: {strikeUsdPerContract.toFixed(stablecoin === "USE" ? 3 : 2)} {stablecoin}
                 </p>
               )}
             </div>
             <div>
-              <label className="block text-sm text-[#9da5b8] mb-2">Est. Premium (Black-Scholes)</label>
+              <label className="block text-sm text-etcha-text-secondary mb-2">Est. Premium (Black-Scholes)</label>
               {suggestedPremium > 0 ? (
-                <p className="py-2 text-[#e09a5f] font-mono text-lg">
-                  {suggestedPremium.toFixed(suggestedPremium < 0.01 ? 6 : 3)} <span className="text-sm text-[#9da5b8]">{stablecoin}/contract</span>
-                  <span className="ml-2 text-xs text-[#9da5b8]">(σ={(oracleVolToDecimal(oracleVol) * 100).toFixed(1)}%)</span>
+                <p className="py-2 text-etcha-copper-light font-mono text-lg">
+                  {suggestedPremium.toFixed(suggestedPremium < 0.01 ? 6 : 3)} <span className="text-sm text-etcha-text-secondary">{stablecoin}/contract</span>
+                  <span className="ml-2 text-xs text-etcha-text-secondary">(σ={(oracleVolToDecimal(oracleVol) * 100).toFixed(1)}%)</span>
                 </p>
               ) : (
-                <p className="py-2 text-xs text-[#9da5b8]">
+                <p className="py-2 text-xs text-etcha-text-secondary">
                   {spotPrice <= 0 ? "Waiting for oracle price..." : "—"}
                 </p>
               )}
@@ -631,25 +631,25 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           </div>
 
           {/* V5: Auto-list toggle + premium input */}
-          <div className="p-4 bg-[#0a0c10] rounded-lg border border-[#1e2330] space-y-3">
+          <div className="p-4 bg-etcha-bg rounded-lg border border-etcha-border space-y-3">
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={autoList}
                 onChange={(e) => setAutoList(e.target.checked)}
-                className="w-4 h-4 rounded border-[#1e2330] bg-[#0a0c10] text-[#c87941] focus:ring-[#c87941]"
+                className="w-4 h-4 rounded border-etcha-border bg-etcha-bg text-etcha-copper focus:ring-etcha-copper"
               />
-              <span className="text-sm text-[#e8eaf0] font-medium">Auto-list for sale after minting</span>
+              <span className="text-sm text-etcha-text font-medium">Auto-list for sale after minting</span>
             </label>
             {autoList && (
               <div>
-                <label className="block text-xs text-[#9da5b8] mb-1">
+                <label className="block text-xs text-etcha-text-secondary mb-1">
                   Premium per token ({stablecoin})
                   {suggestedPremium > 0 && (
                     <button
                       type="button"
                       onClick={() => setPremium(suggestedPremium.toFixed(6))}
-                      className="ml-2 text-[#c87941] hover:underline"
+                      className="ml-2 text-etcha-copper hover:underline"
                     >
                       Use B-S: {suggestedPremium.toFixed(suggestedPremium < 0.01 ? 6 : 3)}
                     </button>
@@ -662,15 +662,15 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                   placeholder={suggestedPremium > 0 ? suggestedPremium.toFixed(6) : "0.000"}
                   step="0.001"
                   min="0"
-                  className="w-full bg-[#12151c] border border-[#1e2330] rounded-lg px-3 py-2 text-[#e09a5f] font-mono focus:border-[#c87941] focus:outline-none"
+                  className="w-full bg-etcha-surface border border-etcha-border rounded-lg px-3 py-2 text-etcha-copper-light font-mono focus:border-etcha-copper focus:outline-none"
                 />
-                <p className="mt-1 text-xs text-[#9da5b8]">
+                <p className="mt-1 text-xs text-etcha-text-secondary">
                   Your tokens will be listed at this price immediately after minting. You can cancel anytime from Portfolio.
                 </p>
               </div>
             )}
             {!autoList && (
-              <p className="text-xs text-[#9da5b8]">
+              <p className="text-xs text-etcha-text-secondary">
                 Tokens will be delivered to your wallet. List for sale manually from Portfolio.
               </p>
             )}
@@ -678,11 +678,11 @@ export default function WritePage({ params }: { params: { asset: string } }) {
 
           {/* Summary */}
           {contracts > 0 && (
-            <div className="p-4 bg-[#0a0c10] rounded-lg border border-[#1e2330] space-y-2">
-              <h3 className="text-sm font-semibold text-[#e8eaf0] mb-3">Summary</h3>
+            <div className="p-4 bg-etcha-bg rounded-lg border border-etcha-border space-y-2">
+              <h3 className="text-sm font-semibold text-etcha-text mb-3">Summary</h3>
               <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-                <span className="text-[#9da5b8]">Lock:</span>
-                <span className="text-[#e8eaf0] font-mono">
+                <span className="text-etcha-text-secondary">Lock:</span>
+                <span className="text-etcha-text font-mono">
                   {(() => {
                     const isPhysicalCall = optionType === "call" && settlement === "physical";
                     const rate = isPhysicalCall ? Number(REGISTRY_RATES[info.index] ?? 0n) : 0;
@@ -694,32 +694,32 @@ export default function WritePage({ params }: { params: { asset: string } }) {
                     return <>{collateral.toFixed(collateral >= 1 ? 4 : 6)} {isPhysicalCall ? (info.oracleUnit ?? info.unit) : stablecoin}</>;
                   })()}
                   {info.index !== ERG_ORACLE_INDEX && (
-                    <span className="text-[#9da5b8]"> + {ergDeposit.toFixed(4)} ERG (fees)</span>
+                    <span className="text-etcha-text-secondary"> + {ergDeposit.toFixed(4)} ERG (fees)</span>
                   )}
                 </span>
 
-                <span className="text-[#9da5b8]">Receive:</span>
-                <span className="text-[#e8eaf0] font-mono">{contracts} option tokens</span>
+                <span className="text-etcha-text-secondary">Receive:</span>
+                <span className="text-etcha-text font-mono">{contracts} option tokens</span>
 
-                <span className="text-[#9da5b8]">If all exercised:</span>
+                <span className="text-etcha-text-secondary">If all exercised:</span>
                 {settlement === "physical" ? (
-                  <span className="text-[#34d399] font-mono">
+                  <span className="text-etcha-green font-mono">
                     you receive {totalStrikeUsd.toFixed(stablecoin === "USE" ? 3 : 2)} {stablecoin}
                   </span>
                 ) : (
-                  <span className="text-[#e09a5f] font-mono">
+                  <span className="text-etcha-copper-light font-mono">
                     buyer receives payout from your {collateral.toFixed(collateral >= 1 ? 4 : 6)} {stablecoin} collateral
                   </span>
                 )}
 
-                <span className="text-[#9da5b8]">If expired:</span>
-                <span className="text-[#e8eaf0] font-mono">you keep all {optionType === "call" && settlement === "physical" ? info.unit : stablecoin}</span>
+                <span className="text-etcha-text-secondary">If expired:</span>
+                <span className="text-etcha-text font-mono">you keep all {optionType === "call" && settlement === "physical" ? info.unit : stablecoin}</span>
               </div>
             </div>
           )}
 
           {!autoList && (
-            <p className="text-xs text-[#9da5b8]">
+            <p className="text-xs text-etcha-text-secondary">
               After minting, list your option for sale from the Portfolio page.
             </p>
           )}
@@ -727,11 +727,11 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           {/* Submit */}
           <button
             onClick={handleWrite}
-            className="w-full py-3 bg-[#c87941] text-white rounded-lg font-medium hover:bg-[#e09a5f] transition-colors disabled:opacity-50"
+            className="w-full py-3 bg-etcha-copper text-white rounded-lg font-medium hover:bg-etcha-copper-light transition-colors disabled:opacity-50"
             disabled={oracleLoading || !strike || contracts <= 0 || cSize <= 0 || activeStep > 0}>
             {activeStep > 0 ? "Submitting..." : isErgoPay ? "Sign with Mobile Wallet" : "Lock Collateral & Mint"}
           </button>
-          <p className="text-xs text-[#9da5b8] text-center">
+          <p className="text-xs text-etcha-text-secondary text-center">
             {isErgoPay
               ? "A QR code will appear for you to scan with your Ergo wallet app."
               : "You sign once. Our open-source bots handle the rest in ~3-6 blocks."}
@@ -739,7 +739,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
 
           {/* ErgoPay error display */}
           {isErgoPay && ergoPay.error && (
-            <div className="bg-[#2a1215] border border-[#4d1a1e] rounded-lg px-4 py-3 text-sm text-[#f87171]">
+            <div className="bg-[#2a1215] border border-[#4d1a1e] rounded-lg px-4 py-3 text-sm text-etcha-red">
               {ergoPay.error}
             </div>
           )}
@@ -759,7 +759,7 @@ export default function WritePage({ params }: { params: { asset: string } }) {
         </div>
       ) : (
         /* Step progress for TX chain */
-        <div className="bg-[#12151c] border border-[#1e2330] rounded-lg p-6 space-y-4">
+        <div className="bg-etcha-surface border border-etcha-border rounded-lg p-6 space-y-4">
           <h2 className="text-lg font-semibold mb-2">
             {activeStep >= 4 ? "Option Created" : "Creating Option..."}
           </h2>
@@ -791,25 +791,25 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           ].map((s) => (
             <div key={s.num} className="flex items-start gap-3">
               <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold ${
-                step > s.num ? "bg-[#34d399] text-white"
-                  : step === s.num && !writeError ? "bg-[#c87941] text-white animate-pulse"
-                  : step === s.num && writeError ? "bg-[#f87171] text-white"
-                  : "bg-[#1e2330] text-[#9da5b8]"
+                step > s.num ? "bg-etcha-green text-white"
+                  : step === s.num && !writeError ? "bg-etcha-copper text-white animate-pulse"
+                  : step === s.num && writeError ? "bg-etcha-red text-white"
+                  : "bg-etcha-border text-etcha-text-secondary"
               }`}>
                 {step > s.num ? "\u2713" : s.num}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className={step >= s.num ? "text-[#e8eaf0]" : "text-[#9da5b8]"}>
+                  <span className={step >= s.num ? "text-etcha-text" : "text-etcha-text-secondary"}>
                     {s.label}
                   </span>
                   {!s.isUserAction && step >= s.num && step <= s.num && (
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-[#c87941]/10 text-[#c87941]">
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-[#c87941]/10 text-etcha-copper">
                       automatic
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-[#9da5b8]">{s.desc}</p>
+                <p className="text-xs text-etcha-text-secondary">{s.desc}</p>
                 {s.num === 1 && txIds.create && (
                   <div className="mt-0.5">
                     <TxStatus status="" txId={txIds.create} />
@@ -820,20 +820,20 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           ))}
 
           {writeWarning && !writeError && (
-            <div className="mt-4 p-3 bg-[#e09a5f]/10 border border-[#e09a5f]/30 rounded-lg text-sm text-[#e09a5f]">
+            <div className="mt-4 p-3 bg-[#e09a5f]/10 border border-[#e09a5f]/30 rounded-lg text-sm text-etcha-copper-light">
               <p className="break-words">{writeWarning}</p>
             </div>
           )}
 
           {writeError && (
-            <div className="mt-4 p-3 bg-[#f87171]/10 border border-[#f87171]/30 rounded-lg text-sm text-[#f87171]">
+            <div className="mt-4 p-3 bg-[#f87171]/10 border border-[#f87171]/30 rounded-lg text-sm text-etcha-red">
               <p className="font-semibold mb-1">Error at step {step}:</p>
               <p className="break-words">{writeError}</p>
             </div>
           )}
 
           {step >= 4 && !writeError && (
-            <div className="mt-4 p-3 bg-[#34d399]/10 border border-[#34d399]/30 rounded-lg text-sm text-[#34d399]">
+            <div className="mt-4 p-3 bg-[#34d399]/10 border border-[#34d399]/30 rounded-lg text-sm text-etcha-green">
               {autoList
                 ? `Option listed successfully! ${contracts} tokens at ${(Number(premium) || suggestedPremium || 0).toFixed(3)} ${stablecoin}/token.`
                 : `Option created successfully! ${contracts} tokens are in your wallet.`}
@@ -841,13 +841,13 @@ export default function WritePage({ params }: { params: { asset: string } }) {
           )}
 
           {step < 4 && step >= 2 && !writeError && (
-            <p className="text-xs text-[#9da5b8] mt-2">
+            <p className="text-xs text-etcha-text-secondary mt-2">
               You can safely wait. The bot handles minting and delivery automatically.
             </p>
           )}
 
           {step === 1 && !writeError && (
-            <p className="text-xs text-[#e09a5f] mt-2">
+            <p className="text-xs text-etcha-copper-light mt-2">
               Approve the transaction in your Nautilus wallet.
             </p>
           )}
@@ -857,11 +857,11 @@ export default function WritePage({ params }: { params: { asset: string } }) {
             <div className="flex gap-3 mt-4">
               <button
                 onClick={resetWrite}
-                className="px-4 py-2 bg-[#1e2330] text-[#e8eaf0] rounded-lg text-sm hover:bg-[#334155] transition-colors">
+                className="px-4 py-2 bg-etcha-border text-etcha-text rounded-lg text-sm hover:bg-[#334155] transition-colors">
                 {writeError ? "Back to Form" : "Write Another"}
               </button>
               {writeError && step < 4 && (
-                <p className="self-center text-xs text-[#9da5b8]">
+                <p className="self-center text-xs text-etcha-text-secondary">
                   Check your portfolio for stuck boxes before retrying.
                 </p>
               )}

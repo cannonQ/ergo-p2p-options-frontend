@@ -27,8 +27,8 @@ export default async function TradePage({
     return (
       <div className="text-center py-20">
         <h1 className="text-xl font-bold mb-2">Asset Not Found</h1>
-        <p className="text-[#9da5b8]">Unknown asset: {params.asset}</p>
-        <Link href="/app" className="text-[#c87941] hover:underline mt-4 inline-block">
+        <p className="text-etcha-text-secondary">Unknown asset: {params.asset}</p>
+        <Link href="/app" className="text-etcha-copper hover:underline mt-4 inline-block">
           Back to home
         </Link>
       </div>
@@ -68,7 +68,7 @@ export default async function TradePage({
   return (
     <div className="space-y-6">
       {nodeError && (
-        <div className="bg-[#f87171]/10 border border-[#f87171]/30 rounded-lg px-4 py-3 text-sm text-[#f87171]">
+        <div className="bg-[#f87171]/10 border border-[#f87171]/30 rounded-lg px-4 py-3 text-sm text-etcha-red">
           Unable to reach Ergo node — data may be unavailable. Try refreshing.
         </div>
       )}
@@ -76,13 +76,13 @@ export default async function TradePage({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">{info.pair}</h1>
-          <p className="text-[#9da5b8] text-sm">Option chain for {info.name}</p>
+          <p className="text-etcha-text-secondary text-sm">Option chain for {info.name}</p>
         </div>
         <div className="flex items-center gap-2">
           <RefreshButton />
           <Link
             href={`/app/trade/${params.asset}/write`}
-            className="px-4 py-2 bg-[#c87941] text-white rounded-lg text-sm font-medium hover:bg-[#e09a5f] transition-colors"
+            className="px-4 py-2 bg-etcha-copper text-white rounded-lg text-sm font-medium hover:bg-etcha-copper-light transition-colors"
           >
             Write New Option
           </Link>

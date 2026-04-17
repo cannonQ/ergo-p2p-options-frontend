@@ -170,7 +170,7 @@ export function ResultPanel({
 
           <Link
             href={`/app/trade/${assetSlug}`}
-            className="block w-full rounded-lg bg-etcha-green text-[#0a0c10] font-bold text-[15px] py-3.5 text-center mb-2.5 hover:opacity-90 transition-opacity"
+            className="block w-full rounded-lg bg-etcha-green text-etcha-bg font-bold text-[15px] py-3.5 text-center mb-2.5 hover:opacity-90 transition-opacity"
           >
             Buy this contract on Etcha &rarr;
           </Link>
@@ -205,7 +205,7 @@ export function ResultPanel({
             </div>
             <button
               onClick={onSwitchToWrite}
-              className="w-full rounded-lg bg-etcha-copper text-[#0a0c10] font-bold text-sm py-3 hover:opacity-90 transition-opacity cursor-pointer"
+              className="w-full rounded-lg bg-etcha-copper text-etcha-bg font-bold text-sm py-3 hover:opacity-90 transition-opacity cursor-pointer"
             >
               Switch to write mode &rarr;
             </button>
@@ -313,7 +313,7 @@ export function ResultPanel({
 
           <Link
             href={writeUrl}
-            className="block w-full rounded-lg bg-etcha-copper text-[#0a0c10] font-bold text-[15px] py-3.5 text-center mb-2.5 hover:opacity-90 transition-opacity"
+            className="block w-full rounded-lg bg-etcha-copper text-etcha-bg font-bold text-[15px] py-3.5 text-center mb-2.5 hover:opacity-90 transition-opacity"
           >
             Write this contract on Etcha &rarr;
           </Link>
